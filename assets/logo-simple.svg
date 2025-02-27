@@ -3,7 +3,7 @@
    viewBox="0 0 200 200"
    version="1.1"
    id="svg14"
-   sodipodi:docname="improved-svg.svg"
+   sodipodi:docname="logo-simple.svg"
    inkscape:version="1.4 (86a8ad7, 2024-10-11)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -20,12 +20,12 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="4.1542523"
-     inkscape:cx="199.55456"
-     inkscape:cy="117.10892"
-     inkscape:window-width="3440"
-     inkscape:window-height="1377"
-     inkscape:window-x="1912"
-     inkscape:window-y="-8"
+     inkscape:cx="68.122969"
+     inkscape:cy="126.85797"
+     inkscape:window-width="1440"
+     inkscape:window-height="830"
+     inkscape:window-x="-6"
+     inkscape:window-y="-6"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg14" />
   <!-- Improved Background Gradient -->
@@ -162,15 +162,6 @@
      ry="20"
      fill="url(#bgGradient)"
      id="rect7" />
-  <rect
-     x="0"
-     y="0"
-     width="200"
-     height="200"
-     rx="20"
-     ry="20"
-     fill="url(#pattern)"
-     id="rect8" />
   <!-- Main Elements with Improved Styling -->
   <!-- Left Bar -->
   <rect

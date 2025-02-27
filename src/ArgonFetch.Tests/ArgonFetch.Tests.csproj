@@ -22,4 +22,8 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ArgonFetch.Application\ArgonFetch.Application.csproj" />
+  </ItemGroup>
+
 </Project>

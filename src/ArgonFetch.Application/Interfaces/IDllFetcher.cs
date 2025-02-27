@@ -6,11 +6,12 @@ namespace ArgonFetch.Application.Interfaces
     public interface IDllFetcher
     {
         /// <summary>
-        /// Fetches the download link for a specified DLL using the provided options.
+        /// Fetches the media information for a specified DLL using the provided options.
         /// </summary>
         /// <param name="dllName">The name of the DLL to fetch the link for.</param>
         /// <param name="dllFetcherOptions">Options to customize the fetching process.</param>
-        /// <returns>The download link as a string.</returns>
-        Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions);
+        /// <param name="cancellationToken">Token to monitor for cancellation requests.</param>
+        /// <returns>The media information as a MediaInformationDto.</returns>
+        Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions, CancellationToken cancellationToken);
     }
 }

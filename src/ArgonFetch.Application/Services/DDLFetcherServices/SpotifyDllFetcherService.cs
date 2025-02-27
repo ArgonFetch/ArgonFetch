@@ -14,7 +14,7 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
             SpotifyClientSecret = spotifyClientSecret;
         }
 
-        public async Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions)
+        public async Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

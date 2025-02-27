@@ -10,7 +10,7 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
         private static readonly HttpClient _httpClient = new HttpClient();
         private readonly HtmlParser _htmlParser = new HtmlParser();
 
-        public async Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions)
+        public async Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions, CancellationToken cancellationToken)
         {
             string baseUrl = "https://tmate.cc";
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");

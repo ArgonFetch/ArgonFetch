@@ -1,4 +1,5 @@
 ﻿using ArgonFetch.Application.Dtos;
+using ArgonFetch.Application.Enums;
 using ArgonFetch.Application.Interfaces;
 using ArgonFetch.Application.Models;
 using YoutubeDLSharp;
@@ -17,17 +18,17 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
             _youtubeDL.FFmpegPath = "ffmpeg"; // Ensure ffmpeg is installed
         }
 
-        public async Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions)
+        public async Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions, CancellationToken cancellationToken)
         {
             var options = new OptionSet
             {
                 Format = GetFormatString(dllFetcherOptions.MediaFormat),
                 NoPlaylist = true,
-                ExtractAudio = dllFetcherOptions.MediaFormat == MediaFormat.BestAudio ||
-                              dllFetcherOptions.MediaFormat == MediaFormat.WorstAudio
+                //ExtractAudio = dllFetcherOptions.MediaFormat == MediaFormat.BestAudio ||
+                //              dllFetcherOptions.MediaFormat == MediaFormat.WorstAudio
             };
 
-            var result = await _youtubeDL.RunVideoDataFetch(dllName, options);
+            var result = await _youtubeDL.RunVideoDataFetch(dllName, overrideOptions: options, ct: cancellationToken);
             if (!result.Success)
             {
                 throw new Exception($"Failed to fetch video data: {string.Join(", ", result.ErrorOutput)}");
