@@ -16,6 +16,7 @@ builder.Services.AddHttpClient<TikTokDllFetcherService>();
 
 // Register the IDllFetcher implementations
 builder.Services.AddScoped<IDllFetcher, TikTokDllFetcherService>();
+builder.Services.AddScoped<IDllFetcher, DllFetcherService>();
 builder.Services.AddScoped<IDllFetcher>(sp =>
     new SpotifyDllFetcherService(
         builder.Configuration["Spotify:ClientId"],

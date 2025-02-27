@@ -13,7 +13,7 @@ namespace ArgonFetch.Application.Factories
 
         public IDllFetcher? GetFetcher(string type)
         {
-            return _fetchers.FirstOrDefault(f => f.GetType().Name.StartsWith(type, StringComparison.OrdinalIgnoreCase));
+            return _fetchers.SingleOrDefault(f => f.GetType().Name.StartsWith(type, StringComparison.OrdinalIgnoreCase));
         }
     }
 }
