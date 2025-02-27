@@ -1,7 +1,6 @@
-using ArgonFetch.Application.Factories;
-using ArgonFetch.Application.Interfaces;
 using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services.DDLFetcherServices;
+using SpotifyAPI.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,16 +14,21 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetMe
 builder.Services.AddHttpClient<TikTokDllFetcherService>();
 
 // Register the IDllFetcher implementations
-builder.Services.AddScoped<IDllFetcher, TikTokDllFetcherService>();
-builder.Services.AddScoped<IDllFetcher, DllFetcherService>();
-builder.Services.AddScoped<IDllFetcher>(sp =>
-    new SpotifyDllFetcherService(
-        builder.Configuration["Spotify:ClientId"],
-        builder.Configuration["Spotify:ClientSecret"]
-    ));
+builder.Services.AddScoped<TikTokDllFetcherService>();
+builder.Services.AddScoped<DllFetcherService>();
 
-// Register DllFetcherFactory
-builder.Services.AddSingleton<DllFetcherFactory>();
+// Register SpotifyAPI
+builder.Services.AddScoped<SpotifyClient>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var spotifyConfig = SpotifyClientConfig
+       .CreateDefault()
+       .WithAuthenticator(new ClientCredentialsAuthenticator(config["Spotify:ClientId"], config["Spotify:ClientSecret"]));
+    return new SpotifyClient(spotifyConfig);
+});
+
+// Register YoutubeMusicAPI
+builder.Services.AddScoped<YTMusicAPI.SearchClient>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

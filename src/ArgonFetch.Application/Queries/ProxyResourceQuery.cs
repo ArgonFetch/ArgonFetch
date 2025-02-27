@@ -4,11 +4,12 @@ namespace ArgonFetch.Application.Queries
 {
     public class ProxyResourceQuery : IRequest<string>
     {
+        public string Url { get; set; }
+
         public ProxyResourceQuery(string url)
         {
-            this.url = url;
+            Url = url;
         }
-        public string url { get; set; }
     }
 
     public class ProxyResourceQueryHandler : IRequestHandler<ProxyResourceQuery, string>

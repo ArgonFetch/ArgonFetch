@@ -18,17 +18,23 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
             _youtubeDL.FFmpegPath = "ffmpeg"; // Ensure ffmpeg is installed
         }
 
-        public async Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions, CancellationToken cancellationToken)
+        public async Task<MediaInformationDto> FetchLinkAsync(string query, DllFetcherOptions dllFetcherOptions = null, CancellationToken cancellationToken = default)
         {
+            dllFetcherOptions ??= new DllFetcherOptions { MediaFormat = MediaFormat.Best };
+
             var options = new OptionSet
             {
                 Format = GetFormatString(dllFetcherOptions.MediaFormat),
                 NoPlaylist = true,
-                //ExtractAudio = dllFetcherOptions.MediaFormat == MediaFormat.BestAudio ||
-                //              dllFetcherOptions.MediaFormat == MediaFormat.WorstAudio
             };
 
-            var result = await _youtubeDL.RunVideoDataFetch(dllName, overrideOptions: options, ct: cancellationToken);
+            if (!Uri.IsWellFormedUriString(query, UriKind.Absolute))
+            {
+                var searchResult = await _youtubeDL.RunVideoDataFetch($"ytsearch:{query}", overrideOptions: options, ct: cancellationToken);
+                query = searchResult.Data.Entries.First().Url;
+            }
+
+            var result = await _youtubeDL.RunVideoDataFetch(query, overrideOptions: options, ct: cancellationToken);
             if (!result.Success)
             {
                 throw new Exception($"Failed to fetch video data: {string.Join(", ", result.ErrorOutput)}");
@@ -55,7 +61,7 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
 
             return new MediaInformationDto
             {
-                RequestedUrl = dllName,
+                RequestedUrl = query,
                 StreamingUrl = videoData.Url,
                 CoverUrl = thumbnailUrl,
                 Title = videoData.Title,

@@ -2,6 +2,8 @@
 using ArgonFetch.Application.Dtos;
 using ArgonFetch.Application.Interfaces;
 using ArgonFetch.Application.Models;
+using System.Net;
+using System.Text.RegularExpressions;
 
 namespace ArgonFetch.Application.Services.DDLFetcherServices
 {
@@ -10,7 +12,7 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
         private static readonly HttpClient _httpClient = new HttpClient();
         private readonly HtmlParser _htmlParser = new HtmlParser();
 
-        public async Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions, CancellationToken cancellationToken)
+        public async Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions = null, CancellationToken cancellationToken = default)
         {
             string baseUrl = "https://tmate.cc";
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
@@ -45,17 +47,38 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
 
                 return new MediaInformationDto
                 {
-                    RequestedUrl = dllName,
-                    StreamingUrl = downloadLink,
-                    CoverUrl = imageUrl,
-                    Title = title,
-                    Author = author
+                    RequestedUrl = CleanHtml(dllName),
+                    StreamingUrl = CleanHtml(downloadLink),
+                    CoverUrl = CleanHtml(imageUrl),
+                    Title = CleanHtml(title),
+                    Author = CleanHtml(author)
                 };
             }
             else
             {
                 throw new Exception($"Error: {response.StatusCode}");
             }
+        }
+
+        private static string CleanHtml(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return string.Empty;
+
+            input = WebUtility.HtmlDecode(input); // Decode HTML entities
+            input = Regex.Replace(input, "<.*?>", string.Empty); // Remove HTML tags
+            input = input.Replace("\\\"", "\"").Replace("\"", "").Replace("\\/", "/"); // Fix slashes
+            input = input.Replace("\\r", "").Replace("\\n", ""); // Removes newline
+            input = Regex.Replace(input, @"\\[\""/]", string.Empty); // Remove escaped characters like \", \/
+
+            // Replace multiple spaces/newlines with a single space
+            input = Regex.Replace(input, @"\s+", " ").Trim();
+
+            // Remove Watermark
+            if (input.Contains("Download without Watermark"))
+                input = input.Split("Download without Watermark")[0];
+
+            return input;
         }
     }
 }

@@ -11,7 +11,7 @@ namespace ArgonFetch.Tests
         {
             // Arrange
             var dllFetcherService = new DllFetcherService();
-            var dllName = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+            var dllName = "https://music.youtube.com/watch?v=kA_1chVgPVA&si=SCujMuH6O3FmAjJQ";
             var dllFetcherOptions = new DllFetcherOptions
             {
                 MediaFormat = MediaFormat.Best
@@ -26,8 +26,8 @@ namespace ArgonFetch.Tests
             Assert.Equal(dllName, result.RequestedUrl);
             Assert.False(string.IsNullOrEmpty(result.StreamingUrl));
             Assert.False(string.IsNullOrEmpty(result.CoverUrl));
-            Assert.False(string.IsNullOrEmpty(result.Title));
-            Assert.False(string.IsNullOrEmpty(result.Author));
+            Assert.Equal("CRAZY", result.Title);
+            Assert.Equal("LE SSERAFIM", result.Author);
         }
     }
 }
