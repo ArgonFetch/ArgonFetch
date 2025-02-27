@@ -7,13 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AngleSharp" Version="1.2.0" />
     <PackageReference Include="MediatR" Version="12.4.1" />
-    <PackageReference Include="YoutubeDLSharp" Version="1.1.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Interfaces\" />
-    <Folder Include="Services\DDLRetrievingServices\" />
   </ItemGroup>
 
 </Project>

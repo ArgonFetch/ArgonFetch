@@ -1,13 +1,29 @@
+using ArgonFetch.Application.Factories;
+using ArgonFetch.Application.Interfaces;
 using ArgonFetch.Application.Queries;
+using ArgonFetch.Application.Services.DDLFetcherServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
 
 // Add MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetMediaQuery).Assembly));
+
+// Add HttpClient for TikTokDllFetcherService
+builder.Services.AddHttpClient<TikTokDllFetcherService>();
+
+// Register the IDllFetcher implementations
+builder.Services.AddScoped<IDllFetcher, TikTokDllFetcherService>();
+builder.Services.AddScoped<IDllFetcher>(sp =>
+    new SpotifyDllFetcherService(
+        builder.Configuration["Spotify:ClientId"],
+        builder.Configuration["Spotify:ClientSecret"]
+    ));
+
+// Register DllFetcherFactory
+builder.Services.AddSingleton<DllFetcherFactory>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
