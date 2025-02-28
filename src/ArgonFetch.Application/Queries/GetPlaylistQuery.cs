@@ -5,12 +5,12 @@ namespace ArgonFetch.Application.Queries
 {
     public class GetPlaylistQuery : IRequest<PlaylistInformationDto>
     {
-        public GetPlaylistQuery(string query)
+        public GetPlaylistQuery(string url)
         {
-            Query = query;
+            Url = url;
         }
 
-        public string Query { get; set; }
+        public string Url { get; set; }
     }
 
     public class GetPlaylistQueryHandler : IRequestHandler<GetPlaylistQuery, PlaylistInformationDto>

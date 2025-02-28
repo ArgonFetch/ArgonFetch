@@ -1,5 +1,10 @@
+using ArgonFetch.Application.Behaviors;
 using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services.DDLFetcherServices;
+using ArgonFetch.Application.Validators;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using MediatR;
 using SpotifyAPI.Web;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,14 +26,25 @@ builder.Services.AddScoped<DllFetcherService>();
 builder.Services.AddScoped<SpotifyClient>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
+    var clientId = config["Spotify:ClientId"];
+    var clientSecret = config["Spotify:ClientSecret"];
+    if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+    {
+        throw new InvalidOperationException("Spotify ClientId and ClientSecret must be provided.");
+    }
     var spotifyConfig = SpotifyClientConfig
        .CreateDefault()
-       .WithAuthenticator(new ClientCredentialsAuthenticator(config["Spotify:ClientId"], config["Spotify:ClientSecret"]));
+       .WithAuthenticator(new ClientCredentialsAuthenticator(clientId, clientSecret));
     return new SpotifyClient(spotifyConfig);
 });
 
 // Register YoutubeMusicAPI
 builder.Services.AddScoped<YTMusicAPI.SearchClient>();
+
+// Register FluentValidation
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<GetMediaQueryValidator>();
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

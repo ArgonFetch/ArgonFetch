@@ -42,14 +42,14 @@ namespace ArgonFetch.Application.Queries
 
             switch (platform)
             {
+                case Platform.SearchTerm:
+                    return await _dllFetcherService.FetchLinkAsync(request.Query, cancellationToken: cancellationToken);
                 case Platform.Spotify:
                     return await HandleSpotify(request.Query, cancellationToken);
                 case Platform.YouTube:
                     return await _dllFetcherService.FetchLinkAsync(request.Query, cancellationToken: cancellationToken);
                 case Platform.SoundCloud:
                     return await HandleSoundCloud(request.Query);
-                case Platform.SearchTerm:
-                    return await _dllFetcherService.FetchLinkAsync(request.Query, cancellationToken: cancellationToken);
                 case Platform.TikTok:
                     return await _tikTokDllFetcher.FetchLinkAsync(request.Query, cancellationToken: cancellationToken);
                 case Platform.Unknown:
@@ -106,7 +106,7 @@ namespace ArgonFetch.Application.Queries
                 return await _dllFetcherService.FetchLinkAsync(href);
             }
 
-            throw new NotSupportedException("Only API SoundCloud URLs are supported.");
+            return await _dllFetcherService.FetchLinkAsync(query);
         }
 
     }

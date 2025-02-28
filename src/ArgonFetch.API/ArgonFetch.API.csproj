@@ -8,10 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="11.11.0" />
+    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
     <PackageReference Include="MediatR" Version="12.4.1" />
     <PackageReference Include="SpotifyAPI.Web" Version="7.2.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
-	<PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="5.0.10" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.1" />
+	<PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="8.0.13" />
 	<PackageReference Include="YTMusicAPI" Version="1.0.7" />
   </ItemGroup>
 
