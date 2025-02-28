@@ -28,10 +28,10 @@ builder.Services.AddScoped<SpotifyClient>(sp =>
     var config = sp.GetRequiredService<IConfiguration>();
     var clientId = config["Spotify:ClientId"];
     var clientSecret = config["Spotify:ClientSecret"];
+
     if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
-    {
         throw new InvalidOperationException("Spotify ClientId and ClientSecret must be provided.");
-    }
+
     var spotifyConfig = SpotifyClientConfig
        .CreateDefault()
        .WithAuthenticator(new ClientCredentialsAuthenticator(clientId, clientSecret));

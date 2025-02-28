@@ -1,4 +1,5 @@
 ﻿using ArgonFetch.Application.Queries;
+using ArgonFetch.Application.Validators.ValidationHelpers;
 using FluentValidation;
 
 namespace ArgonFetch.Application.Validators
@@ -9,7 +10,7 @@ namespace ArgonFetch.Application.Validators
         {
             RuleFor(x => x.Url)
             .NotEmpty().NotNull().WithMessage("Url is required")
-            .MinimumLength(3).WithMessage("Url must be at least 3 characters");
+            .Must(UrlValidation.IsValidUrl).WithMessage("Url must be a valid URL");
         }
     }
 }

@@ -64,7 +64,7 @@ namespace ArgonFetch.Application.Queries
         {
             var uri = new Uri(query);
             var segments = uri.Segments;
-            var searchResponse = await _spotifyClient.Tracks.Get(segments.Last());
+            var searchResponse = await _spotifyClient.Tracks.Get(segments.Last(), cancellationToken);
 
             if (searchResponse == null)
                 throw new ArgumentException("Track not found");
