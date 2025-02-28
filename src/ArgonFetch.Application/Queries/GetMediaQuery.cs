@@ -39,6 +39,10 @@ namespace ArgonFetch.Application.Queries
         public async Task<MediaInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
         {
             var platform = PlatformIdentifierService.IdentifyPlatform(request.Query);
+            var contentType = await MediaContentIdentifierService.IdentifyContent(request.Query, platform);
+
+            if (!new[] { ContentType.Media, ContentType.Url, ContentType.SearchTerm }.Contains(contentType))
+                throw new NotSupportedException($"{contentType} is not Media");
 
             switch (platform)
             {

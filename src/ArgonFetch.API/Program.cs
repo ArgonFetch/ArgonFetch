@@ -1,5 +1,6 @@
 using ArgonFetch.Application.Behaviors;
 using ArgonFetch.Application.Queries;
+using ArgonFetch.Application.Services;
 using ArgonFetch.Application.Services.DDLFetcherServices;
 using ArgonFetch.Application.Validators;
 using FluentValidation;
@@ -40,6 +41,9 @@ builder.Services.AddScoped<SpotifyClient>(sp =>
 
 // Register YoutubeMusicAPI
 builder.Services.AddScoped<YTMusicAPI.SearchClient>();
+
+// Register YTDLPClient
+builder.Services.AddScoped<YTDLPClient>();
 
 // Register FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
