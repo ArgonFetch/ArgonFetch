@@ -127,6 +127,11 @@ The following steps are required to run ArgonFetch in both development and produ
 This project is licensed under the GPL-3.0 License. 
 See the [LICENSE](LICENSE) file for more details.
 
+## Contributors
+<a href = "https://github.com/ArgonFetch/ArgonFetch/graphs/contributors">
+  <img src = "https://contrib.rocks/image?repo=ArgonFetch/ArgonFetch"/>
+</a>
+
 ---
 
 <p align="center">Made with ❤️ by <a href="https://github.com/Pianonic">PianoNic</a> and <a href="https://github.com/MyDrift-user">MyDrift</a></p>
