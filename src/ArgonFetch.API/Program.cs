@@ -12,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 
+builder.Services.AddSpaStaticFiles(spaStaticFilesOptions => { spaStaticFilesOptions.RootPath = "wwwroot/browser"; });
+
 // Add MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetMediaQuery).Assembly));
 
@@ -50,6 +52,27 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Configure CORS for frontend development
+if (builder.Environment.IsDevelopment())
+{
+    // cors
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(corsBuilder =>
+        {
+            corsBuilder.WithOrigins("http://localhost:4200");
+            corsBuilder.WithExposedHeaders("Content-Disposition");
+            corsBuilder.AllowAnyHeader();
+            corsBuilder.AllowAnyMethod();
+            corsBuilder.AllowCredentials();
+            if (!builder.Environment.IsProduction())
+            {
+                corsBuilder.WithExposedHeaders("X-Impersonate");
+            }
+        });
+    });
+}
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -60,7 +83,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors();
 app.UseStaticFiles();
 
 if (!app.Environment.IsDevelopment())
@@ -68,18 +90,19 @@ if (!app.Environment.IsDevelopment())
     app.UseSpaStaticFiles();
 }
 
+// Ensure frontend routes work
+app.UseRouting();
+app.UseAuthorization();
+app.UseCors();
+app.MapControllers();
+
+// Serve Angular Frontend in Production
 if (!app.Environment.IsDevelopment())
 {
     app.UseSpa(spa =>
     {
-        // To learn more about options for serving an Angular SPA from ASP.NET Core,
-        // see https://go.microsoft.com/fwlink/?linkid=864501
-        spa.Options.SourcePath = "frontend";
+        spa.Options.SourcePath = "wwwroot";
     });
 }
-
-app.UseAuthorization();
-
-app.MapControllers();
 
 app.Run();
