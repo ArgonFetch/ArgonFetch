@@ -28,7 +28,7 @@
 ## 📦 Installation
 
 > [!WARNING]  
-> This does not work yet.
+> This does not fully work yet.
 
 ```sh
 # Clone the repository
