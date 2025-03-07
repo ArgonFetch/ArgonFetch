@@ -2,27 +2,27 @@
   <div class="playlist-header">
     <div class="playlist-content">
       <div class="playlist-thumbnail">
-        <img [src]="playlistInfo.image_url" alt="Playlist Cover">
+        <img [src]="resourceInformation.coverUrl" alt="Playlist Cover">
       </div>
       
       <div class="playlist-info">
         <div class="title-row">
-          <h3 class="playlist-title">{{ playlistInfo.playlist_name }}</h3>
+          <h3 class="playlist-title">{{ resourceInformation.title }}</h3>
           <button class="action-button download-button" (click)="onDownload()">
             <fa-icon [icon]="faDownload"></fa-icon>
           </button>
         </div>
-        <p class="playlist-author">By {{ playlistInfo.author }}</p>
+        <p class="playlist-author">By {{ resourceInformation.author }}</p>
       </div>
     </div>
   </div>
 
   <div class="songs-list">
     <ul>
-      <li *ngFor="let song of playlistInfo.songs" class="song-item">
-        <img [src]="song.image_url" alt="Song Cover" class="song-cover">
+      <li *ngFor="let song of resourceInformation.mediaItems" class="song-item">
+        <img [src]="song.coverUrl" alt="Song Cover" class="song-cover">
         <div class="song-info">
-          <p class="song-name">{{ song.song_name }}</p>
+          <p class="song-name">{{ song.title }}</p>
           <p class="song-author">{{ song.author }}</p>
         </div>
         <button class="action-button download-button">

@@ -1,0 +1,14 @@
+services:
+  argonfetch-proxy:
+    build:
+      context: ./services/ArgonFetch.Proxy
+      dockerfile: Dockerfile
+    container_name: argonfetch-proxy
+    restart: unless-stopped
+    ports:
+      - "4442:4442"  # Exposed externally in dev mode
+    networks:
+      - ArgonFetch-dev
+
+networks:
+  ArgonFetch-dev: {}

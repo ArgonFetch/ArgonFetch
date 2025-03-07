@@ -1,4 +1,5 @@
-﻿using ArgonFetch.Application.Queries;
+﻿using ArgonFetch.Application.Models;
+using ArgonFetch.Application.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,15 +10,68 @@ namespace ArgonFetch.API.Controllers
     public class CorsProxyController : ControllerBase
     {
         private readonly IMediator _mediator;
+
         public CorsProxyController(IMediator mediator)
         {
             _mediator = mediator;
         }
 
-        [HttpGet("ProxyUrl", Name = "ProxyUrl")]
+        [HttpGet("Url", Name = "ProxyUrl")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<string>> ProxyUrl(string url)
         {
-            return await _mediator.Send(new ProxyResourceQuery(url));
+            var data = await _mediator.Send(new ProxyUrlQuery(url));
+            return Content(System.Text.Encoding.UTF8.GetString(data), "text/plain");
+        }
+
+        [HttpGet("Head", Name = "ProxyHead")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ProxyHeadResponse))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<ProxyHeadResponse>> Head(string url)
+        {
+            var response = await _mediator.Send(new ProxyHeadQuery(url));
+
+            if (!response.IsSuccess)
+            {
+                return BadRequest(response.ErrorMessage);
+            }
+
+            var result = new ContentResult();
+
+            // Copy the headers from the original response
+            foreach (var header in response.Headers)
+            {
+                Response.Headers[header.Key] = header.Value.ToArray();
+            }
+
+            if (response.ContentLength.HasValue)
+            {
+                Response.Headers["Content-Length"] = response.ContentLength.Value.ToString();
+            }
+
+            return result;
+        }
+
+        [HttpGet("Range", Name = "ProxyRange")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FileContentResult))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status416RequestedRangeNotSatisfiable)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<FileContentResult>> Range(string url, int start, int end)
+        {
+            var response = await _mediator.Send(new ProxyRangeQuery(url, start, end));
+
+            if (!response.IsSuccess)
+            {
+                return BadRequest(response.ErrorMessage);
+            }
+
+            return File(response.Data, "application/octet-stream");
         }
     }
 }

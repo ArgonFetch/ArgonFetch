@@ -1,9 +1,7 @@
 # <p align="center">ArgonFetch</p>
-
 <p align="center">
   <img src="https://github.com/user-attachments/assets/bf03eee6-0aa5-4508-8d2f-cb6fd6b1485f" width="200" alt="ArgonFetch Logo">
 </p>
-
 <p align="center">
   <strong>ArgonFetch is Yet Another Media Downloader.</strong> 
   A powerful tool for downloading videos, music, and other media from various online sources.
@@ -15,40 +13,33 @@
 ---
 
 ## 🚀 Features
-
 - 📥 Download videos, music, and more from multiple sources 
 - 🎯 Easy-to-use interface with powerful options 
 - 🔗 Supports a wide range of websites 
 
 ## 📸 Screenshots
-
 <p align="center">
   <img src=".\assets\startpage.png" width="1000" alt="ArgonFetch Screenshot">
+</p>
 
 ## 📦 Installation
-
 > [!WARNING]  
 > This does not fully work yet.
-
 ```sh
 # Clone the repository
 git clone https://github.com/Pianonic/ArgonFetch.git
-
 # Navigate to the project directory
 cd ArgonFetch
-
 # Run the application using Docker Compose
 docker-compose up -d
 ```
 After running the command, ArgonFetch should be accessible at http://localhost:8000.
 
 ## 🛠️ Usage
-
 Simply launch ArgonFetch and paste the URL of the media you want to download. 
 Choose your preferred format and quality, then start downloading!
 
 ## 💻 Development Environment Setup
-
 ### Prerequisites
 - Git
 - Node.js and npm
@@ -56,7 +47,6 @@ Choose your preferred format and quality, then start downloading!
 - Python 3.x or .NET SDK (depending on which backend you want to use)
 
 ### Setting Up the Environment
-
 1. Clone the repository:
    ```sh
    git clone https://github.com/Pianonic/ArgonFetch.git
@@ -64,14 +54,12 @@ Choose your preferred format and quality, then start downloading!
    ```
 
 2. Configure API Credentials:
-
    **For Python Backend:**
    Create a `.env` file in the `tmp/ArgonFetch.Backend` directory with:
    ```
    SPOTIFY_CLIENT_ID=your_spotify_client_id
    SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
    ```
-
    **For C# Backend:**
    Set up user secrets:
    ```sh
@@ -87,8 +75,16 @@ Choose your preferred format and quality, then start downloading!
    npm install
    ```
 
-### Running the Application
+### Running the Development Setup
+To run **only the proxy** in development mode:
 
+```sh
+docker-compose -f dev-docker-compose.yml up -d
+```
+
+This will start the **proxy** service, and you can access it at `http://localhost:4442`.
+
+### Running the Application
 The following steps are required to run ArgonFetch in both development and production environments:
 
 1. Start the proxy server (required for API communication):
@@ -98,14 +94,12 @@ The following steps are required to run ArgonFetch in both development and produ
    ```
 
 2. Start the backend server:
-
    **For Python Backend:**
    ```sh
    cd tmp/ArgonFetch.Backend
    # Start the Python server
    python app.py
    ```
-
    **OR For C# Backend:**
    ```sh
    cd src/ArgonFetch.API
@@ -123,7 +117,6 @@ The following steps are required to run ArgonFetch in both development and produ
 **Important Note:** The proxy server is not just for testing - it's an essential component of the application architecture. It handles API requests and bypasses CORS restrictions in both development and production environments.
 
 ## 📜 License
-
 This project is licensed under the GPL-3.0 License. 
 See the [LICENSE](LICENSE) file for more details.
 
@@ -133,5 +126,4 @@ See the [LICENSE](LICENSE) file for more details.
 </a>
 
 ---
-
 <p align="center">Made with ❤️ by <a href="https://github.com/Pianonic">PianoNic</a> and <a href="https://github.com/MyDrift-user">MyDrift</a></p>

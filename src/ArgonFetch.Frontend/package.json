@@ -8,7 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "build:agent": "ng build --aot --configuration production --output-path",
-    "api-gen": "npx @openapitools/openapi-generator-cli generate -i http://localhost:8000/openapi.json -g typescript-angular -o F:\\Coding\\ArgonFetch\\ArgonFetch.Frontend\\api"
+    "api-gen": "npx @openapitools/openapi-generator-cli generate -i http://localhost:5114/swagger/v1/swagger.json -g typescript-angular -o api"
   },
   "private": true,
   "dependencies": {

@@ -1,8 +1,8 @@
 import { Component, Input } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { PlaylistInformation } from '../../../../api';
 import { faDownload } from '@fortawesome/free-solid-svg-icons';
 import { CommonModule } from '@angular/common';
+import { ResourceInformationDto } from '../../../../api';
 
 @Component({
   selector: 'app-playlist-container',
@@ -12,7 +12,7 @@ import { CommonModule } from '@angular/common';
   styleUrl: './playlist-container.component.scss'
 })
 export class PlaylistContainerComponent {
-  @Input() playlistInfo!: PlaylistInformation;
+  @Input() resourceInformation!: ResourceInformationDto;
   
   faDownload = faDownload;
 

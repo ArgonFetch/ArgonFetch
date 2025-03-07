@@ -1,4 +1,5 @@
 ﻿using ArgonFetch.Application.Dtos;
+using ArgonFetch.Application.Enums;
 using ArgonFetch.Application.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -15,14 +16,24 @@ namespace ArgonFetch.API.Controllers
             _mediator = mediator;
         }
 
+        [HttpGet("GetMediaType", Name = "GetMediaType")]
+        [ProducesResponseType(typeof(MediaType), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<MediaType>> GetMediaType(string url)
+        {
+            var mediaType = await _mediator.Send(new GetMediaTypeQuery(url));
+            return Ok(mediaType);
+        }
+
         [HttpGet("GetResource", Name = "GetResource")]
+        [ProducesResponseType(typeof(ResourceInformationDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ResourceInformationDto>> GetResource(string url)
         {
             var mediaType = await _mediator.Send(new GetMediaTypeQuery(url));
 
             if (mediaType == Application.Enums.MediaType.Media)
             {
-
                 var result = await _mediator.Send(new GetMediaQuery(url));
                 var returnDto = new ResourceInformationDto
                 {

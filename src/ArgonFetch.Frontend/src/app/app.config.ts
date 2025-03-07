@@ -9,7 +9,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     {
       provide: Configuration,
-      useFactory: () => new Configuration({ basePath: 'http://localhost:8000' }),  // Using the API base URL
+      useFactory: () => new Configuration({ basePath: 'http://localhost:5114' }),  // Using the API base URL
     },
     provideRouter(routes)
   ]

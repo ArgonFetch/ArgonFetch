@@ -2,32 +2,33 @@
 
 namespace ArgonFetch.Application.Queries
 {
-    public class ProxyResourceQuery : IRequest<string>
+    public class ProxyUrlQuery : IRequest<byte[]>
     {
         public string Url { get; set; }
 
-        public ProxyResourceQuery(string url)
+        public ProxyUrlQuery(string url)
         {
             Url = url;
         }
     }
 
-    public class ProxyResourceQueryHandler : IRequestHandler<ProxyResourceQuery, string>
+    public class ProxyUrlQueryHandler : IRequestHandler<ProxyUrlQuery, byte[]>
     {
         private readonly HttpClient _httpClient;
 
-        public ProxyResourceQueryHandler(HttpClient httpClient)
+        public ProxyUrlQueryHandler(HttpClient httpClient)
         {
             _httpClient = httpClient;
         }
 
-        public async Task<string> Handle(ProxyResourceQuery request, CancellationToken cancellationToken)
+        public async Task<byte[]> Handle(ProxyUrlQuery request, CancellationToken cancellationToken)
         {
             try
             {
                 var response = await _httpClient.GetAsync(request.Url, cancellationToken);
                 response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync(cancellationToken);
+
+                return await response.Content.ReadAsByteArrayAsync(cancellationToken);
             }
             catch (HttpRequestException ex)
             {
