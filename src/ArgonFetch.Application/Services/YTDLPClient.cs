@@ -56,9 +56,9 @@ namespace ArgonFetch.Application.Services
         public async Task<string> GetVideoInfoAsync(string url, List<string> optionalParams = null)
         {
             optionalParams ??= new List<string>();
-            if (!optionalParams.Contains("-J"))
+            if (!optionalParams.Contains("--skip-download"))
             {
-                optionalParams.Insert(0, "-J");
+                optionalParams.Insert(0, "--skip-download");
             }
             optionalParams.Add($"\"{url}\"");
             var args = string.Join(" ", optionalParams);

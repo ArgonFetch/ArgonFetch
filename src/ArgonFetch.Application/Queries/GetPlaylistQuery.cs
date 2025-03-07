@@ -106,10 +106,11 @@ namespace ArgonFetch.Application.Queries
         {
             try
             {
-                var optionalParams = new List<string> { "--flat-playlist" };
-                var videoInfo = await _ytdlpClient.GetVideoInfoAsync(url);
-                var playlistInfo = JsonDocument.Parse(videoInfo).RootElement;
+                var optionalParams = new List<string> { "--flat-playlist", "--dump-single-json" };
+                var videoInfo = await _ytdlpClient.GetVideoInfoAsync(url, optionalParams);
+
                 var mediaItems = new List<MediaInformationDto>();
+                var playlistInfo = JsonDocument.Parse(videoInfo).RootElement;
 
                 if (playlistInfo.TryGetProperty("entries", out var entries))
                 {
@@ -140,7 +141,7 @@ namespace ArgonFetch.Application.Queries
             }
         }
 
-        private static string? GetJsonValue(JsonElement element, string propertyName)
+        private static string GetJsonValue(JsonElement element, string propertyName)
         {
             return element.TryGetProperty(propertyName, out var property) ? property.GetString() : null;
         }
@@ -149,13 +150,15 @@ namespace ArgonFetch.Application.Queries
         {
             if (element.TryGetProperty("thumbnails", out var thumbnails) && thumbnails.ValueKind == JsonValueKind.Array)
             {
-                // Get the first thumbnail URL (or highest quality if you enumerate and select)
-                foreach (var thumb in thumbnails.EnumerateArray())
+                // Select the thumbnail with the highest resolution
+                var bestThumbnail = thumbnails.EnumerateArray()
+                    .OrderByDescending(thumb =>
+                        thumb.TryGetProperty("width", out var widthProp) ? widthProp.GetInt32() : 0)
+                    .FirstOrDefault();
+
+                if (bestThumbnail.TryGetProperty("url", out var url))
                 {
-                    if (thumb.TryGetProperty("url", out var url))
-                    {
-                        return url.GetString() ?? string.Empty;
-                    }
+                    return url.GetString() ?? string.Empty;
                 }
             }
 
