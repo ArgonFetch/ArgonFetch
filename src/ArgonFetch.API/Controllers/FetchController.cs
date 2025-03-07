@@ -15,16 +15,53 @@ namespace ArgonFetch.API.Controllers
             _mediator = mediator;
         }
 
-        [HttpGet("GetMedia", Name = "GetMedia")]
-        public async Task<ActionResult<MediaInformationDto>> GetMedia(string url)
+        [HttpGet("GetResource", Name = "GetResource")]
+        public async Task<ActionResult<ResourceInformationDto>> GetResource(string url)
         {
-            return await _mediator.Send(new GetMediaQuery(url));
-        }
+            var mediaType = await _mediator.Send(new GetMediaTypeQuery(url));
 
-        [HttpGet("GetPlaylist", Name = "GetPlaylist")]
-        public async Task<ActionResult<PlaylistInformationDto>> GetResource(string url)
-        {
-            return await _mediator.Send(new GetPlaylistQuery(url));
+            if (mediaType == Application.Enums.MediaType.Media)
+            {
+
+                var result = await _mediator.Send(new GetMediaQuery(url));
+                var returnDto = new ResourceInformationDto
+                {
+                    Type = mediaType,
+                    MediaItems = new List<MediaInformationDto>
+                    {
+                        new MediaInformationDto
+                        {
+                            RequestedUrl = url,
+                            StreamingUrl = result.StreamingUrl,
+                            CoverUrl = result.CoverUrl,
+                            Title = result.Title,
+                            Author = result.Author
+                        }
+                    }
+                };
+                return Ok(returnDto);
+            }
+            else
+            {
+                var result = await _mediator.Send(new GetPlaylistQuery(url));
+                var returnDto = new ResourceInformationDto
+                {
+                    Type = mediaType,
+                    Title = result.Title,
+                    Author = result.Author,
+                    CoverUrl = result.ImageUrl,
+                    MediaItems = result.MediaItems.Select(mid => new MediaInformationDto
+                    {
+                        RequestedUrl = mid.RequestedUrl,
+                        StreamingUrl = mid.StreamingUrl,
+                        CoverUrl = mid.CoverUrl,
+                        Title = mid.Title,
+                        Author = mid.Author
+                    })
+                };
+
+                return Ok(returnDto);
+            }
         }
     }
 }

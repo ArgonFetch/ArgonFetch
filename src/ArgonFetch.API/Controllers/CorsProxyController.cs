@@ -14,8 +14,8 @@ namespace ArgonFetch.API.Controllers
             _mediator = mediator;
         }
 
-        [HttpGet("GetResource", Name = "GetResource")]
-        public async Task<ActionResult<string>> GetResource(string url)
+        [HttpGet("ProxyUrl", Name = "ProxyUrl")]
+        public async Task<ActionResult<string>> ProxyUrl(string url)
         {
             return await _mediator.Send(new ProxyResourceQuery(url));
         }
