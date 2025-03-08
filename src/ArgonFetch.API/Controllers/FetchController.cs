@@ -32,7 +32,7 @@ namespace ArgonFetch.API.Controllers
         {
             var mediaType = await _mediator.Send(new GetMediaTypeQuery(url));
 
-            if (mediaType == Application.Enums.MediaType.Media)
+            if (mediaType == MediaType.Media)
             {
                 var result = await _mediator.Send(new GetMediaQuery(url));
                 var returnDto = new ResourceInformationDto

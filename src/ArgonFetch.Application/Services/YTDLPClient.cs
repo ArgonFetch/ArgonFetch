@@ -117,15 +117,15 @@ namespace ArgonFetch.Application.Services
         /// <param name="optionalParams">Optional parameters to pass to yt-dlp.</param>
         /// <returns>A JSON string containing the video information.</returns>
         /// <exception cref="Exception">Thrown when yt-dlp fails to retrieve video information.</exception>
-        public async Task<string> GetVideoInfoAsync(string url, List<string> optionalParams = null)
+        public async Task<string> GetVideoInfoAsync(string url, string[] optionalParams = null)
         {
-            optionalParams ??= new List<string>();
-            if (!optionalParams.Contains("--skip-download"))
+            var optionalParamsList = optionalParams?.ToList() ?? new List<string>();
+            if (!optionalParamsList.Contains("--skip-download"))
             {
-                optionalParams.Insert(0, "--skip-download");
+                optionalParamsList.Insert(0, "--skip-download");
             }
-            optionalParams.Add($"\"{url}\"");
-            var args = string.Join(" ", optionalParams);
+            optionalParamsList.Add($"\"{url}\"");
+            var args = string.Join(" ", optionalParamsList);
             var result = await ExecuteCommandAsync(args);
             return result;
         }

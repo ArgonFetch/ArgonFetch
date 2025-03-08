@@ -106,7 +106,7 @@ namespace ArgonFetch.Application.Queries
         {
             try
             {
-                var optionalParams = new List<string> { "--flat-playlist", "--dump-single-json" };
+                var optionalParams = new[] { "--flat-playlist", "--dump-single-json" };
                 var videoInfo = await _ytdlpClient.GetVideoInfoAsync(url, optionalParams);
 
                 var mediaItems = new List<MediaInformationDto>();
