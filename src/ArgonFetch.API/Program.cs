@@ -3,6 +3,7 @@ using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services;
 using ArgonFetch.Application.Services.DDLFetcherServices;
 using ArgonFetch.Application.Validators;
+using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MediatR;
@@ -12,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddSpaStaticFiles(spaStaticFilesOptions => { spaStaticFilesOptions.RootPath = "wwwroot/browser"; });
 
 // Add MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetMediaQuery).Assembly));
@@ -27,8 +29,20 @@ builder.Services.AddScoped<DllFetcherService>();
 builder.Services.AddScoped<SpotifyClient>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
-    var clientId = config["Spotify:ClientId"];
-    var clientSecret = config["Spotify:ClientSecret"];
+
+    string clientId, clientSecret;
+
+    if (builder.Environment.IsDevelopment())
+    {
+        clientId = config["Spotify:ClientId"]!;
+        clientSecret = config["Spotify:ClientSecret"]!;
+    }
+    else
+    {
+        Env.Load();
+        clientId = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_ID")!;
+        clientSecret = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_SECRET")!;
+    }
 
     if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
         throw new InvalidOperationException("Spotify ClientId and ClientSecret must be provided.");
@@ -54,7 +68,56 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Configure CORS for frontend development
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(corsBuilder =>
+        {
+            corsBuilder.WithOrigins("http://localhost:4200");
+            corsBuilder.WithExposedHeaders("Content-Disposition");
+            corsBuilder.AllowAnyHeader();
+            corsBuilder.AllowAnyMethod();
+            corsBuilder.AllowCredentials();
+            if (!builder.Environment.IsProduction())
+            {
+                corsBuilder.WithExposedHeaders("X-Impersonate");
+            }
+        });
+    });
+}
+
 var app = builder.Build();
+
+// Create a scope to resolve services
+using (var scope = app.Services.CreateScope())
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var yTDLPClient = scope.ServiceProvider.GetRequiredService<YTDLPClient>();
+
+    // Check yt-dlp
+    var ytDlpVersion = await yTDLPClient.GetYtDlpVersionAsync();
+    if (string.IsNullOrEmpty(ytDlpVersion))
+    {
+        logger.LogWarning("yt-dlp is not installed or cannot be found! Media downloads may fail.");
+    }
+    else
+    {
+        logger.LogInformation("yt-dlp Version: {Version}", ytDlpVersion);
+    }
+
+    // Check FFmpeg
+    var ffmpegVersion = await yTDLPClient.GetFfmpegVersionAsync();
+    if (string.IsNullOrEmpty(ffmpegVersion))
+    {
+        logger.LogWarning("FFmpeg is not installed or cannot be found! Media processing may fail.");
+    }
+    else
+    {
+        logger.LogInformation("FFmpeg Version: {Version}", ffmpegVersion);
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -64,7 +127,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors();
 app.UseStaticFiles();
 
 if (!app.Environment.IsDevelopment())
@@ -72,18 +134,19 @@ if (!app.Environment.IsDevelopment())
     app.UseSpaStaticFiles();
 }
 
+// Ensure frontend routes work
+app.UseRouting();
+app.UseAuthorization();
+app.UseCors();
+app.MapControllers();
+
+// Serve Angular Frontend in Production
 if (!app.Environment.IsDevelopment())
 {
     app.UseSpa(spa =>
     {
-        // To learn more about options for serving an Angular SPA from ASP.NET Core,
-        // see https://go.microsoft.com/fwlink/?linkid=864501
-        spa.Options.SourcePath = "frontend";
+        spa.Options.SourcePath = "wwwroot";
     });
 }
-
-app.UseAuthorization();
-
-app.MapControllers();
 
 app.Run();

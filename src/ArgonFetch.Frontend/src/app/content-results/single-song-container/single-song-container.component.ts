@@ -1,8 +1,9 @@
 import { Component, DestroyRef, Input } from '@angular/core';
-import { DefaultService, MusicInformation } from '../../../../api';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { CommonModule } from '@angular/common';
 import { faDownload, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { ProxyService, ResourceInformationDto } from '../../../../api';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-single-song-container',
@@ -12,7 +13,7 @@ import { faDownload, faSpinner } from '@fortawesome/free-solid-svg-icons';
   styleUrl: './single-song-container.component.scss'
 })
 export class SingleSongContainerComponent {
-  @Input() musicInfo!: MusicInformation;
+  @Input() resourceInformation!: ResourceInformationDto;
 
   faDownload = faDownload;
   faSpinner = faSpinner;
@@ -33,7 +34,7 @@ export class SingleSongContainerComponent {
   private chunks: { start: number; end: number; loaded: number; blob?: Blob }[] = [];
   private activeRequests = 0;
 
-  constructor(private defaultService: DefaultService) { }
+  constructor(private proxyService: ProxyService) {}
 
   formatSpeed(bytesPerSecond: number): string {
     if (bytesPerSecond > 1048576) { // 1 MB/s
@@ -81,49 +82,49 @@ export class SingleSongContainerComponent {
 
     this.resetDownloadState();
 
-    const proxy = "http://localhost:4442/";
-    const url = this.musicInfo.streaming_url;
-    const filename = this.musicInfo.song_name + '.mp3';
+    const url = this.resourceInformation.mediaItems?.[0].streamingUrl;
+    const filename = this.resourceInformation.mediaItems?.[0].title + '.mp3';
+
+    if (!url) {
+      console.error('No streaming URL available');
+      return;
+    }
 
     this.isDownloading = true;
-    this.downloadProgress = 0;
-    this.loadedBytes = 0;
-    this.chunks = [];
     this.startTime = Date.now();
 
     try {
-      // Get file size with HEAD request
-      const headResponse = await fetch(proxy + url, { method: 'HEAD' });
-      if (!headResponse.ok) throw new Error("Failed to get file information");
+      const headResponse = await firstValueFrom(this.proxyService.proxyHead(url));
 
-      this.totalBytes = parseInt(headResponse.headers.get('content-length') || '0', 10);
-      if (!this.totalBytes) throw new Error("Content-Length header is missing");
+      console.log(headResponse);
 
-      // Calculate chunk sizes
+      this.totalBytes = headResponse.contentLength ?? 0;
+
+      if (!this.totalBytes) {
+        throw new Error("Content-Length header is missing");
+      }
+
       const chunkSize = Math.floor(this.totalBytes / this.CHUNK_COUNT);
+      this.chunks = [];
 
-      // Initialize chunks
       for (let i = 0; i < this.CHUNK_COUNT; i++) {
         const start = i * chunkSize;
         const end = (i === this.CHUNK_COUNT - 1) ? this.totalBytes - 1 : start + chunkSize - 1;
         this.chunks.push({ start, end, loaded: 0 });
       }
 
-      // Set up interval for speed updates
       this.speedUpdateInterval = setInterval(() => this.updateSpeed(), 1000);
 
-      // Start parallel downloads
       const downloadPromises = this.chunks.map((chunk, index) =>
-        this.downloadChunk(proxy + url, chunk, index)
+        this.downloadChunk(url, chunk, index)
       );
 
       await Promise.all(downloadPromises);
 
-      // Combine all chunks and trigger download
       if (this.chunks.every(chunk => chunk.blob)) {
         const completeBlob = new Blob(
           this.chunks.map(chunk => chunk.blob as Blob),
-          { type: 'video/mp4' }
+          { type: 'audio/mpeg' }
         );
 
         const link = document.createElement("a");
@@ -144,36 +145,14 @@ export class SingleSongContainerComponent {
     this.activeRequests++;
 
     try {
-      const response = await fetch(url, {
-        headers: {
-          'Range': `bytes=${chunk.start}-${chunk.end}`
-        }
-      });
+      const response = await firstValueFrom(
+        this.proxyService.proxyRange(url, chunk.start, chunk.end)
+      );
 
-      if (!response.ok && response.status !== 206) {
-        throw new Error(`Failed to download chunk ${chunkIndex}. Status: ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("Response reader could not be created");
-
-      const chunks: Uint8Array[] = [];
-
-      while (true) {
-        const { done, value } = await reader.read();
-
-        if (done) break;
-
-        chunks.push(value);
-        chunk.loaded += value.byteLength;
-        this.loadedBytes += value.byteLength;
-
-        // Update overall progress
-        this.downloadProgress = Math.round((this.loadedBytes / this.totalBytes) * 100);
-      }
-
-      // Create blob from chunk
-      chunk.blob = new Blob(chunks, { type: 'audio/mpeg' });
+      chunk.blob = response;
+      chunk.loaded = response.size;
+      this.loadedBytes += response.size;
+      this.downloadProgress = Math.round((this.loadedBytes / this.totalBytes) * 100);
     } catch (error) {
       console.error(`Error downloading chunk ${chunkIndex}:`, error);
       throw error;

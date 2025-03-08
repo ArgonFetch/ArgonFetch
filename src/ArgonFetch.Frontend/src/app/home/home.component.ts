@@ -5,11 +5,11 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { faLink, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
-import { DefaultService, MusicInformation, PlaylistInformation } from '../../../api';
 import { PlaylistContainerComponent } from '../content-results/playlist-container/playlist-container.component';
-import { SingleSongContainerComponent } from '../content-results/single-song-container/single-song-container.component';
 import { ModalService } from '../services/modal.service';
 import { ContentSkeletonLoaderComponent } from "../content-skeleton-loader/content-skeleton-loader.component";
+import { SingleSongContainerComponent } from '../content-results/single-song-container/single-song-container.component';
+import { FetchService, MediaType, ResourceInformationDto } from '../../../api';
 
 @Component({
   selector: 'app-home',
@@ -29,6 +29,7 @@ export class HomeComponent {
   faLink = faLink;
   faSearch = faSearch;
   faTimes = faTimes;
+  mediaTypeEnum = MediaType;
 
   url: string = '';
   faWarning = faTriangleExclamation;
@@ -36,11 +37,11 @@ export class HomeComponent {
   isLoading: boolean = false;
   loaderType: 'single-song' | 'playlist' = 'single-song';
 
-  songContent: MusicInformation | undefined;
-  playlistContent: PlaylistInformation | undefined;
+  resourceInformation: ResourceInformationDto | undefined;
+  mediaType: MediaType | undefined;
 
   constructor(
-    private defaultService: DefaultService,
+    private fetchService: FetchService,
     private destroyRef: DestroyRef,
     private modalService: ModalService
   ) { }
@@ -56,61 +57,46 @@ export class HomeComponent {
     }
 
     // Reset previous content
-    this.songContent = undefined;
-    this.playlistContent = undefined;
+    this.resourceInformation = undefined;
+    this.mediaType = undefined;
 
     // Show loader
     this.isLoading = true;
 
-    this.defaultService
-      .identifyContentApiIdentifyIsSongGet(this.url)
+    this.fetchService
+      .getMediaType(this.url)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(isSong => {
-        // Set the appropriate loader type based on content type
-        this.loaderType = isSong ? 'single-song' : 'playlist';
-
-        if (isSong) {
-          this.defaultService
-            .getSongInfoApiFetchSongGet(this.url)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-              next: (response) => {
-                // Add a small delay to make the loader visible
-                setTimeout(() => {
-                  this.songContent = response;
-                  this.isLoading = false;
-                }, 800);
-              },
-              error: () => {
-                this.handleError();
-              }
-            });
-        } else {
-          this.defaultService
-            .getPlaylistInfoApiFetchPlaylistGet(this.url)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-              next: (response) => {
-                // Add a small delay to make the loader visible
-                setTimeout(() => {
-                  this.playlistContent = response;
-                  this.isLoading = false;
-                }, 800);
-              },
-              error: () => {
-                this.handleError();
-              }
-            });
+      .subscribe({
+        next: (mediaType) => {
+          this.mediaType = mediaType;
+          if(mediaType == MediaType.NUMBER_0)
+            this.loaderType = 'single-song';
+          else
+            this.loaderType = 'playlist';
+        },
+        error: () => {
+          this.handleError();
         }
-      }, error => {
-        this.handleError();
+      });
+
+    this.fetchService
+      .getResource(this.url)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (resourceInformation) => {
+          this.resourceInformation = resourceInformation;
+          this.isLoading = false;
+        },
+        error: () => {
+          this.handleError();
+        }
       });
   }
 
   private handleError() {
     this.isLoading = false;
     this.modalService.open({
-      title: 'Error',
+      title: 'Oh no..',
       confirmationText: 'Unable to fetch content. Please check the URL and try again.',
       showCancelButton: false
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();

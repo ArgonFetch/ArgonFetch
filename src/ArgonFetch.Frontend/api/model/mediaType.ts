@@ -1,5 +1,5 @@
 /**
- * ArgonFetch API
+ * ArgonFetch.API
  *
  * 
  *
@@ -9,11 +9,10 @@
  */
 
 
-export interface MusicInformation { 
-    streaming_url: string;
-    song_url: string;
-    song_name: string;
-    author: string;
-    image_url: string;
-}
+export type MediaType = 0 | 1;
+
+export const MediaType = {
+    NUMBER_0: 0 as MediaType,
+    NUMBER_1: 1 as MediaType
+};
 

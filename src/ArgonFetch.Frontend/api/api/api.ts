@@ -1,3 +1,5 @@
-export * from './default.service';
-import { DefaultService } from './default.service';
-export const APIS = [DefaultService];
+export * from './fetch.service';
+import { FetchService } from './fetch.service';
+export * from './proxy.service';
+import { ProxyService } from './proxy.service';
+export const APIS = [FetchService, ProxyService];

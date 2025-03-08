@@ -1,4 +1,5 @@
 ﻿using ArgonFetch.Application.Dtos;
+using ArgonFetch.Application.Enums;
 using ArgonFetch.Application.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -15,16 +16,63 @@ namespace ArgonFetch.API.Controllers
             _mediator = mediator;
         }
 
-        [HttpGet("GetMedia", Name = "GetMedia")]
-        public async Task<ActionResult<MediaInformationDto>> GetMedia(string url)
+        [HttpGet("GetMediaType", Name = "GetMediaType")]
+        [ProducesResponseType(typeof(MediaType), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<MediaType>> GetMediaType(string url)
         {
-            return await _mediator.Send(new GetMediaQuery(url));
+            var mediaType = await _mediator.Send(new GetMediaTypeQuery(url));
+            return Ok(mediaType);
         }
 
-        [HttpGet("GetPlaylist", Name = "GetPlaylist")]
-        public async Task<ActionResult<PlaylistInformationDto>> GetResource(string url)
+        [HttpGet("GetResource", Name = "GetResource")]
+        [ProducesResponseType(typeof(ResourceInformationDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<ResourceInformationDto>> GetResource(string url)
         {
-            return await _mediator.Send(new GetPlaylistQuery(url));
+            var mediaType = await _mediator.Send(new GetMediaTypeQuery(url));
+
+            if (mediaType == Application.Enums.MediaType.Media)
+            {
+                var result = await _mediator.Send(new GetMediaQuery(url));
+                var returnDto = new ResourceInformationDto
+                {
+                    Type = mediaType,
+                    MediaItems = new List<MediaInformationDto>
+                    {
+                        new MediaInformationDto
+                        {
+                            RequestedUrl = url,
+                            StreamingUrl = result.StreamingUrl,
+                            CoverUrl = result.CoverUrl,
+                            Title = result.Title,
+                            Author = result.Author
+                        }
+                    }
+                };
+                return Ok(returnDto);
+            }
+            else
+            {
+                var result = await _mediator.Send(new GetPlaylistQuery(url));
+                var returnDto = new ResourceInformationDto
+                {
+                    Type = mediaType,
+                    Title = result.Title,
+                    Author = result.Author,
+                    CoverUrl = result.ImageUrl,
+                    MediaItems = result.MediaItems.Select(mid => new MediaInformationDto
+                    {
+                        RequestedUrl = mid.RequestedUrl,
+                        StreamingUrl = mid.StreamingUrl,
+                        CoverUrl = mid.CoverUrl,
+                        Title = mid.Title,
+                        Author = mid.Author
+                    })
+                };
+
+                return Ok(returnDto);
+            }
         }
     }
 }

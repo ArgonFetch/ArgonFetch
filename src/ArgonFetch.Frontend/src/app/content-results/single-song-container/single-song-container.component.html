@@ -1,18 +1,18 @@
 <div class="song-container">
   <div class="song-content">
     <div class="song-thumbnail">
-      <img [src]="musicInfo.image_url" alt="Song Cover">
+      <img [src]="resourceInformation.mediaItems?.[0]?.coverUrl" alt="Song Cover">
     </div>
 
     <div class="song-info">
       <div class="title-row">
-        <h3 class="song-title">{{ musicInfo.song_name }}</h3>
+        <h3 class="song-title">{{ resourceInformation.mediaItems?.[0]?.title }}</h3>
         <button class="action-button download-button" (click)="onDownload()" [disabled]="isDownloading">
           <fa-icon *ngIf="!isDownloading" [icon]="faDownload"></fa-icon>
           <fa-icon *ngIf="isDownloading" [icon]="faSpinner" animation="spin"></fa-icon>
         </button>
       </div>
-      <p class="song-artist">{{ musicInfo.author }}</p>
+      <p class="song-artist">{{ resourceInformation.mediaItems?.[0]?.author }}</p>
       <div class="download-progress-container" *ngIf="isDownloading">
         <div class="download-progress-bar" [style.width.%]="downloadProgress"></div>
         <div class="download-progress-text">{{ downloadProgress }}%</div>

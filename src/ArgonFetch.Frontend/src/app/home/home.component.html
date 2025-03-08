@@ -1,5 +1,5 @@
 <main class="main-content">
-  <div class="when-content-arrives-spacing" *ngIf="songContent || playlistContent || isLoading"></div>
+  <div class="when-content-arrives-spacing" *ngIf="mediaType || resourceInformation || isLoading"></div>
   <div class="hero">
     <h1>ArgonFetch</h1>
     <p class="subtitle">Universal Media Downloader</p>
@@ -22,9 +22,9 @@
     <app-content-skeleton-loader *ngIf="isLoading" [type]="loaderType" [animate]="true" class="content-container" />
 
     <!-- Actual Content -->
-    <div class="content-container" *ngIf="songContent || playlistContent">
-      <app-single-song-container *ngIf="songContent" [musicInfo]="songContent" />
-      <app-playlist-container *ngIf="playlistContent" [playlistInfo]="playlistContent" />
+    <div class="content-container">
+      <app-single-song-container *ngIf="mediaType === mediaTypeEnum.NUMBER_0 && resourceInformation" [resourceInformation]="resourceInformation" />
+      <app-playlist-container *ngIf="mediaType === mediaTypeEnum.NUMBER_1 && resourceInformation" [resourceInformation]="resourceInformation" />
     </div>
 
     <div class="disclaimer-content">

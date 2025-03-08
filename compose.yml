@@ -1,9 +1,16 @@
 services:
-  argonfetch-proxy:
+  ArgonFetch:
+    image: argonfetch:0.0.1
+    container_name: ArgonFetch
     build:
-      context: ./services/ArgonFetch.Proxy
-      dockerfile: Dockerfile
-    container_name: argonfetch-proxy
-    restart: unless-stopped
+      context: .
+      dockerfile: src/ArgonFetch.API/Dockerfile
+    env_file:
+      - .env
     ports:
-      - "4442:4442"
+      - "8080:8080"
+    networks:
+      - ArgonFetch-default
+
+networks:
+  ArgonFetch-default: {}

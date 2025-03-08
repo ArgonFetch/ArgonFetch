@@ -1,8 +1,0 @@
-services:
-  cors-proxy:
-    build: .
-    container_name: cors-proxy
-    ports:
-      - "4442:4442"
-    volumes:
-      - .:/app/argonfetch/proxy

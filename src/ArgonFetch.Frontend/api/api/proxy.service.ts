@@ -1,5 +1,5 @@
 /**
- * ArgonFetch API
+ * ArgonFetch.API
  *
  * 
  *
@@ -17,11 +17,9 @@ import { CustomHttpParameterCodec }                          from '../encoder';
 import { Observable }                                        from 'rxjs';
 
 // @ts-ignore
-import { HTTPValidationError } from '../model/hTTPValidationError';
+import { ProblemDetails } from '../model/problemDetails';
 // @ts-ignore
-import { MusicInformation } from '../model/musicInformation';
-// @ts-ignore
-import { PlaylistInformation } from '../model/playlistInformation';
+import { ProxyHeadResponse } from '../model/proxyHeadResponse';
 
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
@@ -32,7 +30,7 @@ import { Configuration }                                     from '../configurat
 @Injectable({
   providedIn: 'root'
 })
-export class DefaultService {
+export class ProxyService {
 
     protected basePath = 'http://localhost';
     public defaultHeaders = new HttpHeaders();
@@ -95,18 +93,14 @@ export class DefaultService {
     }
 
     /**
-     * Get Playlist Info
      * @param url 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      */
-    public getPlaylistInfoApiFetchPlaylistGet(url: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<PlaylistInformation>;
-    public getPlaylistInfoApiFetchPlaylistGet(url: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<PlaylistInformation>>;
-    public getPlaylistInfoApiFetchPlaylistGet(url: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<PlaylistInformation>>;
-    public getPlaylistInfoApiFetchPlaylistGet(url: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
-        if (url === null || url === undefined) {
-            throw new Error('Required parameter url was null or undefined when calling getPlaylistInfoApiFetchPlaylistGet.');
-        }
+    public proxyHead(url?: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<ProxyHeadResponse>;
+    public proxyHead(url?: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<ProxyHeadResponse>>;
+    public proxyHead(url?: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<ProxyHeadResponse>>;
+    public proxyHead(url?: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
 
         let localVarQueryParameters = new HttpParams({encoder: this.encoder});
         if (url !== undefined && url !== null) {
@@ -120,7 +114,9 @@ export class DefaultService {
         if (localVarHttpHeaderAcceptSelected === undefined) {
             // to determine the Accept header
             const httpHeaderAccepts: string[] = [
-                'application/json'
+                'text/plain',
+                'application/json',
+                'text/json'
             ];
             localVarHttpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         }
@@ -150,8 +146,8 @@ export class DefaultService {
             }
         }
 
-        let localVarPath = `/api/fetch/playlist`;
-        return this.httpClient.request<PlaylistInformation>('get', `${this.configuration.basePath}${localVarPath}`,
+        let localVarPath = `/api/Proxy/Head`;
+        return this.httpClient.request<ProxyHeadResponse>('get', `${this.configuration.basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 params: localVarQueryParameters,
@@ -166,23 +162,29 @@ export class DefaultService {
     }
 
     /**
-     * Get Song Info
      * @param url 
+     * @param start 
+     * @param end 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      */
-    public getSongInfoApiFetchSongGet(url: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<MusicInformation>;
-    public getSongInfoApiFetchSongGet(url: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<MusicInformation>>;
-    public getSongInfoApiFetchSongGet(url: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<MusicInformation>>;
-    public getSongInfoApiFetchSongGet(url: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
-        if (url === null || url === undefined) {
-            throw new Error('Required parameter url was null or undefined when calling getSongInfoApiFetchSongGet.');
-        }
+    public proxyRange(url?: string, start?: number, end?: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<Blob>;
+    public proxyRange(url?: string, start?: number, end?: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Blob>>;
+    public proxyRange(url?: string, start?: number, end?: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Blob>>;
+    public proxyRange(url?: string, start?: number, end?: number, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
 
         let localVarQueryParameters = new HttpParams({encoder: this.encoder});
         if (url !== undefined && url !== null) {
           localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
             <any>url, 'url');
+        }
+        if (start !== undefined && start !== null) {
+          localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
+            <any>start, 'start');
+        }
+        if (end !== undefined && end !== null) {
+          localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
+            <any>end, 'end');
         }
 
         let localVarHeaders = this.defaultHeaders;
@@ -191,7 +193,9 @@ export class DefaultService {
         if (localVarHttpHeaderAcceptSelected === undefined) {
             // to determine the Accept header
             const httpHeaderAccepts: string[] = [
-                'application/json'
+                'text/plain',
+                'application/json',
+                'text/json'
             ];
             localVarHttpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         }
@@ -210,23 +214,12 @@ export class DefaultService {
         }
 
 
-        let responseType_: 'text' | 'json' | 'blob' = 'json';
-        if (localVarHttpHeaderAcceptSelected) {
-            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
-                responseType_ = 'text';
-            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
-                responseType_ = 'json';
-            } else {
-                responseType_ = 'blob';
-            }
-        }
-
-        let localVarPath = `/api/fetch/song`;
-        return this.httpClient.request<MusicInformation>('get', `${this.configuration.basePath}${localVarPath}`,
+        let localVarPath = `/api/Proxy/Range`;
+        return this.httpClient.request('get', `${this.configuration.basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 params: localVarQueryParameters,
-                responseType: <any>responseType_,
+                responseType: "blob",
                 withCredentials: this.configuration.withCredentials,
                 headers: localVarHeaders,
                 observe: observe,
@@ -237,18 +230,14 @@ export class DefaultService {
     }
 
     /**
-     * Identify Content
      * @param url 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      */
-    public identifyContentApiIdentifyIsSongGet(url: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<boolean>;
-    public identifyContentApiIdentifyIsSongGet(url: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<boolean>>;
-    public identifyContentApiIdentifyIsSongGet(url: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<boolean>>;
-    public identifyContentApiIdentifyIsSongGet(url: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
-        if (url === null || url === undefined) {
-            throw new Error('Required parameter url was null or undefined when calling identifyContentApiIdentifyIsSongGet.');
-        }
+    public proxyUrl(url?: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<string>;
+    public proxyUrl(url?: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<string>>;
+    public proxyUrl(url?: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<string>>;
+    public proxyUrl(url?: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'text/plain' | 'application/json' | 'text/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
 
         let localVarQueryParameters = new HttpParams({encoder: this.encoder});
         if (url !== undefined && url !== null) {
@@ -262,7 +251,9 @@ export class DefaultService {
         if (localVarHttpHeaderAcceptSelected === undefined) {
             // to determine the Accept header
             const httpHeaderAccepts: string[] = [
-                'application/json'
+                'text/plain',
+                'application/json',
+                'text/json'
             ];
             localVarHttpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         }
@@ -292,8 +283,8 @@ export class DefaultService {
             }
         }
 
-        let localVarPath = `/api/identify/is-song`;
-        return this.httpClient.request<boolean>('get', `${this.configuration.basePath}${localVarPath}`,
+        let localVarPath = `/api/Proxy/Url`;
+        return this.httpClient.request<string>('get', `${this.configuration.basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 params: localVarQueryParameters,
