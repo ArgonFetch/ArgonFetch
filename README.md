@@ -1,16 +1,21 @@
 # <p align="center">ArgonFetch</p>
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/bf03eee6-0aa5-4508-8d2f-cb6fd6b1485f" width="200" alt="ArgonFetch Logo">
+  <img src="assets/logo-simple.svg" width="200" alt="ArgonFetch Logo">
 </p>
 <p align="center">
   <strong>ArgonFetch is Yet Another Media Downloader.</strong> 
   A powerful tool for downloading videos, music, and other media from various online sources.
 </p>
 <p align="center">
-  <a href="https://hits.seeyoufarm.com"><img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FArgonFetch%2FArgonFetch&count_bg=%23A855F6&title_bg=%23555555&icon=powershell.svg&icon_color=%23E7E7E7&title=Visits&edge_flat=false"/></a>
+  <a><img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FArgonFetch%2FArgonFetch&count_bg=%23A855F6&title_bg=%23555555&icon=powershell.svg&icon_color=%23E7E7E7&title=Visits&edge_flat=false"/></a>
+  <a href="https://www.argonfetch.dev/"><img src="https://img.shields.io/badge/Cloud%20Version-argonfetch.dev-9f54e5.svg"/></a>
+  <a href="https://github.com/ArgonFetch/ArgonFetch?tab=readme-ov-file#-installation"><img src="https://img.shields.io/badge/Selfhost-Instructions-9f54e5.svg"/></a>
+  <a href="https://github.com/ArgonFetch/ArgonFetch/blob/main/devenv.md"><img src="https://img.shields.io/badge/Development-Setup-9f54e5.svg"/></a>
 </p>
 
 ---
+
+<!-- [![Version](https://img.shields.io/github/v/release/ArgonFetch/ArgonFetch?color=%230567ff&label=Latest%20Release&style=for-the-badge)](https://github.com/ArgonFetch/ArgonFetch/releases/latest) -->
 
 ## 🚀 Features
 - 📥 Download videos, music, and more from multiple sources 
@@ -23,84 +28,43 @@
 </p>
 
 ## 📦 Installation
-```sh
-# Clone the repository
-git clone https://github.com/Pianonic/ArgonFetch.git
-# Navigate to the project directory
-cd ArgonFetch
-# Edit the .env file with your Spotify API credentials
-# Run the application using Docker Compose
-docker compose up -d
-```
+1. Clone the repository:
+  ```sh
+  # Download Source
+  curl -fsSL -o argonfetch.tar.gz https://github.com/Pianonic/ArgonFetch/archive/refs/heads/main.tar.gz
+  # Unpack Source, remove tar and cd into the source directory
+  tar -xzf argonfetch.tar.gz
+  rm argonfetch.tar.gz
+  cd ArgonFetch-main
+  ```
+2. Create a `.env` file with your Spotify Credentials:
+   ```
+   SPOTIFY_CLIENT_ID=your_spotify_client_id
+   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+   ```
+3. Run the application using Docker Compose
+  ```sh
+  docker compose up -d
+  ```
+
 After running the command, ArgonFetch should be accessible at http://localhost:8080.
 
 ## 🛠️ Usage
 Simply launch ArgonFetch and paste the URL of the media you want to download. 
 <!--- Choose your preferred format and quality, then start downloading! --->
 
+## 🛣️ Roadmap
+- [x] Spotify Songs
+- [ ] Spotify Playlists
+- [ ] Spotify Albums
+- [ ] YouTube Media
+- [ ] SoundCloud Media
+### Future Plans
+- [ ] Social Media Support (X, Instagram, TikTok ...)
+
 ## 💻 Development Environment Setup
-### Prerequisites
-- Git
-- Node.js and npm
-- Angular CLI
-- Python 3.x or .NET SDK (depending on which backend you want to use)
+To setup the development environment follow [this](devenv.md) guide.
 
-### Setting Up the Environment
-1. Clone the repository:
-   ```sh
-   git clone https://github.com/Pianonic/ArgonFetch.git
-   cd ArgonFetch
-   ```
-
-2. Configure API Credentials:
-   **For Python Backend:**
-   Create a `.env` file in the `tmp/ArgonFetch.Backend` directory with:
-   ```
-   SPOTIFY_CLIENT_ID=your_spotify_client_id
-   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-   ```
-   **For C# Backend:**
-   Set up user secrets:
-   ```sh
-   cd src/ArgonFetch.API
-   dotnet user-secrets init
-   dotnet user-secrets set "Spotify:ClientId" "your_spotify_client_id"
-   dotnet user-secrets set "Spotify:ClientSecret" "your_spotify_client_secret"
-   ```
-
-3. Install frontend dependencies:
-   ```sh
-   cd src/ArgonFetch.Frontend
-   npm install
-   ```
-1. 
-
-### Running the Application
-The following steps are required to run ArgonFetch in both development and production environments:
-
-
-1. Start the backend server:
-   **For Python Backend:**
-   ```sh
-   cd tmp/ArgonFetch.Backend
-   # Start the Python server
-   python app.py
-   ```
-   **OR For C# Backend:**
-   ```sh
-   cd src/ArgonFetch.API
-   dotnet run
-   ```
-
-2. Start the frontend application:
-   ```sh
-   cd src/ArgonFetch.Frontend
-   ng serve
-   ```
-
-3. Access the application at `http://localhost:4200`
-
-1. 
 ## 📜 License
 This project is licensed under the GPL-3.0 License. 
 See the [LICENSE](LICENSE) file for more details.
