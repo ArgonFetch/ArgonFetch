@@ -1,6 +1,15 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
 WORKDIR /app
+
+# Install ffmpeg and yt-dlp as root before switching users
+USER root
+RUN apt-get update && apt-get install -y ffmpeg wget && \
+    wget -O /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp && \
+    chmod a+rx /usr/local/bin/yt-dlp && \
+    rm -rf /var/lib/apt/lists/*
+
+# Switch to non-root user after installing packages
+USER $APP_UID
 EXPOSE 8080
 EXPOSE 8081
 

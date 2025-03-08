@@ -2,8 +2,8 @@
 README.md
 api.module.ts
 api/api.ts
-api/corsProxy.service.ts
 api/fetch.service.ts
+api/proxy.service.ts
 configuration.ts
 encoder.ts
 git_push.sh

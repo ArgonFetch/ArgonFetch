@@ -2,6 +2,7 @@
 using ArgonFetch.Application.Enums;
 using ArgonFetch.Application.Interfaces;
 using ArgonFetch.Application.Models;
+using System.Diagnostics;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Options;
 
@@ -16,6 +17,34 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
             _youtubeDL = new YoutubeDL();
             _youtubeDL.YoutubeDLPath = "yt-dlp"; // Ensure yt-dlp is installed
             _youtubeDL.FFmpegPath = "ffmpeg"; // Ensure ffmpeg is installed
+        }
+
+        public async Task<string> GetYtDlpVersionAsync()
+        {
+            try
+            {
+                var processStartInfo = new ProcessStartInfo
+                {
+                    FileName = "yt-dlp",
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using (var process = new Process { StartInfo = processStartInfo })
+                {
+                    process.Start();
+                    string output = await process.StandardOutput.ReadToEndAsync();
+                    process.WaitForExit();
+
+                    return output.Trim();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<MediaInformationDto> FetchLinkAsync(string query, DllFetcherOptions dllFetcherOptions = null, CancellationToken cancellationToken = default)

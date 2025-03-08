@@ -23,21 +23,20 @@
 </p>
 
 ## 📦 Installation
-> [!WARNING]  
-> This does not fully work yet.
 ```sh
 # Clone the repository
 git clone https://github.com/Pianonic/ArgonFetch.git
 # Navigate to the project directory
 cd ArgonFetch
+# Edit the .env file with your Spotify API credentials
 # Run the application using Docker Compose
-docker-compose up -d
+docker compose up -d
 ```
-After running the command, ArgonFetch should be accessible at http://localhost:8000.
+After running the command, ArgonFetch should be accessible at http://localhost:8080.
 
 ## 🛠️ Usage
 Simply launch ArgonFetch and paste the URL of the media you want to download. 
-Choose your preferred format and quality, then start downloading!
+<!--- Choose your preferred format and quality, then start downloading! --->
 
 ## 💻 Development Environment Setup
 ### Prerequisites
@@ -74,26 +73,13 @@ Choose your preferred format and quality, then start downloading!
    cd src/ArgonFetch.Frontend
    npm install
    ```
-
-### Running the Development Setup
-To run **only the proxy** in development mode:
-
-```sh
-docker-compose -f dev-docker-compose.yml up -d
-```
-
-This will start the **proxy** service, and you can access it at `http://localhost:4442`.
+1. 
 
 ### Running the Application
 The following steps are required to run ArgonFetch in both development and production environments:
 
-1. Start the proxy server (required for API communication):
-   ```sh
-   cd scripts
-   run_proxy.bat
-   ```
 
-2. Start the backend server:
+1. Start the backend server:
    **For Python Backend:**
    ```sh
    cd tmp/ArgonFetch.Backend
@@ -106,16 +92,15 @@ The following steps are required to run ArgonFetch in both development and produ
    dotnet run
    ```
 
-3. Start the frontend application:
+2. Start the frontend application:
    ```sh
    cd src/ArgonFetch.Frontend
    ng serve
    ```
 
-4. Access the application at `http://localhost:4200`
+3. Access the application at `http://localhost:4200`
 
-**Important Note:** The proxy server is not just for testing - it's an essential component of the application architecture. It handles API requests and bypasses CORS restrictions in both development and production environments.
-
+1. 
 ## 📜 License
 This project is licensed under the GPL-3.0 License. 
 See the [LICENSE](LICENSE) file for more details.

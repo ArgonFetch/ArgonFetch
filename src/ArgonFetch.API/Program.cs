@@ -2,6 +2,7 @@ using ArgonFetch.Application.Behaviors;
 using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services.DDLFetcherServices;
 using ArgonFetch.Application.Validators;
+using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MediatR;
@@ -11,7 +12,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
-
 builder.Services.AddSpaStaticFiles(spaStaticFilesOptions => { spaStaticFilesOptions.RootPath = "wwwroot/browser"; });
 
 // Add MediatR
@@ -28,8 +28,20 @@ builder.Services.AddScoped<DllFetcherService>();
 builder.Services.AddScoped<SpotifyClient>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
-    var clientId = config["Spotify:ClientId"];
-    var clientSecret = config["Spotify:ClientSecret"];
+
+    string clientId, clientSecret;
+
+    if (builder.Environment.IsDevelopment())
+    {
+        clientId = config["Spotify:ClientId"];
+        clientSecret = config["Spotify:ClientSecret"];
+    }
+    else
+    {
+        Env.Load();
+        clientId = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_ID");
+        clientSecret = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_SECRET");
+    }
 
     if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
         throw new InvalidOperationException("Spotify ClientId and ClientSecret must be provided.");
@@ -55,7 +67,6 @@ builder.Services.AddSwaggerGen();
 // Configure CORS for frontend development
 if (builder.Environment.IsDevelopment())
 {
-    // cors
     builder.Services.AddCors(options =>
     {
         options.AddDefaultPolicy(corsBuilder =>
@@ -74,6 +85,22 @@ if (builder.Environment.IsDevelopment())
 }
 
 var app = builder.Build();
+
+// yt-dlp Version Check
+using (var scope = app.Services.CreateScope())
+{
+    var dllFetcherService = scope.ServiceProvider.GetRequiredService<DllFetcherService>();
+    var ytDlpVersion = await dllFetcherService.GetYtDlpVersionAsync();
+
+    if (string.IsNullOrEmpty(ytDlpVersion))
+    {
+        Console.WriteLine("WARNING: yt-dlp is not installed or cannot be found!");
+    }
+    else
+    {
+        Console.WriteLine($"yt-dlp Version: {ytDlpVersion}");
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

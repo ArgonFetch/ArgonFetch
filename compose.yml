@@ -8,18 +8,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8080:8080"  # Backend remains accessible externally
-    networks:
-      - ArgonFetch-default
-  
-  argonfetch-proxy:
-    build:
-      context: ./services/ArgonFetch.Proxy
-      dockerfile: Dockerfile
-    container_name: argonfetch-proxy
-    restart: unless-stopped
-    expose:
-      - "4442"  # No external port mapping, only accessible inside Docker
+      - "8080:8080"
     networks:
       - ArgonFetch-default
 

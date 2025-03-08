@@ -2,7 +2,7 @@ import { Component, DestroyRef, Input } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { CommonModule } from '@angular/common';
 import { faDownload, faSpinner } from '@fortawesome/free-solid-svg-icons';
-import { CorsProxyService, ResourceInformationDto } from '../../../../api';
+import { ProxyService, ResourceInformationDto } from '../../../../api';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -34,9 +34,7 @@ export class SingleSongContainerComponent {
   private chunks: { start: number; end: number; loaded: number; blob?: Blob }[] = [];
   private activeRequests = 0;
 
-  constructor(private corsProxyService: CorsProxyService) { 
-    //console.log(this.resourceInformation.mediaItems?.[0].streamingUrl)
-  }
+  constructor(private proxyService: ProxyService) {}
 
   formatSpeed(bytesPerSecond: number): string {
     if (bytesPerSecond > 1048576) { // 1 MB/s
@@ -96,7 +94,7 @@ export class SingleSongContainerComponent {
     this.startTime = Date.now();
 
     try {
-      const headResponse = await firstValueFrom(this.corsProxyService.proxyHead(url));
+      const headResponse = await firstValueFrom(this.proxyService.proxyHead(url));
 
       console.log(headResponse);
 
@@ -148,7 +146,7 @@ export class SingleSongContainerComponent {
 
     try {
       const response = await firstValueFrom(
-        this.corsProxyService.proxyRange(url, chunk.start, chunk.end)
+        this.proxyService.proxyRange(url, chunk.start, chunk.end)
       );
 
       chunk.blob = response;

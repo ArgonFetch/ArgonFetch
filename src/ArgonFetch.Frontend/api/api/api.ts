@@ -1,5 +1,5 @@
-export * from './corsProxy.service';
-import { CorsProxyService } from './corsProxy.service';
 export * from './fetch.service';
 import { FetchService } from './fetch.service';
-export const APIS = [CorsProxyService, FetchService];
+export * from './proxy.service';
+import { ProxyService } from './proxy.service';
+export const APIS = [FetchService, ProxyService];
