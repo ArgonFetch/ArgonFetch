@@ -28,6 +28,13 @@
 </p>
 
 ## 📦 Installation
+
+### Preparations:
+
+- For Spotify Support you'll need to [create an App using Spotify for Developers](https://developer.spotify.com/documentation/web-api/concepts/apps).
+  From there you'll get a Client ID and a Client Secret, which you will have to provide during the install.
+
+### Option 1: Automated Setup (Recommended)
 1. Clone the repository:
   ```sh
   # Download Source
@@ -37,17 +44,25 @@
   rm argonfetch.tar.gz
   cd ArgonFetch-main
   ```
-2. Create a `.env` file with your Spotify Credentials:
-   ```
-   SPOTIFY_CLIENT_ID=your_spotify_client_id
-   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-   ```
-3. Run the application using Docker Compose
-  ```sh
-  docker compose up -d
-  ```
 
-After running the command, ArgonFetch should be accessible at http://localhost:8080.
+2. Run the setup script:
+   
+   **Linux/macOS:**
+   ```sh
+   # Make the script executable
+   chmod +x setup.sh
+   
+   # Run interactively (you'll be prompted for credentials)
+   ./setup.sh
+   ```
+   
+   **Windows (PowerShell):**
+   ```powershell   
+   # Run interactively (you'll be prompted for credentials)
+   .\setup.ps1
+   ```
+
+After the installation, ArgonFetch should be accessible at http://localhost:8080.
 
 ## 🛠️ Usage
 Simply launch ArgonFetch and paste the URL of the media you want to download. 
