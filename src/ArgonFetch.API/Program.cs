@@ -55,6 +55,9 @@ builder.Services.AddScoped<SpotifyClient>(sp =>
 // Register YoutubeMusicAPI
 builder.Services.AddScoped<YTMusicAPI.SearchClient>();
 
+// Register YoutubeDL
+builder.Services.AddTransient<YoutubeDLSharp.YoutubeDL>();
+
 // Register FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<GetMediaQueryValidator>();
