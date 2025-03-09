@@ -19,6 +19,7 @@ export class AppComponent {
   faMoon = faMoon;
   faGithub = faGithub;
   isDarkTheme$;
+  version = '1.0.0';
 
   constructor(private themeService: ThemeService) {
     this.isDarkTheme$ = this.themeService.isDarkTheme$;

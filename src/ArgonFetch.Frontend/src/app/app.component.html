@@ -4,16 +4,26 @@
       <a routerLink="/" class="nav-logo">ArgonFetch</a>
     </div>
     <div class="nav-right">
-      <a routerLink="/about" class="nav-link">About</a>
       <button class="theme-toggle" (click)="toggleTheme()">
         <fa-icon [icon]="(isDarkTheme$ | async) ? faSun : faMoon"></fa-icon>
       </button>
-      <a href="https://github.com/pianonic/argonfetch" class="github-link" target="_blank">
-        <fa-icon [icon]="faGithub" class="github-icon"></fa-icon>
-      </a>
     </div>
   </div>
 </nav>
 
 <router-outlet></router-outlet>
 <app-confirmation-modal></app-confirmation-modal>
+
+<footer class="footer">
+  <div class="footer-links">
+    <a href="https://argonfetch.dev" class="footer-link">ArgonFetch</a>
+    <span class="footer-separator">•</span>
+    <a routerLink="/about" class="footer-link">About</a>
+    <span class="footer-separator">•</span>
+    <a href="https://github.com/ArgonFetch/ArgonFetch" class="footer-link" target="_blank">
+      Open Source <fa-icon [icon]="faGithub" class="footer-github-icon"></fa-icon>
+    </a>
+    <span class="footer-separator">•</span>
+    <a href="https://github.com/ArgonFetch/ArgonFetch/releases/tag/v{{ version }}" class="footer-link footer-version" target="_blank">v{{ version }}</a>
+  </div>
+</footer>

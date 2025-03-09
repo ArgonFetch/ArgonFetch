@@ -38,7 +38,7 @@
 1. Clone the repository:
   ```sh
   # Download Source
-  curl -fsSL -o argonfetch.tar.gz https://github.com/Pianonic/ArgonFetch/archive/refs/heads/main.tar.gz
+  curl -fsSL -o argonfetch.tar.gz https://github.com/ArgonFetch/ArgonFetch/archive/refs/heads/main.tar.gz
   # Unpack Source, remove tar and cd into the source directory
   tar -xzf argonfetch.tar.gz
   rm argonfetch.tar.gz

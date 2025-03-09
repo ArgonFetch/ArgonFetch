@@ -8,17 +8,11 @@
 ## Setting Up the Environment
 1. Clone the repository:
    ```sh
-   git clone https://github.com/Pianonic/ArgonFetch.git
+   git clone https://github.com/ArgonFetch/ArgonFetch.git
    cd ArgonFetch
    ```
 
 2. Configure API Credentials:
-   **For Python Backend:**
-   Create a `.env` file in the `tmp/ArgonFetch.Backend` directory with:
-   ```
-   SPOTIFY_CLIENT_ID=your_spotify_client_id
-   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-   ```
    **For C# Backend:**
    Set up user secrets:
    ```sh
@@ -39,12 +33,6 @@ The following steps are required to run ArgonFetch in both development and produ
 
 
 1. Start the backend server:
-   **For Python Backend:**
-   ```sh
-   cd tmp/ArgonFetch.Backend
-   # Start the Python server
-   python app.py
-   ```
    **OR For C# Backend:**
    ```sh
    cd src/ArgonFetch.API
