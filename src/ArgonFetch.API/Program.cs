@@ -1,3 +1,4 @@
+using ArgonFetch.API.IntegrationValidators;
 using ArgonFetch.Application.Behaviors;
 using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services.DDLFetcherServices;
@@ -7,6 +8,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using MediatR;
 using SpotifyAPI.Web;
+using YoutubeDLSharp;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,7 +24,6 @@ builder.Services.AddHttpClient<TikTokDllFetcherService>();
 
 // Register the IDllFetcher implementations
 builder.Services.AddScoped<TikTokDllFetcherService>();
-builder.Services.AddScoped<DllFetcherService>();
 
 // Register SpotifyAPI
 builder.Services.AddScoped<SpotifyClient>(sp =>
@@ -52,8 +53,9 @@ builder.Services.AddScoped<SpotifyClient>(sp =>
     return new SpotifyClient(spotifyConfig);
 });
 
-// Register YoutubeMusicAPI
+// Register YoutubeMusicAPI and YoutubeDL
 builder.Services.AddScoped<YTMusicAPI.SearchClient>();
+builder.Services.AddScoped<YoutubeDL>();
 
 // Register FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
@@ -86,20 +88,24 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
-// yt-dlp Version Check.
+// yt-dlp and FFmpeg Version Check.
 using (var scope = app.Services.CreateScope())
 {
-    var dllFetcherService = scope.ServiceProvider.GetRequiredService<DllFetcherService>();
-    var ytDlpVersion = await dllFetcherService.GetYtDlpVersionAsync();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
+    // Check yt-dlp
+    var ytDlpVersion = await MediaValidators.GetYtDlpVersionAsync();
     if (string.IsNullOrEmpty(ytDlpVersion))
-    {
-        Console.WriteLine("WARNING: yt-dlp is not installed or cannot be found!");
-    }
+        logger.LogWarning("yt-dlp is not installed or cannot be found!");
     else
-    {
-        Console.WriteLine($"yt-dlp Version: {ytDlpVersion}");
-    }
+        logger.LogInformation("yt-dlp Version: {Version}", ytDlpVersion);
+
+    // Check FFmpeg
+    var ffmpegVersion = await MediaValidators.GetFfmpegVersionAsync();
+    if (string.IsNullOrEmpty(ffmpegVersion))
+        logger.LogWarning("FFmpeg is not installed or cannot be found!");
+    else
+        logger.LogInformation("FFmpeg Version: {Version}", ffmpegVersion);
 }
 
 // Configure the HTTP request pipeline.

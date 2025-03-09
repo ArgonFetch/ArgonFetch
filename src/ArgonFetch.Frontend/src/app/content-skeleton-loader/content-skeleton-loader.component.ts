@@ -9,7 +9,7 @@ import { Component, Input, OnInit } from '@angular/core';
   styleUrl: './content-skeleton-loader.component.scss'
 })
 export class ContentSkeletonLoaderComponent implements OnInit {
-  @Input() type: 'single-song' | 'playlist' = 'single-song';
+  @Input() type: 'single-song' | 'playlist' | 'unknown' = 'unknown';
   @Input() animate: boolean = true;
   
   ngOnInit() {

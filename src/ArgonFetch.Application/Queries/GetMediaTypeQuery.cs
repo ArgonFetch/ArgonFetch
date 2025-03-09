@@ -23,6 +23,9 @@ namespace ArgonFetch.Application.Queries
             if (new[] { ContentType.Media, ContentType.Url, ContentType.SearchTerm }.Contains(contentType))
                 return MediaType.Media;
 
+            if (contentType == ContentType.Unknown)
+                return MediaType.Unknown;
+
             return MediaType.PlayList;
         }
     }

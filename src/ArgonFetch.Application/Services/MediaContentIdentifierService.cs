@@ -41,17 +41,18 @@ namespace ArgonFetch.Application.Services
                     return ContentType.Media;
 
                 case Platform.Unknown:
-                    using (var httpClient = new HttpClient())
-                    {
-                        var response = await httpClient.GetAsync(query);
-                        response.EnsureSuccessStatusCode();
+                    return ContentType.Unknown;
+                //using (var httpClient = new HttpClient())
+                //{
+                //    var response = await httpClient.GetAsync(query);
+                //    response.EnsureSuccessStatusCode();
 
-                        var contentType = response.Content.Headers.ContentType?.MediaType;
+                //    var contentType = response.Content.Headers.ContentType?.MediaType;
 
-                        return (contentType != null && (contentType.Contains("audio") || contentType.Contains("video")))
-                            ? ContentType.Media
-                            : ContentType.Url;
-                    }
+                //    return (contentType != null && (contentType.Contains("audio") || contentType.Contains("video")))
+                //        ? ContentType.Media
+                //        : ContentType.Url;
+                //}
 
                 default:
                     throw new UnknownContentTypeException();

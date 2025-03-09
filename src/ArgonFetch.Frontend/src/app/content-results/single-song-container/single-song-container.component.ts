@@ -96,8 +96,6 @@ export class SingleSongContainerComponent {
     try {
       const headResponse = await firstValueFrom(this.proxyService.proxyHead(url));
 
-      console.log(headResponse);
-
       this.totalBytes = headResponse.contentLength ?? 0;
 
       if (!this.totalBytes) {

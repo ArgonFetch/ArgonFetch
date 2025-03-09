@@ -1,66 +1,158 @@
-﻿using AngleSharp;
-using ArgonFetch.Application.Dtos;
+﻿using ArgonFetch.Application.Dtos;
 using ArgonFetch.Application.Enums;
-using ArgonFetch.Application.Models;
 using ArgonFetch.Application.Services;
-using ArgonFetch.Application.Services.DDLFetcherServices;
 using MediatR;
 using SpotifyAPI.Web;
+using YoutubeDLSharp;
+using YoutubeDLSharp.Metadata;
+using YoutubeDLSharp.Options;
 
 namespace ArgonFetch.Application.Queries
 {
-    public class GetMediaQuery : IRequest<MediaInformationDto>
+    public class GetMediaQuery : IRequest<ResourceInformationDto>
     {
-        public GetMediaQuery(string query)
+        public GetMediaQuery(string url)
         {
-            Query = query;
+            Query = url;
         }
 
         public string Query { get; set; }
     }
 
-    public class GetMediaQueryHandler : IRequestHandler<GetMediaQuery, MediaInformationDto>
+    public class GetMediaQueryHandler : IRequestHandler<GetMediaQuery, ResourceInformationDto>
     {
+        private readonly YoutubeDL _youtubeDL;
         private readonly SpotifyClient _spotifyClient;
-        private readonly DllFetcherService _dllFetcherService;
-        private readonly TikTokDllFetcherService _tikTokDllFetcher;
-        private readonly HttpClient _httpClient;
         private readonly YTMusicAPI.SearchClient _ytmSearchClient;
 
-        public GetMediaQueryHandler(SpotifyClient spotifyClient, DllFetcherService dllFetcherService, HttpClient httpClient, YTMusicAPI.SearchClient ytmSearchClient, TikTokDllFetcherService tikTokDllFetcher)
+        public GetMediaQueryHandler(
+            SpotifyClient spotifyClient,
+            YTMusicAPI.SearchClient ytmSearchClient,
+            YoutubeDL youtubeDL
+            )
         {
             _spotifyClient = spotifyClient;
-            _dllFetcherService = dllFetcherService;
-            _httpClient = httpClient;
             _ytmSearchClient = ytmSearchClient;
-            _tikTokDllFetcher = tikTokDllFetcher;
+            _youtubeDL = youtubeDL;
         }
 
-        public async Task<MediaInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
+        public async Task<ResourceInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
         {
             var platform = PlatformIdentifierService.IdentifyPlatform(request.Query);
 
-            switch (platform)
+            if (platform == Platform.Spotify)
             {
-                case Platform.SearchTerm:
-                    return await _dllFetcherService.FetchLinkAsync(request.Query, cancellationToken: cancellationToken);
-                case Platform.Spotify:
-                    return await HandleSpotify(request.Query, cancellationToken);
-                case Platform.YouTube:
-                    return await _dllFetcherService.FetchLinkAsync(request.Query, cancellationToken: cancellationToken);
-                case Platform.SoundCloud:
-                    return await HandleSoundCloud(request.Query);
-                case Platform.TikTok:
-                    return await _tikTokDllFetcher.FetchLinkAsync(request.Query, cancellationToken: cancellationToken);
-                case Platform.Unknown:
-                    return await _dllFetcherService.FetchLinkAsync(request.Query, cancellationToken: cancellationToken);
+                return await HandleSpotify(request.Query, cancellationToken);
+            }
 
-                default:
-                    throw new NotSupportedException($"Platform {platform} is not supported.");
+            var resultData = await Search(request.Query);
+
+            if (resultData.ResultType == MetadataType.Playlist)
+            {
+                throw new NotSupportedException("Playlists are not supported yet.");
+                try
+                {
+                    var mediaItems = resultData.Entries?.Select(entry => new MediaInformationDto
+                    {
+                        RequestedUrl = entry.Url ?? entry.WebpageUrl ?? string.Empty,
+                        StreamingUrl = entry.Url ?? string.Empty,
+                        CoverUrl = GetBestThumbnail(entry.Thumbnails) ?? entry.Thumbnail ?? string.Empty,
+                        Title = entry.Title ?? string.Empty,
+                        Author = entry.Uploader ?? string.Empty
+                    }).ToList() ?? new List<MediaInformationDto>();
+
+                    var returnDto = new ResourceInformationDto
+                    {
+                        Type = MediaType.PlayList,
+                        Title = resultData.Title ?? string.Empty,
+                        Author = resultData.Uploader ?? string.Empty,
+                        CoverUrl = GetBestThumbnail(resultData.Thumbnails) ?? resultData.Thumbnail ?? string.Empty,
+                        MediaItems = mediaItems
+                    };
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"Failed to fetch playlist information: {ex.Message}");
+                }
+            }
+            else
+            {
+                string thumbnailUrl = resultData.Thumbnail;
+
+                // Try to find largest square thumbnail if available
+                if (resultData.Thumbnails?.Any() == true)
+                {
+                    var squareThumbnails = resultData.Thumbnails
+                        .Where(t => t.Width == t.Height && t.Width.HasValue)
+                        .ToList();
+
+                    if (squareThumbnails.Any())
+                    {
+                        thumbnailUrl = squareThumbnails
+                            .OrderByDescending(t => t.Width)
+                            .First()
+                            .Url;
+                    }
+                }
+
+                var streamingUrl = resultData.Url ?? await GetBestStreamingUrl(resultData.Formats);
+
+                return new ResourceInformationDto
+                {
+                    Type = MediaType.Media,
+                    MediaItems =
+                    [
+                            new MediaInformationDto
+                            {
+                                RequestedUrl = request.Query,
+                                StreamingUrl = streamingUrl,
+                                CoverUrl = thumbnailUrl,
+                                Title = resultData.Title,
+                                Author = resultData.Uploader
+                            }
+                    ]
+                };
             }
         }
 
-        private async Task<MediaInformationDto> HandleSpotify(string query, CancellationToken cancellationToken)
+        private async Task<VideoData> Search(string query, OptionSet? options = null)
+        {
+            options ??= new OptionSet { DumpSingleJson = true };
+
+            if (!Uri.IsWellFormedUriString(query, UriKind.Absolute))
+            {
+                var searchOptions = new OptionSet
+                {
+                    Format = "best",
+                    NoPlaylist = true,
+                };
+
+                var searchResult = await _youtubeDL.RunVideoDataFetch($"ytsearch:{query}", overrideOptions: searchOptions);
+                query = searchResult.Data.Entries.First().Url;
+            }
+
+            var result = await _youtubeDL.RunVideoDataFetch(query, overrideOptions: options);
+            if (!result.Success)
+                throw new ArgumentException($"Failed to fetch data: {string.Join(", ", result.ErrorOutput)}");
+
+            return result.Data;
+        }
+
+        private async Task<string> GetBestStreamingUrl(FormatData[] formatData)
+        {
+            if (formatData == null || !formatData.Any())
+                return string.Empty;
+
+            var bestFormat = formatData
+                .Where(f => !string.IsNullOrEmpty(f.AudioCodec) && f.AudioCodec != "none")
+                .OrderByDescending(f => f.AudioBitrate)
+                .ThenByDescending(f => f.AudioSamplingRate)
+                .FirstOrDefault();
+
+            return await Task.FromResult(bestFormat?.Url ?? string.Empty);
+        }
+
+        private async Task<ResourceInformationDto> HandleSpotify(string query, CancellationToken cancellationToken)
         {
             var uri = new Uri(query);
             var segments = uri.Segments;
@@ -76,38 +168,41 @@ namespace ArgonFetch.Application.Queries
 
             var ytmTrackUrl = response.Result.First().Url;
 
-            var downloadOptions = new DllFetcherOptions { MediaFormat = MediaFormat.BestAudio };
-
-            var streamingUrl = (await _dllFetcherService.FetchLinkAsync(ytmTrackUrl, downloadOptions, cancellationToken)).StreamingUrl;
-
-            return new MediaInformationDto
+            var downloadOptions = new OptionSet
             {
-                RequestedUrl = query,
-                StreamingUrl = streamingUrl,
-                CoverUrl = searchResponse.Album.Images.First().Url,
-                Title = searchResponse.Name,
-                Author = searchResponse.Artists.First().Name
+                Format = "best",
+                NoPlaylist = true,
+            };
+
+            var result = await Search(ytmTrackUrl, downloadOptions);
+
+            return new ResourceInformationDto
+            {
+                Type = MediaType.Media,
+                MediaItems = new MediaInformationDto[]
+                {
+                    new MediaInformationDto
+                    {
+                        RequestedUrl = query,
+                        StreamingUrl = result.Url,
+                        CoverUrl = searchResponse.Album.Images.First().Url,
+                        Title = searchResponse.Name,
+                        Author = searchResponse.Artists.First().Name
+                    }
+                }
             };
         }
 
-        private async Task<MediaInformationDto> HandleSoundCloud(string query)
+        private string GetBestThumbnail(IEnumerable<ThumbnailData> thumbnails)
         {
-            var parsedUrl = new Uri(query);
-            var subdomain = parsedUrl.Host.Split('.')[0];
+            if (thumbnails == null || !thumbnails.Any()) return null;
 
-            if (subdomain.Contains("api"))
-            {
-                var response = await _httpClient.GetStringAsync($"https://w.soundcloud.com/player/?url={query}");
-                var context = BrowsingContext.New(Configuration.Default);
-                var document = await context.OpenAsync(req => req.Content(response));
-                var canonicalLink = document.QuerySelector("link[rel='canonical']");
-                var href = canonicalLink.GetAttribute("href");
-
-                return await _dllFetcherService.FetchLinkAsync(href);
-            }
-
-            return await _dllFetcherService.FetchLinkAsync(query);
+#pragma warning disable CS8603 // Possible null reference return.
+            return thumbnails
+                .OrderByDescending(t => t.Width)
+                .FirstOrDefault()
+                ?.Url;
+#pragma warning restore CS8603 // Possible null reference return.
         }
-
     }
 }

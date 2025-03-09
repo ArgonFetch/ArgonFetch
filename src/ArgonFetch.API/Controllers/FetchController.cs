@@ -27,51 +27,40 @@ namespace ArgonFetch.API.Controllers
 
         [HttpGet("GetResource", Name = "GetResource")]
         [ProducesResponseType(typeof(ResourceInformationDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status415UnsupportedMediaType)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
         public async Task<ActionResult<ResourceInformationDto>> GetResource(string url)
         {
-            var mediaType = await _mediator.Send(new GetMediaTypeQuery(url));
-
-            if (mediaType == Application.Enums.MediaType.Media)
+            try
             {
                 var result = await _mediator.Send(new GetMediaQuery(url));
-                var returnDto = new ResourceInformationDto
-                {
-                    Type = mediaType,
-                    MediaItems = new List<MediaInformationDto>
-                    {
-                        new MediaInformationDto
-                        {
-                            RequestedUrl = url,
-                            StreamingUrl = result.StreamingUrl,
-                            CoverUrl = result.CoverUrl,
-                            Title = result.Title,
-                            Author = result.Author
-                        }
-                    }
-                };
-                return Ok(returnDto);
+                return Ok(result);
             }
-            else
+            catch (ArgumentException ex)
             {
-                var result = await _mediator.Send(new GetPlaylistQuery(url));
-                var returnDto = new ResourceInformationDto
+                return NotFound(new ProblemDetails
                 {
-                    Type = mediaType,
-                    Title = result.Title,
-                    Author = result.Author,
-                    CoverUrl = result.ImageUrl,
-                    MediaItems = result.MediaItems.Select(mid => new MediaInformationDto
-                    {
-                        RequestedUrl = mid.RequestedUrl,
-                        StreamingUrl = mid.StreamingUrl,
-                        CoverUrl = mid.CoverUrl,
-                        Title = mid.Title,
-                        Author = mid.Author
-                    })
-                };
-
-                return Ok(returnDto);
+                    Title = "Resource Not Found",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+            catch (NotSupportedException ex)
+            {
+                return StatusCode(StatusCodes.Status415UnsupportedMediaType, new ProblemDetails
+                {
+                    Title = "Unsupported Media Type",
+                    Status = StatusCodes.Status415UnsupportedMediaType
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status502BadGateway, new ProblemDetails
+                {
+                    Title = "Fetch Failed",
+                    Status = StatusCodes.Status502BadGateway
+                });
             }
         }
     }

@@ -35,7 +35,7 @@ export class HomeComponent {
   faWarning = faTriangleExclamation;
 
   isLoading: boolean = false;
-  loaderType: 'single-song' | 'playlist' = 'single-song';
+  loaderType: 'single-song' | 'playlist' | 'unknown' = 'unknown';
 
   resourceInformation: ResourceInformationDto | undefined;
   mediaType: MediaType | undefined;
@@ -58,7 +58,6 @@ export class HomeComponent {
 
     // Reset previous content
     this.resourceInformation = undefined;
-    this.mediaType = undefined;
 
     // Show loader
     this.isLoading = true;
@@ -68,36 +67,53 @@ export class HomeComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (mediaType) => {
-          this.mediaType = mediaType;
-          if(mediaType == MediaType.NUMBER_0)
+          if (mediaType == MediaType.NUMBER_0) {
             this.loaderType = 'single-song';
-          else
+            this.fetchResource();
+          } else if (mediaType == MediaType.NUMBER_1) {
             this.loaderType = 'playlist';
+            this.handleError('Hold on a minute...', 'Young padawan, I have to sadly inform you that the playlist feature isn\'t available yet.');
+          } else {
+            this.loaderType = 'unknown';
+            this.fetchResource();
+          }
         },
         error: () => {
-          this.handleError();
+          this.handleError('Well, this is awkward...', 'Something unexpected happened. Mind giving it another shot?');
         }
       });
+  }
 
+  private fetchResource() {
     this.fetchService
       .getResource(this.url)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (resourceInformation) => {
+          resourceInformation.type
           this.resourceInformation = resourceInformation;
+          console.log(resourceInformation.type);
           this.isLoading = false;
         },
-        error: () => {
-          this.handleError();
+        error: (error) => {
+          if (error.status === 404) {
+            this.handleError('Resource Not Found', 'We couldn\'t find what you\'re looking for. Are you sure that URL is correct?');
+          } else if (error.status === 415) {
+            this.handleError('Hold on a minute...', 'Young padawan, I have to sadly inform you that the playlist feature isn\'t available yet.');
+          } else if (error.status === 502) {
+            this.handleError('Fetch Failed', 'We couldn\'t reach the source. Please try again later.');
+          } else {
+            this.handleError('Well, this is awkward...', 'Something unexpected happened. Mind giving it another shot?');
+          }
         }
       });
   }
 
-  private handleError() {
+  private handleError(title: string, confirmationText: string) {
     this.isLoading = false;
     this.modalService.open({
-      title: 'Well, this is awkward...',
-      confirmationText: 'Oopsie doopsie! Either that URL is playing hide and seek, or the internet gremlins are at it again. Mind giving it another shot?',
+      title: title,
+      confirmationText: confirmationText,
       showCancelButton: false
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }

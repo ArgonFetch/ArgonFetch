@@ -40,4 +40,15 @@
             </ul>
         </div>
     </div>
+    
+    <!-- Unknown Content Skeleton -->
+    <div *ngIf="type === 'unknown'" class="unknown-container skeleton-unknown">
+        <div class="question-mark-container pulse">
+            <div class="question-mark">?</div>
+        </div>
+        <div class="unknown-info">
+            <div class="skeleton-title pulse"></div>
+            <div class="skeleton-subtitle pulse"></div>
+        </div>
+    </div>
 </div>

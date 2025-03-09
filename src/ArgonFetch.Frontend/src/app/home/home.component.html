@@ -23,8 +23,8 @@
 
     <!-- Actual Content -->
     <div class="content-container">
-      <app-single-song-container *ngIf="mediaType === mediaTypeEnum.NUMBER_0 && resourceInformation" [resourceInformation]="resourceInformation" />
-      <app-playlist-container *ngIf="mediaType === mediaTypeEnum.NUMBER_1 && resourceInformation" [resourceInformation]="resourceInformation" />
+      <app-single-song-container *ngIf="resourceInformation?.type === mediaTypeEnum.NUMBER_0 && resourceInformation" [resourceInformation]="resourceInformation" />
+      <app-playlist-container *ngIf="resourceInformation?.type === mediaTypeEnum.NUMBER_1 && resourceInformation" [resourceInformation]="resourceInformation" />
     </div>
 
     <div class="disclaimer-content">

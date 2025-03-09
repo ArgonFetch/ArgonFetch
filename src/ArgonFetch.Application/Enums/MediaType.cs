@@ -3,6 +3,7 @@
     public enum MediaType
     {
         Media,
-        PlayList
+        PlayList,
+        Unknown
     }
 }

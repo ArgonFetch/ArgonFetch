@@ -8,5 +8,6 @@
         YouTubeRadio,
         SpotifyAlbum,
         Url,
+        Unknown
     }
 }
