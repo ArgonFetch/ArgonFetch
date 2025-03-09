@@ -6,11 +6,13 @@ import { filter, map, take } from 'rxjs/operators';
 export interface ModalConfig {
   confirmationText: string;
   showCancelButton?: boolean;
+  showConfirmButton?: boolean;
   title?: string;
 }
 
 export interface ModalState extends ModalConfig {
   isOpen: boolean;
+  showConfirmButton?: boolean;
 }
 
 @Injectable({
@@ -44,6 +46,7 @@ export class ModalService {
       isOpen: true,
       confirmationText: config.confirmationText,
       showCancelButton: config.showCancelButton ?? true,
+      showConfirmButton: config.showConfirmButton ?? true,
       title: config.title ?? 'Confirmation'
     });
 

@@ -15,6 +15,7 @@ export class ConfirmationModalComponent implements OnInit, OnDestroy {
   isOpen: boolean = false;
   confirmationText: string = '';
   showCancelButton: boolean = true;
+  showConfirmButton: boolean = true;
   title: string = 'Confirmation';
   
   private subscription = new Subscription();
@@ -27,6 +28,7 @@ export class ConfirmationModalComponent implements OnInit, OnDestroy {
         this.isOpen = state.isOpen;
         this.confirmationText = state.confirmationText;
         this.showCancelButton = state.showCancelButton ?? true;
+        this.showConfirmButton = state.showConfirmButton ?? true;
         this.title = state.title ?? 'Confirmation';
       })
     );

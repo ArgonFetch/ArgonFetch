@@ -32,7 +32,7 @@ namespace ArgonFetch.API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<ProxyHeadResponse>> Head(string url)
+        public async Task<ActionResult<ProxyHeadResponse>> ProxyHead(string url)
         {
             var response = await _mediator.Send(new ProxyHeadQuery(url));
 
@@ -47,7 +47,7 @@ namespace ArgonFetch.API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status416RequestedRangeNotSatisfiable)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> Range(string url, int start, int end)
+        public async Task<ActionResult> ProxyRange(string url, int start, int end)
         {
             var response = await _mediator.Send(new ProxyRangeQuery(url, start, end));
             if (!response.IsSuccess)

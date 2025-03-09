@@ -16,7 +16,7 @@
 
 <footer class="footer">
   <div class="footer-links">
-    <a href="https://argonfetch.dev" class="footer-link">ArgonFetch</a>
+    <a href="https://www.argonfetch.dev" class="footer-link">ArgonFetch</a>
     <span class="footer-separator">•</span>
     <a routerLink="/about" class="footer-link">About</a>
     <span class="footer-separator">•</span>
@@ -24,6 +24,8 @@
       Open Source <fa-icon [icon]="faGithub" class="footer-github-icon"></fa-icon>
     </a>
     <span class="footer-separator">•</span>
-    <a href="https://github.com/ArgonFetch/ArgonFetch/releases/tag/v{{ version }}" class="footer-link footer-version" target="_blank">v{{ version }}</a>
+    <span class="footer-environment">{{ environment }}</span>
+    <span class="footer-separator">•</span>
+    <a href="https://github.com/ArgonFetch/ArgonFetch/releases/tag/v{{ version }}" class="footer-link footer-version" target="_blank">{{ version }}</a>
   </div>
 </footer>

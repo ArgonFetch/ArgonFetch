@@ -96,8 +96,8 @@ export class HomeComponent {
   private handleError() {
     this.isLoading = false;
     this.modalService.open({
-      title: 'Oh no..',
-      confirmationText: 'Unable to fetch content. Please check the URL and try again.',
+      title: 'Well, this is awkward...',
+      confirmationText: 'Oopsie doopsie! Either that URL is playing hide and seek, or the internet gremlins are at it again. Mind giving it another shot?',
       showCancelButton: false
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }

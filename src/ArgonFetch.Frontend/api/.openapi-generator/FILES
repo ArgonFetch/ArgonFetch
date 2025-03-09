@@ -2,12 +2,14 @@
 README.md
 api.module.ts
 api/api.ts
+api/app.service.ts
 api/fetch.service.ts
 api/proxy.service.ts
 configuration.ts
 encoder.ts
 git_push.sh
 index.ts
+model/appInfoDto.ts
 model/mediaInformationDto.ts
 model/mediaType.ts
 model/models.ts
