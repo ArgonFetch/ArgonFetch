@@ -49,7 +49,7 @@ export class HomeComponent {
   async download() {
     if (!this.url) {
       this.modalService.open({
-        title: 'Oops! No URL Detected',
+        title: 'Yoooo! No URL Detected',
         confirmationText: 'You forgot to enter a URL! How do you expect me to fetch something from nothing?',
         showCancelButton: false
       }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();

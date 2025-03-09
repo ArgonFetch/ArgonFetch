@@ -86,7 +86,7 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
-// yt-dlp Version Check
+// yt-dlp Version Check.
 using (var scope = app.Services.CreateScope())
 {
     var dllFetcherService = scope.ServiceProvider.GetRequiredService<DllFetcherService>();

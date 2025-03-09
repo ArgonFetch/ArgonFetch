@@ -41,7 +41,7 @@ export class AppComponent {
         takeUntilDestroyed(),
         catchError(() => {
           this.modalService.open({
-            title: 'Oops! Backend is Missing in Action',
+            title: 'Noorr! Backend is Missing in Action',
             confirmationText: 'Houston, we have a problem! The backend server seems to be on vacation. Perhaps it\'s sipping cocktails on a digital beach somewhere?',
             showCancelButton: false,
             showConfirmButton: false,
