@@ -4,6 +4,8 @@ categories:
   - title: '🚀 Features'
     labels:
       - '🚀 feature'
+  - title: '✨ enhancement'
+    labels:
       - '✨ enhancement'
   - title: '🐛 Bug Fixes'
     labels:
@@ -11,31 +13,15 @@ categories:
   - title: '🏗 Refactoring'
     labels:
       - '🏗 refactor'
-  # These categories won't appear in release notes since they don't match any included labels
-  # But we keep them in case you want to add them later
-  - title: '📖 Documentation'
-    labels:
-      - '📖 documentation'
-  - title: '⚙️ CI/CD'
-    labels:
-      - '⚙️ CI/CD'
 
-exclude-labels:
-  - '🤏 tiny change'
-  - '📖 documentation'
-  - '⚙️ CI/CD'
-
-# Add this to exclude unlabeled PRs
 include-labels:
   - '🚀 feature'
   - '✨ enhancement'
   - '🐛 bug'
   - '🏗 refactor'
-  - 'major'
-  - 'breaking'
 
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
-change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
+change-title-escapes: '\<*_&' # Add # and @ to disable mentions, and add ` to disable code blocks.
 
 # We're not using the version resolver anymore since we're providing the version directly
 # But keeping it as a fallback in case the version extraction fails
@@ -60,7 +46,3 @@ template: |
   $CHANGES
 
   **Full Changelog**: https://github.com/ArgonFetch/ArgonFetch/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
-  
-  ## Contributors
-  
-  $CONTRIBUTORS 

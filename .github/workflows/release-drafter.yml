@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  # Allow manual trigger
   workflow_dispatch:
 
 permissions:
@@ -13,9 +12,7 @@ permissions:
 jobs:
   update_release_draft:
     permissions:
-      # Write permission is required to create a GitHub release
       contents: write
-      # Write permission is required for autolabeler
       pull-requests: write
 
     runs-on: ubuntu-latest
