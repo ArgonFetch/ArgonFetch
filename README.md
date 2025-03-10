@@ -90,7 +90,7 @@ See the [LICENSE](LICENSE) file for more details.
 
 ## Contributors
 <a href="https://github.com/argonfetch/argonfetch/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=argonfetch/argonfetch" />
+  <img src="https://contrib.rocks/image?repo=argonfetch/argonfetch " />
 </a>
 
 ---
