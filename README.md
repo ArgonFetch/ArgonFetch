@@ -72,7 +72,7 @@ Simply launch ArgonFetch and paste the URL of the media you want to download.
 - [x] Spotify Songs
 - [ ] Spotify Playlists
 - [ ] Spotify Albums
-- [ ] YouTube Media
+- [x] YouTube Media
 - [ ] SoundCloud Media
 ### Future Plans
 - [ ] Social Media Support (X, Instagram, TikTok ...)
