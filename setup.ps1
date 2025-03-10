@@ -6,6 +6,13 @@ param (
     [string]$SpotifySecret
 )
 
+$ShortcutName = "ArgonFetch Setup.lnk"
+$desktopPath = [Environment]::GetFolderPath("Desktop")
+$shortcutPath = [System.IO.Path]::Combine($desktopPath, $ShortcutName)
+
+$repoPath = (Get-Location).Path
+$scriptPath = $repoPath + "\setup.ps1"
+
 # Print colored text
 function Write-Color {
     param (
@@ -31,6 +38,21 @@ function Read-YesNo {
     return [string]::IsNullOrWhiteSpace($response) -or $response -eq "y" -or $response -eq "Y"
 }
 
+function DockerDesktop-Instructions {
+    Write-Color "To install Docker Desktop manually:" "Red"
+    Write-Color "1. Download Docker Desktop from https://www.docker.com/products/docker-desktop" "White"
+    Write-Color "2. Run the installer and follow the instructions" "White"
+    Write-Color "3. After installation, restart this script" "White"
+}
+
+# Check if PowerShell is running as Administrator
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Color "This script must be run as Administrator. Please run PowerShell as Administrator and try again." "Red"
+    exit 1
+}
+
+
 # Print header
 Write-Color @"
 
@@ -46,19 +68,6 @@ Write-Color @"
 Write-Color "Setup Script" "Cyan"
 Write-Output ""
 
-
-#===========================================================================
-# Remove existing shortcut (optional after docker installation is complete for easier re-launching)
-#===========================================================================
-
-$ShortcutName = "ArgonFetch Setup.lnk"
-$desktopPath = [Environment]::GetFolderPath("Desktop")
-$shortcutPath = [System.IO.Path]::Combine($desktopPath, $ShortcutName)
-
-if (Test-Path $shortcutPath) {
-    Remove-Item $shortcutPath -Force
-}
-
 #===========================================================================
 # Check if Docker is installed and install if not + optional Shortcut creation
 #===========================================================================
@@ -69,14 +78,13 @@ function Check-DockerInstallation {
     $dockerCheck = Get-Command docker -ErrorAction SilentlyContinue
     
     if (-not $dockerCheck) {
-        Write-Color "Docker is not installed but is required to run ArgonFetch." "Yellow"
-        Write-Color "Docker Desktop needs to be installed on your system." "Yellow"
+        Write-Color "Docker is not installed but required for ArgonFetch." "Yellow"
         
-        $installDocker = Read-YesNo "Would you like to install Docker Desktop now?"
+        $installDocker = Read-YesNo "Would you like Docker Desktop to be installed automatically via winget? (Make sure to update App-Installer first: https://apps.microsoft.com/detail/9NBLGGH4NNS1?hl=de-de&gl=CH&ocid=pdpshare)"
         
         if (-not $installDocker) {
             Write-Color "Docker installation cancelled. Docker is required to run ArgonFetch." "Red"
-            Write-Color "Please install Docker manually and run this script again." "Red"
+            DockerDesktop-Instructions
             exit 1
         }
         
@@ -86,28 +94,27 @@ function Check-DockerInstallation {
         if ($wingetCheck) {
             # Install Docker Desktop using winget
             Write-Color "Installing Docker Desktop using winget..." "Yellow"
-            winget install Docker.DockerDesktop
+            try {
+                winget install Docker.DockerDesktop --accept-package-agreements --accept-source-agreements --silent
+            } catch {
+                Write-Color "Error: Failed to install Docker Desktop using winget." "Red"
+                DockerDesktop-Instructions
+                exit 1
+            }
         } else {
-            # Provide manual installation instructions
-            Write-Color "Winget is not available. Please install Docker Desktop manually:" "Red"
-            Write-Color "1. Download Docker Desktop from https://www.docker.com/products/docker-desktop" "White"
-            Write-Color "2. Run the installer and follow the instructions" "White"
-            Write-Color "3. After installation, restart this script" "White"
+            DockerDesktop-Instructions
             exit 1
         }
         
-        Write-Color "Docker Desktop has been installed. You may need to restart your computer." "Green"
+        Write-Color "Docker Desktop has been installed. You will need to restart your computer and finish the Docker Desktop Setup (will open automatically after restart)." "Green"
         
         $createShortcut = Read-YesNo "Would you like to create a desktop shortcut for this script?"
         if ($createShortcut) {
-            $scriptPath = $MyInvocation.MyCommand.Path
-            $desktopPath = [System.IO.Path]::Combine([Environment]::GetFolderPath("Desktop"), $ShortcutName)
-            
             $WScriptShell = New-Object -ComObject WScript.Shell
-            $shortcut = $WScriptShell.CreateShortcut($desktopPath)
+            $shortcut = $WScriptShell.CreateShortcut($shortcutPath)
             $shortcut.TargetPath = "powershell.exe"
             $shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$scriptPath`""
-            $shortcut.IconLocation = "$scriptPath, 0"
+            $shortcut.IconLocation = "$repoPath\assets\logo-simple.ico"
             $shortcut.WorkingDirectory = [System.IO.Path]::GetDirectoryName($scriptPath)
             $shortcut.Save()
             Write-Color "Shortcut created on the desktop to run this script as admin." "Green"
@@ -116,7 +123,7 @@ function Check-DockerInstallation {
             Write-Color "No shortcut will be created." "Yellow"
             Write-Color "After restarting, please run this script again." "Green"
         }
-        exit 0
+        exit 1
     } else {
         # Check if Docker service is running
         try {
@@ -166,7 +173,7 @@ if (-not $useExistingEnv) {
     # Display information about Spotify credentials
     if (-not $SpotifyId -or -not $SpotifySecret) {
         Write-Color "📝 Spotify Credentials Required" "Blue"
-        Write-Color "For Spotify support, you'll need to create an App using Spotify for Developers:" "White"
+        Write-Color "For Spotify support, you will need to create an App using Spotify for Developers:" "White"
         Write-Color "https://developer.spotify.com/documentation/web-api/concepts/apps" "White"
         Write-Output ""
     }
@@ -220,4 +227,12 @@ if ($startNow) {
 } else {
     Write-Color "ArgonFetch setup preparation is complete but not started." "Yellow"
     Write-Color "You can start it later by running: docker compose up -d" "Yellow"
+}
+
+#===========================================================================
+# Remove existing shortcut (optional after docker installation is complete for easier re-launching)
+#===========================================================================
+
+if (Test-Path $shortcutPath) {
+    Remove-Item $shortcutPath -Force
 }

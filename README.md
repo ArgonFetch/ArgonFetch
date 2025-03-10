@@ -34,31 +34,35 @@
 - For Spotify Support you'll need to [create an App using Spotify for Developers](https://developer.spotify.com/documentation/web-api/concepts/apps).
   From there you'll get a Client ID and a Client Secret, which you will have to provide during the install.
 
-### Option 1: Automated Setup (Recommended)
-1. Clone the repository:
-  ```sh
-  # Download Source
-  curl -fsSL -o argonfetch.tar.gz https://github.com/ArgonFetch/ArgonFetch/archive/refs/heads/main.tar.gz
-  # Unpack Source, remove tar and cd into the source directory
-  tar -xzf argonfetch.tar.gz
-  rm argonfetch.tar.gz
-  cd ArgonFetch-main
-  ```
-
-2. Run the setup script:
+#### Clone Run the setup script:
    
    **Linux/macOS:**
    ```sh
+   # Download Source
+   curl -fsSL -o argonfetch.tar.gz https://github.com/ArgonFetch/ArgonFetch/archive/refs/heads/main.tar.gz
+   # Unpack Source, remove tar and cd into the source directory
+   tar -xzf argonfetch.tar.gz
+   rm argonfetch.tar.gz
+   cd ArgonFetch-main
    # Make the script executable
    chmod +x setup.sh
    
-   # Run interactively (you'll be prompted for credentials)
+   # Run interactively
    ./setup.sh
    ```
    
    **Windows (PowerShell):**
    ```powershell   
-   # Run interactively (you'll be prompted for credentials)
+   # Download the source using Invoke-WebRequest
+   Invoke-WebRequest -Uri "https://github.com/ArgonFetch/ArgonFetch/archive/refs/heads/main.tar.gz" -OutFile "argonfetch.tar.gz"
+   # Extract the tar.gz file (Windows 10 and later include tar)
+   tar -xzf argonfetch.tar.gz
+   # Remove the downloaded archive
+   Remove-Item argonfetch.tar.gz
+   # Change directory into the extracted folder
+   Set-Location ArgonFetch-main
+
+   # Run interactively
    .\setup.ps1
    ```
 
