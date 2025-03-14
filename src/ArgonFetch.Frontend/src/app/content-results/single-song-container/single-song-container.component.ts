@@ -1,9 +1,10 @@
-import { Component, DestroyRef, Input } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { CommonModule } from '@angular/common';
 import { faDownload, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { ProxyService, ResourceInformationDto } from '../../../../api';
 import { firstValueFrom } from 'rxjs';
+import * as mime from 'mime-types';
 
 @Component({
   selector: 'app-single-song-container',
@@ -34,7 +35,7 @@ export class SingleSongContainerComponent {
   private chunks: { start: number; end: number; loaded: number; blob?: Blob }[] = [];
   private activeRequests = 0;
 
-  constructor(private proxyService: ProxyService) {}
+  constructor(private proxyService: ProxyService) { }
 
   formatSpeed(bytesPerSecond: number): string {
     if (bytesPerSecond > 1048576) { // 1 MB/s
@@ -77,16 +78,16 @@ export class SingleSongContainerComponent {
     }
   }
 
-  async onDownload() {
+  async onDownload(): Promise<void> {
     if (this.isDownloading) return;
 
     this.resetDownloadState();
 
-    const url = this.resourceInformation.mediaItems?.[0].streamingUrl;
-    const filename = this.resourceInformation.mediaItems?.[0].title + '.mp3';
+    const mediaItem = this.resourceInformation.mediaItems?.[0];
+    const url = mediaItem?.streamingUrl;
 
-    if (!url) {
-      console.error('No streaming URL available');
+    if (!url || !mediaItem) {
+      console.error('No streaming URL or media item available');
       return;
     }
 
@@ -102,30 +103,55 @@ export class SingleSongContainerComponent {
         throw new Error("Content-Length header is missing");
       }
 
-      const chunkSize = Math.floor(this.totalBytes / this.CHUNK_COUNT);
+      // Get content type
+      const contentType: string = headResponse.headers?.[Object.keys(headResponse.headers || {}).find(key => key.toLowerCase() === 'content-type') || '']?.[0] ?? 'application/octet-stream';
+
+      // Get extension from mime-types package
+      let fileExtension: string = '.unknown';  // Default to .unknown if not detected
+
+      if (contentType) {
+        const extension = mime.extension(contentType);
+        if (extension) {
+          fileExtension = '.' + extension;
+        }
+      }
+
+      // Fallback: Extract from URL if content-type didn't provide a valid extension
+      if (fileExtension === '.unknown' && url.includes('.')) {
+        const urlExtension = '.' + url.split('.').pop()?.split('?')[0].toLowerCase();
+        const validExtensions: string[] = ['.mp3', '.m4a', '.ogg', '.wav', '.webm', '.flac', '.aac'];
+
+        if (validExtensions.includes(urlExtension)) {
+          fileExtension = urlExtension;
+        }
+      }
+
+      const filename: string = mediaItem.title + fileExtension;
+
+      const chunkSize: number = Math.floor(this.totalBytes / this.CHUNK_COUNT);
       this.chunks = [];
 
-      for (let i = 0; i < this.CHUNK_COUNT; i++) {
-        const start = i * chunkSize;
-        const end = (i === this.CHUNK_COUNT - 1) ? this.totalBytes - 1 : start + chunkSize - 1;
+      for (let i: number = 0; i < this.CHUNK_COUNT; i++) {
+        const start: number = i * chunkSize;
+        const end: number = (i === this.CHUNK_COUNT - 1) ? this.totalBytes - 1 : start + chunkSize - 1;
         this.chunks.push({ start, end, loaded: 0 });
       }
 
       this.speedUpdateInterval = setInterval(() => this.updateSpeed(), 1000);
 
-      const downloadPromises = this.chunks.map((chunk, index) =>
+      const downloadPromises: Promise<void>[] = this.chunks.map((chunk, index) =>
         this.downloadChunk(url, chunk, index)
       );
 
       await Promise.all(downloadPromises);
 
       if (this.chunks.every(chunk => chunk.blob)) {
-        const completeBlob = new Blob(
+        const completeBlob: Blob = new Blob(
           this.chunks.map(chunk => chunk.blob as Blob),
-          { type: 'audio/mpeg' }
+          { type: contentType }
         );
 
-        const link = document.createElement("a");
+        const link: HTMLAnchorElement = document.createElement("a");
         link.href = URL.createObjectURL(completeBlob);
         link.download = filename;
         link.click();

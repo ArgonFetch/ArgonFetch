@@ -92,7 +92,6 @@ export class HomeComponent {
         next: (resourceInformation) => {
           resourceInformation.type
           this.resourceInformation = resourceInformation;
-          console.log(resourceInformation.type);
           this.isLoading = false;
         },
         error: (error) => {
