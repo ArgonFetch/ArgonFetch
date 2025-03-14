@@ -38,6 +38,31 @@ print_color "36" "Setup Script"
 echo ""
 
 #===========================================================================
+# Clone Repo
+#===========================================================================
+
+# Check if ArgonFetch-main directory already exists
+if [ -d "ArgonFetch-main" ]; then
+  print_color "33" "ArgonFetch-main directory already exists."
+  if read_yes_no "Would you like to use the existing directory?"; then
+    cd ArgonFetch-main
+    print_color "32" "Using existing directory."
+  else
+    print_color "33" "Removing existing directory and downloading fresh source..."
+    rm -rf ArgonFetch-main
+    # Continue with download
+  fi
+else
+  print_color "34" "Downloading ArgonFetch source code..."
+  # Download Source
+  curl -fsSL -o argonfetch.tar.gz https://github.com/ArgonFetch/ArgonFetch/archive/refs/heads/main.tar.gz
+  # Unpack Source, remove tar and cd into the source directory
+  tar -xzf argonfetch.tar.gz
+  rm argonfetch.tar.gz
+  cd ArgonFetch-main
+fi
+
+#===========================================================================
 # Check if Docker is installed and install if necessary
 #===========================================================================
 

@@ -38,32 +38,12 @@
    
    **Linux/macOS:**
    ```sh
-   # Download Source
-   curl -fsSL -o argonfetch.tar.gz https://github.com/ArgonFetch/ArgonFetch/archive/refs/heads/main.tar.gz
-   # Unpack Source, remove tar and cd into the source directory
-   tar -xzf argonfetch.tar.gz
-   rm argonfetch.tar.gz
-   cd ArgonFetch-main
-   # Make the script executable
-   chmod +x setup.sh
-   
-   # Run interactively
-   ./setup.sh
+   curl -sSL https://argonfetch.dev/lin | sh
    ```
    
    **Windows (PowerShell):**
-   ```powershell   
-   # Download the source using Invoke-WebRequest
-   Invoke-WebRequest -Uri "https://github.com/ArgonFetch/ArgonFetch/archive/refs/heads/main.tar.gz" -OutFile "argonfetch.tar.gz"
-   # Extract the tar.gz file (Windows 10 and later include tar)
-   tar -xzf argonfetch.tar.gz
-   # Remove the downloaded archive
-   Remove-Item argonfetch.tar.gz
-   # Change directory into the extracted folder
-   Set-Location ArgonFetch-main
-
-   # Run interactively
-   .\setup.ps1
+   ```powershell
+   irm https//argonfetch.dev/win | iex
    ```
 
 After the installation, ArgonFetch should be accessible at http://localhost:8080.

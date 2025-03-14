@@ -68,6 +68,16 @@ Write-Color @"
 Write-Color "Setup Script" "Cyan"
 Write-Output ""
 
+
+# Download the source using Invoke-WebRequest
+Invoke-WebRequest -Uri "https://github.com/ArgonFetch/ArgonFetch/archive/refs/heads/main.tar.gz" -OutFile "argonfetch.tar.gz"
+# Extract the tar.gz file (Windows 10 and later include tar)
+tar -xzf argonfetch.tar.gz
+# Remove the downloaded archive
+Remove-Item argonfetch.tar.gz
+# Change directory into the extracted folder
+Set-Location ArgonFetch-main
+
 #===========================================================================
 # Check if Docker is installed and install if not + optional Shortcut creation
 #===========================================================================
