@@ -1,6 +1,7 @@
 ﻿using ArgonFetch.Application.Dtos;
 using ArgonFetch.Application.Enums;
 using ArgonFetch.Application.Services;
+using ArgonFetch.Application.Services.DDLFetcherServices;
 using MediatR;
 using SpotifyAPI.Web;
 using YoutubeDLSharp;
@@ -24,16 +25,19 @@ namespace ArgonFetch.Application.Queries
         private readonly YoutubeDL _youtubeDL;
         private readonly SpotifyClient _spotifyClient;
         private readonly YTMusicAPI.SearchClient _ytmSearchClient;
+        private readonly TikTokDllFetcherService _tikTokDllFetcherService;
 
         public GetMediaQueryHandler(
             SpotifyClient spotifyClient,
             YTMusicAPI.SearchClient ytmSearchClient,
-            YoutubeDL youtubeDL
+            YoutubeDL youtubeDL,
+            TikTokDllFetcherService tikTokDllFetcherService
             )
         {
             _spotifyClient = spotifyClient;
             _ytmSearchClient = ytmSearchClient;
             _youtubeDL = youtubeDL;
+            _tikTokDllFetcherService = tikTokDllFetcherService;
         }
 
         public async Task<ResourceInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
@@ -44,6 +48,8 @@ namespace ArgonFetch.Application.Queries
             {
                 return await HandleSpotify(request.Query, cancellationToken);
             }
+            else if (platform == Platform.TikTok)
+                return await HandleTikTok(request.Query, cancellationToken);
 
             var resultData = await Search(request.Query);
 
@@ -203,6 +209,27 @@ namespace ArgonFetch.Application.Queries
                 .FirstOrDefault()
                 ?.Url;
 #pragma warning restore CS8603 // Possible null reference return.
+        }
+
+        private async Task<ResourceInformationDto> HandleTikTok(string query, CancellationToken cancellationToken)
+        {
+            var result = await _tikTokDllFetcherService.FetchLinkAsync(query, cancellationToken: cancellationToken);
+
+            return new ResourceInformationDto
+            {
+                Type = MediaType.Media,
+                MediaItems =
+                [
+                    new MediaInformationDto
+                    {
+                        RequestedUrl = query,
+                        StreamingUrl = result.StreamingUrl,
+                        CoverUrl = result.CoverUrl,
+                        Title = result.Title,
+                        Author = result.Author
+                    }
+                ]
+            };
         }
     }
 }
