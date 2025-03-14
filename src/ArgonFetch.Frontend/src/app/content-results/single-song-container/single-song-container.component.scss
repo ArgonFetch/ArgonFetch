@@ -48,6 +48,19 @@
   display: flex;
   justify-content: flex-start;
   align-items: center;
+  width: 100%;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 50px;
+    background: linear-gradient(to right, transparent, var(--surface));
+    pointer-events: none;
+  }
 }
 
 .song-title {
@@ -65,12 +78,19 @@
   font-size: 1rem;
   color: var(--text);
   opacity: 0.8;
-}
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  position: relative;
 
-.song-details {
-  margin-top: 8px;
-  font-size: 0.8rem;
-  color: var(--text-tertiary, #888);
+  &::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    background: linear-gradient(to right, transparent, var(--surface));
+    pointer-events: none;
+  }
 }
 
 .song-actions {

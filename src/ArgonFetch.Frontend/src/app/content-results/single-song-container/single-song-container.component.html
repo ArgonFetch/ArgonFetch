@@ -7,10 +7,6 @@
     <div class="song-info">
       <div class="title-row">
         <h3 class="song-title">{{ resourceInformation.mediaItems?.[0]?.title }}</h3>
-        <button class="action-button download-button" (click)="onDownload()" [disabled]="isDownloading">
-          <fa-icon *ngIf="!isDownloading" [icon]="faDownload"></fa-icon>
-          <fa-icon *ngIf="isDownloading" [icon]="faSpinner" animation="spin"></fa-icon>
-        </button>
       </div>
       <p class="song-artist">{{ resourceInformation.mediaItems?.[0]?.author }}</p>
       <div class="download-progress-container" *ngIf="isDownloading">
@@ -22,5 +18,10 @@
         <span class="download-eta">ETA: {{ estimatedTimeText }}</span>
       </div>
     </div>
+
+    <button class="action-button download-button" (click)="onDownload()" [disabled]="isDownloading">
+      <fa-icon *ngIf="!isDownloading" [icon]="faDownload"></fa-icon>
+      <fa-icon *ngIf="isDownloading" [icon]="faSpinner" animation="spin"></fa-icon>
+    </button>
   </div>
 </div>
