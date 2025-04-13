@@ -15,6 +15,8 @@
 
 ---
 
+> **⚠️ Important Note:** This project is currently under development and may not function as described directly from the main branch. For a working version, please check the [Releases tab](https://github.com/ArgonFetch/ArgonFetch/releases) for the latest stable release.
+
 <!-- [![Version](https://img.shields.io/github/v/release/ArgonFetch/ArgonFetch?color=%230567ff&label=Latest%20Release&style=for-the-badge)](https://github.com/ArgonFetch/ArgonFetch/releases/latest) -->
 
 ## 🚀 Features
