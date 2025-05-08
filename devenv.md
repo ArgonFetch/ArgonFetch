@@ -3,7 +3,7 @@
 - Git
 - Node.js and npm
 - Angular CLI
-- Python 3.x or .NET SDK (depending on which backend you want to use)
+- .NET SDK
 
 ## Setting Up the Environment
 1. Clone the repository:
