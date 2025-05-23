@@ -15,5 +15,6 @@ export interface MediaInformationDto {
     coverUrl: string | null;
     title: string | null;
     author: string | null;
+    fileExtension?: string | null;
 }
 

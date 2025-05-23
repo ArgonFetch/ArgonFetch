@@ -8,7 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "build:agent": "ng build --aot --configuration production --output-path",
-    "api-gen": "npx @openapitools/openapi-generator-cli generate -i http://localhost:5114/swagger/v1/swagger.json -g typescript-angular -o api"
+    "apigen": "npx @openapitools/openapi-generator-cli generate -i http://localhost:5114/swagger/v1/swagger.json -g typescript-angular -o api"
   },
   "private": true,
   "dependencies": {
@@ -24,7 +24,6 @@
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
-    "mime-types": "^2.1.35",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"

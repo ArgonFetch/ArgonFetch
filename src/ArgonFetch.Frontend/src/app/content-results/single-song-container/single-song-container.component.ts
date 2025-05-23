@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { faDownload, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { ProxyService, ResourceInformationDto } from '../../../../api';
 import { firstValueFrom } from 'rxjs';
-import * as mime from 'mime-types';
 
 @Component({
   selector: 'app-single-song-container',
@@ -85,6 +84,7 @@ export class SingleSongContainerComponent {
 
     const mediaItem = this.resourceInformation.mediaItems?.[0];
     const url = mediaItem?.streamingUrl;
+    var fileExtension = mediaItem?.fileExtension ?? '.unknown';
 
     if (!url || !mediaItem) {
       console.error('No streaming URL or media item available');
@@ -103,30 +103,17 @@ export class SingleSongContainerComponent {
         throw new Error("Content-Length header is missing");
       }
 
-      // Get content type
-      const contentType: string = headResponse.headers?.[Object.keys(headResponse.headers || {}).find(key => key.toLowerCase() === 'content-type') || '']?.[0] ?? 'application/octet-stream';
-
-      // Get extension from mime-types package
-      let fileExtension: string = '.unknown';  // Default to .unknown if not detected
-
-      if (contentType) {
-        const extension = mime.extension(contentType);
-        if (extension) {
-          fileExtension = '.' + extension;
-        }
-      }
-
       // Fallback: Extract from URL if content-type didn't provide a valid extension
       if (fileExtension === '.unknown' && url.includes('.')) {
         const urlExtension = '.' + url.split('.').pop()?.split('?')[0].toLowerCase();
-        const validExtensions: string[] = ['.mp3', '.m4a', '.ogg', '.wav', '.webm', '.flac', '.aac'];
+        const validExtensions: string[] = ['.mp3', '.m4a', '.ogg', '.wav', '.webm', '.flac', '.aac', '.mp4'];
 
         if (validExtensions.includes(urlExtension)) {
           fileExtension = urlExtension;
         }
       }
 
-      const filename: string = mediaItem.title + fileExtension;
+      const filename: string = mediaItem.title + "." + fileExtension;
 
       const chunkSize: number = Math.floor(this.totalBytes / this.CHUNK_COUNT);
       this.chunks = [];
@@ -144,6 +131,9 @@ export class SingleSongContainerComponent {
       );
 
       await Promise.all(downloadPromises);
+      
+      // Get content type
+      const contentType: string = headResponse.headers?.[Object.keys(headResponse.headers || {}).find(key => key.toLowerCase() === 'content-type') || '']?.[0] ?? 'application/octet-stream';
 
       if (this.chunks.every(chunk => chunk.blob)) {
         const completeBlob: Blob = new Blob(

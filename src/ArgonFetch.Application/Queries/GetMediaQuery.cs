@@ -45,9 +45,8 @@ namespace ArgonFetch.Application.Queries
             var platform = PlatformIdentifierService.IdentifyPlatform(request.Query);
 
             if (platform == Platform.Spotify)
-            {
                 return await HandleSpotify(request.Query, cancellationToken);
-            }
+
             else if (platform == Platform.TikTok)
                 return await HandleTikTok(request.Query, cancellationToken);
 
@@ -101,7 +100,7 @@ namespace ArgonFetch.Application.Queries
                     }
                 }
 
-                var streamingUrl = resultData.Url ?? await GetBestStreamingUrl(resultData.Formats);
+                var (streamingUrl, fileExtension) = await GetBestStreamingUrl(resultData.Formats);
 
                 return new ResourceInformationDto
                 {
@@ -114,7 +113,8 @@ namespace ArgonFetch.Application.Queries
                                 StreamingUrl = streamingUrl,
                                 CoverUrl = thumbnailUrl,
                                 Title = resultData.Title,
-                                Author = resultData.Uploader
+                                Author = resultData.Uploader,
+                                FileExtension = fileExtension
                             }
                     ]
                 };
@@ -129,7 +129,6 @@ namespace ArgonFetch.Application.Queries
             {
                 var searchOptions = new OptionSet
                 {
-                    Format = "best",
                     NoPlaylist = true,
                 };
 
@@ -144,18 +143,47 @@ namespace ArgonFetch.Application.Queries
             return result.Data;
         }
 
-        private async Task<string> GetBestStreamingUrl(FormatData[] formatData)
+        private async Task<(string Url, string Extension)> GetBestStreamingUrl(FormatData[] formatData)
         {
             if (formatData == null || !formatData.Any())
-                return string.Empty;
+                return (string.Empty, string.Empty);
+
+            if (formatData.Any(f => f.Extension == "mp4"))
+            {
+                var bestMp4Format = formatData
+                    .Where(f =>
+                        !string.IsNullOrEmpty(f.Format) &&
+                        !f.Format.Contains("audio") &&
+                        !f.Extension.Contains("webm") &&
+
+                        !f.Protocol.Contains("m3u8") &&
+                        !f.Protocol.Contains("mhtml") &&
+                        f.AudioBitrate != null &&
+                        f.AudioBitrate != 0
+                    )
+                    .OrderByDescending(f => f.Bitrate)
+                    .FirstOrDefault();
+
+                if (bestMp4Format != null)
+                    return (bestMp4Format.Url, bestMp4Format.Extension);
+            }
 
             var bestFormat = formatData
-                .Where(f => !string.IsNullOrEmpty(f.AudioCodec) && f.AudioCodec != "none")
-                .OrderByDescending(f => f.AudioBitrate)
-                .ThenByDescending(f => f.AudioSamplingRate)
+                .Where(f =>
+                    !string.IsNullOrEmpty(f.AudioCodec) &&
+                    f.AudioCodec != "none" &&
+                    f.Format.Contains("audio") &&
+                    !f.Extension.Contains("webm") &&
+                    !f.Protocol.Contains("m3u8") &&
+                    f.AudioBitrate != null &&
+                    f.AudioBitrate != 0
+                )
+                .OrderByDescending(f => f.Bitrate)
                 .FirstOrDefault();
 
-            return await Task.FromResult(bestFormat?.Url ?? string.Empty);
+            return bestFormat != null
+                ? (bestFormat.Url ?? string.Empty, bestFormat.Extension ?? string.Empty)
+                : (string.Empty, string.Empty);
         }
 
         private async Task<ResourceInformationDto> HandleSpotify(string query, CancellationToken cancellationToken)
@@ -174,28 +202,25 @@ namespace ArgonFetch.Application.Queries
 
             var ytmTrackUrl = response.Result.First().Url;
 
-            var downloadOptions = new OptionSet
-            {
-                Format = "best",
-                NoPlaylist = true,
-            };
+            var result = await Search(ytmTrackUrl);
 
-            var result = await Search(ytmTrackUrl, downloadOptions);
+            var (streamingUrl, fileExtension) = await GetBestStreamingUrl(result.Formats);
 
             return new ResourceInformationDto
             {
                 Type = MediaType.Media,
-                MediaItems = new MediaInformationDto[]
-                {
+                MediaItems =
+                [
                     new MediaInformationDto
                     {
                         RequestedUrl = query,
-                        StreamingUrl = result.Url,
+                        StreamingUrl = streamingUrl,
                         CoverUrl = searchResponse.Album.Images.First().Url,
                         Title = searchResponse.Name,
-                        Author = searchResponse.Artists.First().Name
+                        Author = searchResponse.Artists.First().Name,
+                        FileExtension = fileExtension
                     }
-                }
+                ]
             };
         }
 

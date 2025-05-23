@@ -21,11 +21,11 @@
     <a routerLink="/about" class="footer-link">About</a>
     <span class="footer-separator">•</span>
     <a href="https://github.com/ArgonFetch/ArgonFetch" class="footer-link" target="_blank">
-      Open Source <fa-icon [icon]="faGithub" class="footer-github-icon"></fa-icon>
+      GitHub <fa-icon [icon]="faGithub" class="footer-github-icon"></fa-icon>
     </a>
     <span class="footer-separator">•</span>
     <span class="footer-environment">{{ environment }}</span>
     <span class="footer-separator">•</span>
-    <a href="https://github.com/ArgonFetch/ArgonFetch/releases/tag/v{{ version }}" class="footer-link footer-version" target="_blank">{{ version }}</a>
+    <a href="https://github.com/ArgonFetch/ArgonFetch/releases/tag/{{ version }}" class="footer-link footer-version" target="_blank">{{ version }}</a>
   </div>
 </footer>
