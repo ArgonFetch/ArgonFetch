@@ -1,6 +1,7 @@
 name: Build and Push Docker Image on Release
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
@@ -58,7 +59,15 @@ jobs:
           context: .
           file: ./src/ArgonFetch.API/Dockerfile
           push: true
-          cache-from: type=gha
-          cache-to: type=inline
-          platforms: linux/amd64,linux/arm64
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ steps.lowercase.outputs.repo_lower }}:buildcache
+            type=gha
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ steps.lowercase.outputs.repo_lower }}:buildcache,mode=max
+            type=inline
+          platforms: linux/amd64
           tags: ${{ steps.semver_tags.outputs.tags }}
+          provenance: false
+          outputs: type=registry
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
