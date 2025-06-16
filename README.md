@@ -7,8 +7,7 @@
   A powerful tool for downloading videos, music, and other media from various online sources.
 </p>
 <p align="center">
-  <a><img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FArgonFetch%2FArgonFetch&count_bg=%23A855F6&title_bg=%23555555&icon=powershell.svg&icon_color=%23E7E7E7&title=Visits&edge_flat=false"/></a>
-  <a href="https://www.argonfetch.dev/"><img src="https://img.shields.io/badge/Cloud%20Version-argonfetch.dev-9f54e5.svg"/></a>
+[![HitCount](https://hits.dwyl.com/ArgonFetch/ArgonFetch.svg?style=flat-square&show=unique)](http://hits.dwyl.com/ArgonFetch/ArgonFetch)  <a href="https://www.argonfetch.dev/"><img src="https://img.shields.io/badge/Cloud%20Version-argonfetch.dev-9f54e5.svg"/></a>
   <a href="https://github.com/ArgonFetch/ArgonFetch?tab=readme-ov-file#-installation"><img src="https://img.shields.io/badge/Selfhost-Instructions-9f54e5.svg"/></a>
   <a href="https://github.com/ArgonFetch/ArgonFetch/blob/main/devenv.md"><img src="https://img.shields.io/badge/Development-Setup-9f54e5.svg"/></a>
 </p>
