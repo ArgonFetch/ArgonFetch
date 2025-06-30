@@ -12,7 +12,7 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
         private static readonly HttpClient _httpClient = new HttpClient();
         private readonly HtmlParser _htmlParser = new HtmlParser();
 
-        public async Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions = null, CancellationToken cancellationToken = default)
+        public async Task<MediaInformationDto> FetchLinkAsync(string queryUrl, DllFetcherOptions dllFetcherOptions = null, CancellationToken cancellationToken = default)
         {
             string baseUrl = "https://tmate.cc";
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
@@ -30,7 +30,7 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
             _httpClient.DefaultRequestHeaders.Add("Cookie", $"session_data={sessionToken}");
             var payload = new FormUrlEncodedContent(new[]
             {
-                new KeyValuePair<string, string>("url", dllName),
+                new KeyValuePair<string, string>("url", queryUrl),
                 new KeyValuePair<string, string>("token", token)
             });
 
@@ -47,8 +47,13 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
 
                 return new MediaInformationDto
                 {
-                    RequestedUrl = CleanHtml(dllName),
-                    StreamingUrl = CleanHtml(downloadLink),
+                    RequestedUrl = CleanHtml(queryUrl),
+                    StreamingVideoUrls = new StreamingUrlDto
+                    {
+                        BestQualityDescription = "Best Quality",
+                        BestQuality = CleanHtml(downloadLink),
+                        BestQualityFileExtension = "mp4",
+                    },
                     CoverUrl = CleanHtml(imageUrl),
                     Title = CleanHtml(title),
                     Author = CleanHtml(author)

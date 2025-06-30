@@ -3,15 +3,19 @@ using ArgonFetch.Application.Behaviors;
 using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services.DDLFetcherServices;
 using ArgonFetch.Application.Validators;
+using ArgonFetch.Infrastructure;
 using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using SpotifyAPI.Web;
 using YoutubeDLSharp;
 
 var builder = WebApplication.CreateBuilder(args);
 
+#region Configure Services
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddSpaStaticFiles(spaStaticFilesOptions => { spaStaticFilesOptions.RootPath = "wwwroot/browser"; });
@@ -25,6 +29,31 @@ builder.Services.AddHttpClient<TikTokDllFetcherService>();
 // Register the IDllFetcher implementations
 builder.Services.AddScoped<TikTokDllFetcherService>();
 
+// Register In memory caching
+builder.Services.AddMemoryCache();
+#endregion
+
+#region Database Configuration
+// Configure the DbContext with a connection string.
+builder.Services.AddDbContext<ArgonFetchDbContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("ArgonFetchDatabase"),
+        npgsqlOptions => npgsqlOptions
+        .EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorCodesToAdd: null
+        )
+    ));
+#endregion
+
+#region API Documentation
+// Register Swagger services
+builder.Services.AddSwaggerGen();
+builder.Services.AddEndpointsApiExplorer();
+#endregion
+
+#region External Services Configuration
 // Register SpotifyAPI
 builder.Services.AddScoped<SpotifyClient>(sp =>
 {
@@ -56,16 +85,16 @@ builder.Services.AddScoped<SpotifyClient>(sp =>
 // Register YoutubeMusicAPI and YoutubeDL
 builder.Services.AddScoped<YTMusicAPI.SearchClient>();
 builder.Services.AddScoped<YoutubeDL>();
+#endregion
 
+#region Validation
 // Register FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<GetMediaQueryValidator>();
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+#endregion
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
+#region CORS Configuration
 // Configure CORS for frontend development
 if (builder.Environment.IsDevelopment())
 {
@@ -85,9 +114,84 @@ if (builder.Environment.IsDevelopment())
         });
     });
 }
+#endregion
 
 var app = builder.Build();
 
+#region Database Initialization with Retry Logic
+bool dbConnected = false;
+int retryCount = 0;
+const int maxRetries = 10;
+const int retryDelaySeconds = 5;
+
+var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+
+while (!dbConnected && retryCount < maxRetries)
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider
+            .GetRequiredService<ArgonFetchDbContext>();
+        try
+        {
+            startupLogger.LogInformation("Attempting to connect to the " +
+                                         "database and apply migrations " +
+                                         "(Attempt {Attempt}/{MaxRetries})...",
+                                         retryCount + 1, maxRetries);
+            dbContext.Database.Migrate();
+            dbConnected = true;
+            startupLogger.LogInformation("Database connection successful " +
+                                         "and migrations applied.");
+        }
+        catch (NpgsqlException ex)
+        {
+            startupLogger.LogError(ex, "Database connection failed: {ErrorMessage}",
+                ex.Message);
+            retryCount++;
+            if (retryCount < maxRetries)
+            {
+                startupLogger.LogInformation("Retrying in {Delay} seconds...",
+                                             retryDelaySeconds);
+                System.Threading.Thread.Sleep(TimeSpan
+                    .FromSeconds(retryDelaySeconds));
+            }
+            else
+            {
+                startupLogger.LogCritical("Failed to connect to the database " +
+                                         "after {MaxRetries} retries. " +
+                                         "Application will now terminate.",
+                                         maxRetries);
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            startupLogger.LogError(ex, "An unexpected error occurred during " +
+                                     "database connection/migration: {ErrorMessage}",
+                                     ex.Message);
+            retryCount++;
+            if (retryCount < maxRetries)
+            {
+                startupLogger.LogInformation("Retrying in {Delay} seconds...",
+                                             retryDelaySeconds);
+                System.Threading.Thread.Sleep(TimeSpan
+                    .FromSeconds(retryDelaySeconds));
+            }
+            else
+            {
+                startupLogger.LogCritical("Failed to perform database " +
+                                         "operations after {MaxRetries} " +
+                                         "retries due to an unexpected error. " +
+                                         "Application will now terminate.",
+                                         maxRetries);
+                throw;
+            }
+        }
+    }
+}
+#endregion
+
+#region Dependency Validation
 // yt-dlp and FFmpeg Version Check.
 using (var scope = app.Services.CreateScope())
 {
@@ -107,12 +211,17 @@ using (var scope = app.Services.CreateScope())
     else
         logger.LogInformation("FFmpeg Version: {Version}", ffmpegVersion);
 }
+#endregion
 
+#region Configure HTTP Pipeline
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "DockiUp API V1");
+    });
 }
 
 app.UseHttpsRedirection();
@@ -128,7 +237,9 @@ app.UseRouting();
 app.UseAuthorization();
 app.UseCors();
 app.MapControllers();
+#endregion
 
+#region SPA Configuration
 // Serve Angular Frontend in Production
 if (!app.Environment.IsDevelopment())
 {
@@ -137,5 +248,6 @@ if (!app.Environment.IsDevelopment())
         spa.Options.SourcePath = "wwwroot";
     });
 }
+#endregion
 
 app.Run();
