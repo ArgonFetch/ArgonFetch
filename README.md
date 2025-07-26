@@ -7,7 +7,7 @@
   A powerful tool for downloading videos, music, and other media from various online sources.
 </p>
 <p align="center">
-  <a href="https://github.com/ArgonFetch/ArgonFetch"><img src="https://badgetrack.pianonic.ch/badge?url=ArgonFetch/ArgonFetch&label=Visitors&color=9f54e5&style=flat&logo=github" alt="Visitor Count"/></a>
+  <a href="https://github.com/ArgonFetch/ArgonFetch"><img src="https://badgetrack.pianonic.ch/badge?tag=argon-fetch&label=visits&color=9f54e5&style=flat" alt="visits" /></a>
   <a href="https://www.argonfetch.dev/"><img src="https://img.shields.io/badge/Cloud%20Version-argonfetch.dev-9f54e5.svg"/></a>
   <a href="https://github.com/ArgonFetch/ArgonFetch?tab=readme-ov-file#-installation"><img src="https://img.shields.io/badge/Selfhost-Instructions-9f54e5.svg"/></a>
   <a href="https://github.com/ArgonFetch/ArgonFetch/blob/main/devenv.md"><img src="https://img.shields.io/badge/Development-Setup-9f54e5.svg"/></a>
