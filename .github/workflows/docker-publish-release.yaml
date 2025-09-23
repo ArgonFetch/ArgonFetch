@@ -16,6 +16,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Prepare repository name
+        id: prep
+        run: |
+          echo "repository_lowercase=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -61,10 +66,10 @@ jobs:
           # Enhanced caching options
           cache-from: |
             type=gha
-            type=registry,ref=ghcr.io/${{ github.repository }}:buildcache
+            type=registry,ref=ghcr.io/${{ steps.prep.outputs.repository_lowercase }}:buildcache
           cache-to: |
             type=gha,mode=max
-            type=registry,ref=ghcr.io/${{ github.repository }}:buildcache,mode=max
+            type=registry,ref=ghcr.io/${{ steps.prep.outputs.repository_lowercase }}:buildcache,mode=max
           # Build in parallel where possible
           build-args: |
             BUILDKIT_INLINE_CACHE=1
