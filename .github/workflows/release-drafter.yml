@@ -16,6 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: release-drafter/release-drafter@v6
+        continue-on-error: true
         with:
           config-name: release-drafter.yml
         env:
