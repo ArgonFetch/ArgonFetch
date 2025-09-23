@@ -6,6 +6,8 @@ on:
   pull_request:
     types: [closed]
 
+permissions: write-all
+
 jobs:
   update_release_draft:
     runs-on: ubuntu-latest
