@@ -4,10 +4,18 @@ WORKDIR /app
 USER root
 # Install dependencies in one layer with cleanup
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg wget ca-certificates && \
-    wget -q -O /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp && \
-    chmod a+rx /usr/local/bin/yt-dlp && \
-    apt-get remove -y wget && \
+    apt-get install -y --no-install-recommends \
+        ffmpeg \
+        ca-certificates \
+        python3 \
+        python3-pip && \
+    # Install yt-dlp via pip for better compatibility
+    pip3 install --no-cache-dir --break-system-packages yt-dlp && \
+    # Verify yt-dlp installation
+    yt-dlp --version && \
+    # Ensure yt-dlp is executable by all users
+    chmod 755 /usr/local/bin/yt-dlp && \
+    # Clean up apt cache
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 USER $APP_UID

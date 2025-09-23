@@ -19,7 +19,13 @@
       "Bash(findstr:*)",
       "Read(//d/SchulwareAPI/.github/workflows/**)",
       "Read(//d/Schuly/.github/workflows/**)",
-      "Read(//d/SchulwareAPI/.github/**)"
+      "Read(//d/SchulwareAPI/.github/**)",
+      "Bash(docker-compose:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker build:*)",
+      "Bash(docker system prune:*)"
     ],
     "deny": [],
     "ask": []
