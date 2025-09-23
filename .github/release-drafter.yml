@@ -32,7 +32,7 @@ version-resolver:
       - 'refactor'
       - 'enhancement'
   default: patch
-
+ 
 template: |
   ## What's Changed
 
