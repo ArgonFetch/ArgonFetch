@@ -1,26 +1,20 @@
-name: Release
+name: Docker Publish Multi-Arch on Release
 
 on:
   release:
     types: [published]
 
 jobs:
-  build-and-push-docker:
+  build-and-push-multiarch:
+    name: Build and Push Multi-Arch Docker Images
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Get version from tag
-        id: get_version
-        run: |
-          VERSION="${{ github.event.release.tag_name }}"
-          VERSION=${VERSION#v}
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Build version: $VERSION"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -66,5 +60,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            VERSION=${{ steps.get_version.outputs.VERSION }}
