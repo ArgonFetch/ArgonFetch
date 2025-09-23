@@ -72,6 +72,10 @@ POSTGRES_DB=argonfetch
 # Spotify API (Required)
 Spotify__ClientId=your_spotify_client_id
 Spotify__ClientSecret=your_spotify_client_secret
+
+# CORS Configuration (Required for production)
+# Comma-separated list of allowed origins
+CORS_ALLOWED_ORIGINS=https://app.argonfetch.dev,https://argonfetch.dev,http://localhost:4200
 ```
 
 3. **Start it:**

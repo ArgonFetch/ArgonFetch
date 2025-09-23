@@ -114,25 +114,34 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 #endregion
 
 #region CORS Configuration
-// Configure CORS for frontend development
-if (builder.Environment.IsDevelopment())
+// Configure CORS with environment variable support
+builder.Services.AddCors(options =>
 {
-    builder.Services.AddCors(options =>
+    options.AddDefaultPolicy(corsBuilder =>
     {
-        options.AddDefaultPolicy(corsBuilder =>
+        // Get allowed origins from environment variable only
+        var allowedOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ?? new[] { "http://localhost:4200" }; // Default for development
+
+        // In production, ensure we have proper origins configured
+        if (builder.Environment.IsProduction() && allowedOrigins.Length == 1 && allowedOrigins[0] == "http://localhost:4200")
         {
-            corsBuilder.WithOrigins("http://localhost:4200");
-            corsBuilder.WithExposedHeaders("Content-Disposition");
-            corsBuilder.AllowAnyHeader();
-            corsBuilder.AllowAnyMethod();
-            corsBuilder.AllowCredentials();
-            if (!builder.Environment.IsProduction())
-            {
-                corsBuilder.WithExposedHeaders("X-Impersonate");
-            }
-        });
+            var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("CORS is using default localhost origin in production. Please set CORS_ALLOWED_ORIGINS environment variable.");
+        }
+
+        corsBuilder.WithOrigins(allowedOrigins);
+        corsBuilder.WithExposedHeaders("Content-Disposition");
+        corsBuilder.AllowAnyHeader();
+        corsBuilder.AllowAnyMethod();
+        corsBuilder.AllowCredentials();
+
+        if (!builder.Environment.IsProduction())
+        {
+            corsBuilder.WithExposedHeaders("X-Impersonate");
+        }
     });
-}
+});
 #endregion
 
 var app = builder.Build();
