@@ -4,19 +4,15 @@ categories:
   - title: '🚀 Features'
     labels:
       - 'feature'
-      - '🚀 feature'
   - title: '✨ Enhancements'
     labels:
       - 'enhancement'
-      - '✨ enhancement'
   - title: '🛠️ Refactors'
     labels:
       - 'refactor'
-      - '🏗 refactor'
   - title: '🐛 Bug Fixes'
     labels:
       - 'bug'
-      - '🐛 bug'
 
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 
@@ -30,15 +26,11 @@ version-resolver:
   minor:
     labels:
       - 'feature'
-      - '🚀 feature'
-      - 'enhancement'
-      - '✨ enhancement'
   patch:
     labels:
       - 'bug'
-      - '🐛 bug'
       - 'refactor'
-      - '🏗 refactor'
+      - 'enhancement'
   default: patch
 
 template: |
