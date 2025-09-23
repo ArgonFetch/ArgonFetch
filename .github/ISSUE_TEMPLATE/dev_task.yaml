@@ -1,0 +1,13 @@
+name: "Dev Task"
+description: "Internal developer task (no required fields)"
+labels: ["internal"]
+assignees: []
+title: "[DEV] "
+projects: []
+
+body:
+  - type: textarea
+    id: content
+    attributes:
+      label: Task
+      placeholder: "Quick notes..."

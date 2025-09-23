@@ -1,56 +1,53 @@
 name: "Bug report"
-description: "Report a bug to help us identify and fix issues in the project."
+description: "Report a bug"
 labels: ["bug"]
 
 body:
-  - type: markdown
-    attributes:
-      value: |
-        # 🐞 **Issue Report**
-        Thank you for taking the time to report an issue! Please provide as much detail as possible to help us address the problem efficiently.  
-
   - type: checkboxes
     attributes:
-      label: ⚙️ Issue Checklist
+      label: Prerequisites
       options:
-        - label: I checked for duplicate issues.
-        - label: I checked for an existing pull request that addresses this issue.
+        - label: I checked for duplicate issues
+          required: true
     validations:
       required: true
 
   - type: input
     id: affected_part
     attributes:
-      label: 📜 What part of ArgonFetch are you having issues with?
-      placeholder: "e.g., Spotify playlist download..."
+      label: What's broken?
+      placeholder: "e.g., Spotify download"
     validations:
       required: true
 
   - type: textarea
     id: issue_description
     attributes:
-      label: 📝 Provide a clear and concise description of the issue.
+      label: Description
+      placeholder: "What happened?"
     validations:
       required: true
 
   - type: textarea
     id: steps_to_reproduce
     attributes:
-      label: 🔄 Steps to reproduce the issue.
-      placeholder: "e.g., Step 1: ..., Step 2: ..."
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
     validations:
       required: true
 
   - type: textarea
     id: error_output
     attributes:
-      label: ❌ Paste the full error output (if available).
-      placeholder: "Include any relevant logs or error messages."
+      label: Error message (if any)
+      placeholder: "Paste error here"
+      render: shell
 
   - type: textarea
     id: additional_context
     attributes:
-      label: 🖼️ Additional context.
-      placeholder: "Include screenshots, code blocks (use triple backticks ```), or any other relevant information."
-    validations:
-      required: false
+      label: Additional info
+      placeholder: "Screenshots, logs, etc."
