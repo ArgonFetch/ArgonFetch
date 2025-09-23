@@ -257,7 +257,9 @@ app.UseStaticFiles();
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseHttpsRedirection();
+    // Don't use HTTPS redirection in production when running behind a reverse proxy
+    // The proxy handles HTTPS termination
+    // app.UseHttpsRedirection();
     app.UseSpaStaticFiles();
 }
 
