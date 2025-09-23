@@ -8,7 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "build:agent": "ng build --aot --configuration production --output-path",
-    "apigen": "npx @openapitools/openapi-generator-cli generate -i http://localhost:5114/swagger/v1/swagger.json -g typescript-angular -o api"
+    "apigen": "npx @openapitools/openapi-generator-cli generate -i http://localhost:5114/swagger/v1/swagger.json -g typescript-angular -o ./src/app/api"
   },
   "private": true,
   "dependencies": {

@@ -85,6 +85,15 @@ builder.Services.AddScoped<SpotifyClient>(sp =>
 // Register YoutubeMusicAPI and YoutubeDL
 builder.Services.AddScoped<YTMusicAPI.SearchClient>();
 builder.Services.AddScoped<YoutubeDL>();
+
+// Register FFmpeg and streaming services
+builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ArgonFetch.Application.Interfaces.IFfmpegStreamingService, ArgonFetch.Infrastructure.Services.FfmpegStreamingService>();
+builder.Services.AddScoped<ArgonFetch.Application.Interfaces.IAcceleratedDownloadService, ArgonFetch.Infrastructure.Services.AcceleratedDownloadService>();
+builder.Services.AddScoped<ArgonFetch.Application.Services.ICombinedStreamUrlBuilder, ArgonFetch.Application.Services.CombinedStreamUrlBuilder>();
+builder.Services.AddScoped<ArgonFetch.Application.Services.IProxyUrlBuilder, ArgonFetch.Application.Services.ProxyUrlBuilder>();
+builder.Services.AddSingleton<ArgonFetch.Application.Services.IMediaUrlCacheService, ArgonFetch.Application.Services.MediaUrlCacheService>();
 #endregion
 
 #region Validation
@@ -224,11 +233,12 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+
 app.UseStaticFiles();
 
 if (!app.Environment.IsDevelopment())
 {
+    app.UseHttpsRedirection();
     app.UseSpaStaticFiles();
 }
 

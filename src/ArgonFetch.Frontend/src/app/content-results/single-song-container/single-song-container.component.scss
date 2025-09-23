@@ -6,12 +6,7 @@
   max-width: 602px;
   width: 100%;
   margin: 16px auto;
-  transition: transform 0.2s ease;
   position: relative;
-
-  &:hover {
-    transform: translateY(-2px);
-  }
 }
 
 .song-content {
@@ -41,7 +36,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding-right: 48px;
+  justify-content: center;
 }
 
 .title-row {
@@ -49,53 +44,35 @@
   justify-content: flex-start;
   align-items: center;
   width: 100%;
-  position: relative;
-
-  &::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 0;
-    height: 100%;
-    width: 50px;
-    background: linear-gradient(to right, transparent, var(--surface));
-    pointer-events: none;
-  }
 }
 
 .song-title {
-  margin: 0;
-  font-size: 1.5rem;
-  color: var(--primary);
+  font-size: 1rem;
   font-weight: 600;
+  color: var(--text);
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
+  text-align: left;
 }
 
 .song-artist {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
   margin: 4px 0 0;
-  font-size: 1rem;
-  color: var(--text);
-  opacity: 0.8;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  position: relative;
-
-  &::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 0;
-    background: linear-gradient(to right, transparent, var(--surface));
-    pointer-events: none;
-  }
+  width: 100%;
+  text-align: left;
 }
 
-.song-actions {
-  display: flex;
-  gap: 8px;
+/* Download Button and Dropdown Menu Styles */
+.download-button-container {
+  position: relative;
+  margin-left: auto;
   flex-shrink: 0;
 }
 
@@ -120,92 +97,223 @@
   &.download-button {
     color: var(--primary);
 
-    &:hover:not([disabled]) {
+    &:hover {
       background: var(--primary);
-      color: var(--surface);
-    }
-
-    &[disabled] {
-      opacity: 0.5;
-      cursor: not-allowed;
+      color: white;
     }
   }
 }
 
-.download-link,
-.download-link fa-icon,
-.download-link:hover {
-  display: none;
-}
-
-.action-button.download-button {
+/* Dropdown Menu Styles */
+.dropdown-menu {
   position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-}
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 150px;
+  padding: 4px 0;
 
-.loading-spinner {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
+  &.main-menu {
+    right: 0;
+    top: calc(100% + 5px);
   }
 
-  100% {
-    transform: rotate(360deg);
+  &.submenu {
+    left: 100%;
+    top: -4px;
+    margin-left: -2px; // Reduced gap to make hovering easier
   }
 }
 
-/* Add to your component's SCSS file */
+.menu-item-wrapper {
+  position: relative;
+}
+
+.menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--primary);
+  }
+
+  .submenu-arrow {
+    font-size: 0.7rem;
+    margin-left: auto;
+    opacity: 0.6;
+  }
+}
+
+/* Download Progress Bar Styles */
 .download-progress-container {
   width: 100%;
-  height: 6px;
-  background-color: rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
-  margin-top: 10px;
-  position: relative;
-  overflow: hidden;
+  margin-top: 12px;
+  animation: fadeIn 0.3s ease;
 }
 
-.download-progress-bar {
-  height: 100%;
-  background-color: var(--primary);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.download-progress-text {
-  position: absolute;
-  right: 0;
-  top: -16px;
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-}
-
-/* Add these styles to your existing SCSS file */
-
-.download-stats {
+.download-info {
   display: flex;
   justify-content: space-between;
-  width: 100%;
-  margin-top: 4px;
+  align-items: center;
+  margin-bottom: 6px;
   font-size: 0.75rem;
-  color: var(--text-tertiary);
 }
 
-.download-speed {
+.download-filename {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 70%;
+}
+
+.download-percentage {
+  color: var(--primary);
   font-weight: 500;
 }
 
-.download-eta {
-  text-align: right;
+.download-stats {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
-/* Make sure the progress container has enough margin to accommodate the stats */
-.download-progress-container {
-  margin-top: 8px;
-  margin-bottom: 2px;
+.download-speed {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.download-status {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.progress-bar-wrapper {
+  width: 100%;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+
+  &.indeterminate .progress-bar {
+    animation: indeterminate 1.8s ease-in-out infinite;
+  }
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light, var(--primary)));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  position: relative;
+  max-width: 100%; // Prevent overflow
+  overflow: hidden; // Hide any content that goes beyond
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Disabled state for download button */
+.action-button.download-button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+
+  &:hover {
+    background: transparent;
+    color: var(--primary);
+  }
+}
+
+/* Spinning animation for loading icon */
+.fa-spin {
+  animation: fa-spin 1s infinite linear;
+}
+
+@keyframes fa-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .song-container {
+    max-width: 100%;
+    margin: 8px;
+  }
+
+  .song-thumbnail {
+    width: 60px;
+    height: 60px;
+  }
+
+
+  .song-title {
+    font-size: 0.9rem;
+  }
+
+  .song-artist {
+    font-size: 0.8rem;
+  }
+
+  .dropdown-menu {
+    &.main-menu {
+      right: -8px;
+    }
+  }
 }

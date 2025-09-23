@@ -1,14 +1,14 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, HostListener, ElementRef } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { CommonModule } from '@angular/common';
-import { faDownload, faSpinner } from '@fortawesome/free-solid-svg-icons';
-import { ProxyService, ResourceInformationDto } from '../../../../api';
-import { firstValueFrom } from 'rxjs';
+import { faDownload, faChevronRight, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { ResourceInformationDto } from '../../api';
+import { HttpClient, HttpEventType, HttpClientModule } from '@angular/common/http';
 
 @Component({
   selector: 'app-single-song-container',
   standalone: true,
-  imports: [FontAwesomeModule, CommonModule],
+  imports: [FontAwesomeModule, CommonModule, HttpClientModule],
   templateUrl: './single-song-container.component.html',
   styleUrl: './single-song-container.component.scss'
 })
@@ -16,184 +16,293 @@ export class SingleSongContainerComponent {
   @Input() resourceInformation!: ResourceInformationDto;
 
   faDownload = faDownload;
+  faChevronRight = faChevronRight;
   faSpinner = faSpinner;
+
+  showMainMenu = false;
+  showVideoSubmenu = false;
+  showAudioSubmenu = false;
+
+  // Download progress tracking
   isDownloading = false;
   downloadProgress = 0;
-  downloadSpeed = 0; // Speed in bytes per second
-  downloadSpeedText = ''; // Formatted speed (KB/s or MB/s)
-  estimatedTimeText = ''; // Formatted estimated time
+  currentDownloadName = '';
+  downloadSpeed = '';
+  lastDownloadTime = 0;
+  lastDownloadBytes = 0;
+  totalBytes = 0;
+  downloadedMB = '';
 
-  // For speed calculation
-  private startTime = 0;
-  private loadedBytes = 0;
-  private totalBytes = 0;
-  private speedUpdateInterval: any;
+  constructor(
+    private elementRef: ElementRef,
+    private http: HttpClient
+  ) {}
 
-  // Parallel download settings
-  private readonly CHUNK_COUNT = 4; // Number of parallel connections
-  private chunks: { start: number; end: number; loaded: number; blob?: Blob }[] = [];
-  private activeRequests = 0;
-
-  constructor(private proxyService: ProxyService) { }
-
-  formatSpeed(bytesPerSecond: number): string {
-    if (bytesPerSecond > 1048576) { // 1 MB/s
-      return (bytesPerSecond / 1048576).toFixed(2) + ' MB/s';
-    } else {
-      return (bytesPerSecond / 1024).toFixed(2) + ' KB/s';
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (!this.elementRef.nativeElement.contains(event.target)) {
+      this.closeAllMenus();
     }
   }
 
-  formatTime(seconds: number): string {
-    if (seconds === Infinity || isNaN(seconds)) {
-      return 'calculating...';
-    }
-
-    if (seconds < 60) {
-      return Math.ceil(seconds) + ' sec';
-    } else if (seconds < 3600) {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = Math.ceil(seconds % 60);
-      return `${minutes}m ${remainingSeconds}s`;
-    } else {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      return `${hours}h ${minutes}m`;
+  toggleMainMenu(event: Event) {
+    event.stopPropagation();
+    this.showMainMenu = !this.showMainMenu;
+    if (!this.showMainMenu) {
+      this.showVideoSubmenu = false;
+      this.showAudioSubmenu = false;
     }
   }
 
-  updateSpeed(): void {
-    const currentTime = Date.now();
-    const elapsedSeconds = (currentTime - this.startTime) / 1000;
-
-    if (elapsedSeconds > 0) {
-      this.downloadSpeed = this.loadedBytes / elapsedSeconds;
-      this.downloadSpeedText = this.formatSpeed(this.downloadSpeed);
-
-      // Calculate remaining time
-      const remainingBytes = this.totalBytes - this.loadedBytes;
-      const estimatedSeconds = remainingBytes / this.downloadSpeed;
-      this.estimatedTimeText = this.formatTime(estimatedSeconds);
-    }
+  showVideoMenu(event: Event) {
+    event.stopPropagation();
+    this.showVideoSubmenu = true;
+    this.showAudioSubmenu = false;
   }
 
-  async onDownload(): Promise<void> {
-    if (this.isDownloading) return;
+  showAudioMenu(event: Event) {
+    event.stopPropagation();
+    this.showAudioSubmenu = true;
+    this.showVideoSubmenu = false;
+  }
 
-    this.resetDownloadState();
+  hideVideoMenu() {
+    // Removed timeout to prevent menu from disappearing
+    // The menu will stay open when hovering over submenu
+  }
+
+  hideAudioMenu() {
+    // Removed timeout to prevent menu from disappearing
+    // The menu will stay open when hovering over submenu
+  }
+
+  closeAllMenus() {
+    this.showMainMenu = false;
+    this.showVideoSubmenu = false;
+    this.showAudioSubmenu = false;
+  }
+
+  async onDownload(quality: 'best' | 'medium' | 'worst', type: 'combined' | 'audio', event: Event) {
+    event.stopPropagation();
+
+    if (this.isDownloading) {
+      return; // Prevent multiple downloads at once
+    }
 
     const mediaItem = this.resourceInformation.mediaItems?.[0];
-    const url = mediaItem?.streamingUrl;
-    var fileExtension = mediaItem?.fileExtension ?? '.unknown';
-
-    if (!url || !mediaItem) {
-      console.error('No streaming URL or media item available');
+    if (!mediaItem) {
+      console.error('No media item available');
       return;
     }
 
+    let url: string | null | undefined = null;
+    let filename = mediaItem.title || 'download';
+    let extension = '';
+
+    if (type === 'combined') {
+      // Handle video streams (with audio)
+      const videoUrls = mediaItem.video;
+      if (!videoUrls) {
+        console.error('No video URLs available');
+        return;
+      }
+
+      switch (quality) {
+        case 'best':
+          url = videoUrls.bestQuality;
+          extension = videoUrls.bestQualityFileExtension || '.mp4';
+          break;
+        case 'medium':
+          url = videoUrls.mediumQuality;
+          extension = videoUrls.mediumQualityFileExtension || '.mp4';
+          break;
+        case 'worst':
+          url = videoUrls.worstQuality;
+          extension = videoUrls.worstQualityFileExtension || '.mp4';
+          break;
+      }
+    } else if (type === 'audio') {
+      // Handle audio-only streams
+      const audioUrls = mediaItem.audio;
+      if (!audioUrls) {
+        console.error('No audio URLs available');
+        return;
+      }
+
+      switch (quality) {
+        case 'best':
+          url = audioUrls.bestQuality;
+          extension = audioUrls.bestQualityFileExtension || '.mp3';
+          break;
+        case 'medium':
+          url = audioUrls.mediumQuality;
+          extension = audioUrls.mediumQualityFileExtension || '.mp3';
+          break;
+        case 'worst':
+          url = audioUrls.worstQuality;
+          extension = audioUrls.worstQualityFileExtension || '.mp3';
+          break;
+      }
+    }
+
+    if (!url) {
+      console.error('No URL available for the selected quality and type');
+      return;
+    }
+
+    // Close menus and start download
+    this.closeAllMenus();
+    this.currentDownloadName = `${filename}${extension}`;
+    // Pass the type and quality to downloadFile for better size estimation
+    await this.downloadFile(url, this.currentDownloadName, type, quality);
+  }
+
+  private async downloadFile(url: string, filename: string, type: 'combined' | 'audio' = 'combined', quality: 'best' | 'medium' | 'worst' = 'medium') {
     this.isDownloading = true;
-    this.startTime = Date.now();
-
-    try {
-      const headResponse = await firstValueFrom(this.proxyService.proxyHead(url));
-
-      this.totalBytes = headResponse.contentLength ?? 0;
-
-      if (!this.totalBytes) {
-        throw new Error("Content-Length header is missing");
-      }
-
-      // Fallback: Extract from URL if content-type didn't provide a valid extension
-      if (fileExtension === '.unknown' && url.includes('.')) {
-        const urlExtension = '.' + url.split('.').pop()?.split('?')[0].toLowerCase();
-        const validExtensions: string[] = ['.mp3', '.m4a', '.ogg', '.wav', '.webm', '.flac', '.aac', '.mp4'];
-
-        if (validExtensions.includes(urlExtension)) {
-          fileExtension = urlExtension;
-        }
-      }
-
-      const filename: string = mediaItem.title + "." + fileExtension;
-
-      const chunkSize: number = Math.floor(this.totalBytes / this.CHUNK_COUNT);
-      this.chunks = [];
-
-      for (let i: number = 0; i < this.CHUNK_COUNT; i++) {
-        const start: number = i * chunkSize;
-        const end: number = (i === this.CHUNK_COUNT - 1) ? this.totalBytes - 1 : start + chunkSize - 1;
-        this.chunks.push({ start, end, loaded: 0 });
-      }
-
-      this.speedUpdateInterval = setInterval(() => this.updateSpeed(), 1000);
-
-      const downloadPromises: Promise<void>[] = this.chunks.map((chunk, index) =>
-        this.downloadChunk(url, chunk, index)
-      );
-
-      await Promise.all(downloadPromises);
-      
-      // Get content type
-      const contentType: string = headResponse.headers?.[Object.keys(headResponse.headers || {}).find(key => key.toLowerCase() === 'content-type') || '']?.[0] ?? 'application/octet-stream';
-
-      if (this.chunks.every(chunk => chunk.blob)) {
-        const completeBlob: Blob = new Blob(
-          this.chunks.map(chunk => chunk.blob as Blob),
-          { type: contentType }
-        );
-
-        const link: HTMLAnchorElement = document.createElement("a");
-        link.href = URL.createObjectURL(completeBlob);
-        link.download = filename;
-        link.click();
-        URL.revokeObjectURL(link.href);
-      }
-    } catch (error) {
-      console.error("Download failed:", error);
-    } finally {
-      this.isDownloading = false;
-      clearInterval(this.speedUpdateInterval);
-    }
-  }
-
-  async downloadChunk(url: string, chunk: { start: number; end: number; loaded: number; blob?: Blob }, chunkIndex: number): Promise<void> {
-    this.activeRequests++;
-
-    try {
-      const response = await firstValueFrom(
-        this.proxyService.proxyRange(url, chunk.start, chunk.end)
-      );
-
-      chunk.blob = response;
-      chunk.loaded = response.size;
-      this.loadedBytes += response.size;
-      this.downloadProgress = Math.round((this.loadedBytes / this.totalBytes) * 100);
-    } catch (error) {
-      console.error(`Error downloading chunk ${chunkIndex}:`, error);
-      throw error;
-    } finally {
-      this.activeRequests--;
-    }
-  }
-
-  private resetDownloadState(): void {
-    this.isDownloading = false;
     this.downloadProgress = 0;
-    this.loadedBytes = 0;
+    this.downloadSpeed = '';
+    this.lastDownloadTime = Date.now();
+    this.lastDownloadBytes = 0;
+    this.currentDownloadName = filename;
     this.totalBytes = 0;
-    this.downloadSpeed = 0;
-    this.downloadSpeedText = '';
-    this.estimatedTimeText = '';
-    this.chunks = [];
+    this.downloadedMB = '0';
 
-    if (this.speedUpdateInterval) {
-      clearInterval(this.speedUpdateInterval);
-      this.speedUpdateInterval = null;
+    try {
+      // Use HttpClient to download with progress tracking
+      this.http.get(url, {
+        responseType: 'blob',
+        reportProgress: true,
+        observe: 'events'
+      }).subscribe({
+        next: (event) => {
+          if (event.type === HttpEventType.DownloadProgress) {
+            // Store total bytes if available
+            this.totalBytes = event.total || 0;
+
+            // Calculate download progress
+            if (event.total) {
+              // Content-Length is known, show real progress
+              const progress = Math.round((event.loaded / event.total) * 100);
+              // Clamp progress between 0 and 100
+              this.downloadProgress = Math.min(100, Math.max(0, progress));
+            } else {
+              // Content-Length is unknown, estimate based on typical file sizes
+              // Use smarter estimation based on content type and quality
+              let estimatedSize: number;
+
+              if (type === 'audio') {
+                // Audio files vary by quality
+                switch (quality) {
+                  case 'best':
+                    estimatedSize = 15 * 1024 * 1024; // 15MB for best audio
+                    break;
+                  case 'medium':
+                    estimatedSize = 10 * 1024 * 1024; // 10MB for medium audio
+                    break;
+                  case 'worst':
+                    estimatedSize = 5 * 1024 * 1024; // 5MB for low audio
+                    break;
+                  default:
+                    estimatedSize = 10 * 1024 * 1024;
+                }
+              } else {
+                // Video files (combined) vary significantly by quality
+                switch (quality) {
+                  case 'best':
+                    estimatedSize = 100 * 1024 * 1024; // 100MB for best video
+                    break;
+                  case 'medium':
+                    estimatedSize = 30 * 1024 * 1024; // 30MB for medium video
+                    break;
+                  case 'worst':
+                    estimatedSize = 10 * 1024 * 1024; // 10MB for low video
+                    break;
+                  default:
+                    estimatedSize = 30 * 1024 * 1024;
+                }
+              }
+
+              // Calculate progress but cap at 95% until download actually completes
+              const estimatedProgress = Math.min(95, Math.round((event.loaded / estimatedSize) * 100));
+              this.downloadProgress = estimatedProgress;
+            }
+
+            // Always update MB downloaded
+            this.downloadedMB = (event.loaded / 1024 / 1024).toFixed(1);
+
+            // Calculate download speed
+            const currentTime = Date.now();
+            const timeDiff = (currentTime - this.lastDownloadTime) / 1000; // in seconds
+
+            if (timeDiff > 0.5) { // Update speed every 0.5 seconds
+              const bytesDiff = event.loaded - this.lastDownloadBytes;
+              const speed = bytesDiff / timeDiff; // bytes per second
+              this.downloadSpeed = this.formatSpeed(speed);
+
+              this.lastDownloadTime = currentTime;
+              this.lastDownloadBytes = event.loaded;
+            }
+          } else if (event.type === HttpEventType.Response) {
+            // Download complete, save the file
+            const blob = event.body;
+            if (blob) {
+              this.saveBlob(blob, filename);
+            }
+            this.isDownloading = false;
+            this.downloadProgress = 0;
+            this.currentDownloadName = '';
+            this.downloadSpeed = '';
+            this.totalBytes = 0;
+            this.downloadedMB = '';
+          }
+        },
+        error: (error) => {
+          console.error('Download failed:', error);
+          this.isDownloading = false;
+          this.downloadProgress = 0;
+          this.currentDownloadName = '';
+          this.downloadSpeed = '';
+          this.totalBytes = 0;
+          this.downloadedMB = '';
+        }
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      this.isDownloading = false;
+      this.downloadProgress = 0;
+      this.currentDownloadName = '';
+      this.downloadSpeed = '';
+      this.totalBytes = 0;
+      this.downloadedMB = '';
     }
   }
 
-  ngOnDestroy() {
-    if (this.speedUpdateInterval) {
-      clearInterval(this.speedUpdateInterval);
+  private saveBlob(blob: Blob, filename: string) {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }
+
+  hasCombinedUrls(): boolean {
+    return !!this.resourceInformation.mediaItems?.[0]?.video;
+  }
+
+  hasAudioUrls(): boolean {
+    return !!this.resourceInformation.mediaItems?.[0]?.audio;
+  }
+
+  private formatSpeed(bytesPerSecond: number): string {
+    if (bytesPerSecond < 1024) {
+      return `${bytesPerSecond.toFixed(0)} B/s`;
+    } else if (bytesPerSecond < 1024 * 1024) {
+      return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
+    } else {
+      return `${(bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`;
     }
   }
 }

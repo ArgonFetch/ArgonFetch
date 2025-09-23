@@ -9,7 +9,7 @@ import { PlaylistContainerComponent } from '../content-results/playlist-containe
 import { ModalService } from '../services/modal.service';
 import { ContentSkeletonLoaderComponent } from "../content-skeleton-loader/content-skeleton-loader.component";
 import { SingleSongContainerComponent } from '../content-results/single-song-container/single-song-container.component';
-import { FetchService, MediaType, ResourceInformationDto } from '../../../api';
+import { MediaType, ResourceInformationDto, FetchService } from '../api';
 
 @Component({
   selector: 'app-home',
@@ -61,27 +61,9 @@ export class HomeComponent {
 
     // Show loader
     this.isLoading = true;
+    this.loaderType = 'single-song'; // Default to single-song loader
 
-    this.fetchService
-      .getMediaType(this.url)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (mediaType) => {
-          if (mediaType == MediaType.NUMBER_0) {
-            this.loaderType = 'single-song';
-            this.fetchResource();
-          } else if (mediaType == MediaType.NUMBER_1) {
-            this.loaderType = 'playlist';
-            this.handleError('Hold on a minute...', 'Young padawan, I have to sadly inform you that the playlist feature isn\'t available yet.');
-          } else {
-            this.loaderType = 'unknown';
-            this.fetchResource();
-          }
-        },
-        error: () => {
-          this.handleError('Well, this is awkward...', 'Something unexpected happened. Mind giving it another shot?');
-        }
-      });
+    this.fetchResource();
   }
 
   private fetchResource() {
@@ -89,12 +71,20 @@ export class HomeComponent {
       .getResource(this.url)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (resourceInformation) => {
-          resourceInformation.type
+        next: (resourceInformation: ResourceInformationDto) => {
           this.resourceInformation = resourceInformation;
+          this.mediaType = resourceInformation.type;
+
+          // Update loader type based on actual media type
+          if (resourceInformation.type === MediaType.NUMBER_1) {
+            this.loaderType = 'playlist';
+          } else {
+            this.loaderType = 'single-song';
+          }
+
           this.isLoading = false;
         },
-        error: (error) => {
+        error: (error: any) => {
           if (error.status === 404) {
             this.handleError('Resource Not Found', 'We couldn\'t find what you\'re looking for. Are you sure that URL is correct?');
           } else if (error.status === 415) {

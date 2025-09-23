@@ -6,7 +6,7 @@ import { faSun, faMoon } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { ThemeService } from './services/theme.service';
 import { ConfirmationModalComponent } from "./confirmation-modal/confirmation-modal.component";
-import { AppService } from '../../api';
+import { AppService } from '../app/api';
 import { catchError, firstValueFrom, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ModalService } from './services/modal.service';

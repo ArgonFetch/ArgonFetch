@@ -5,23 +5,72 @@
     </div>
 
     <div class="song-info">
-      <div class="title-row">
-        <h3 class="song-title">{{ resourceInformation.mediaItems?.[0]?.title }}</h3>
-      </div>
+      <h3 class="song-title">{{ resourceInformation.mediaItems?.[0]?.title }}</h3>
       <p class="song-artist">{{ resourceInformation.mediaItems?.[0]?.author }}</p>
+
+      <!-- Download Progress Bar -->
       <div class="download-progress-container" *ngIf="isDownloading">
-        <div class="download-progress-bar" [style.width.%]="downloadProgress"></div>
-        <div class="download-progress-text">{{ downloadProgress }}%</div>
-      </div>
-      <div class="download-stats" *ngIf="isDownloading">
-        <span class="download-speed">{{ downloadSpeedText }}</span>
-        <span class="download-eta">ETA: {{ estimatedTimeText }}</span>
+        <div class="download-info">
+          <span class="download-filename">{{ currentDownloadName }}</span>
+          <div class="download-stats">
+            <span class="download-speed" *ngIf="downloadSpeed">{{ downloadSpeed }}</span>
+            <span class="download-size" *ngIf="downloadedMB">{{ downloadedMB }} MB</span>
+            <span class="download-percentage">{{ downloadProgress }}%</span>
+          </div>
+        </div>
+        <div class="progress-bar-wrapper">
+          <div class="progress-bar" [style.width.%]="downloadProgress" [style.max-width]="'100%'"></div>
+        </div>
       </div>
     </div>
 
-    <button class="action-button download-button" (click)="onDownload()" [disabled]="isDownloading">
-      <fa-icon *ngIf="!isDownloading" [icon]="faDownload"></fa-icon>
-      <fa-icon *ngIf="isDownloading" [icon]="faSpinner" animation="spin"></fa-icon>
-    </button>
+    <!-- Download Button with Dropdown Menu -->
+    <div class="download-button-container">
+      <button class="action-button download-button"
+              [disabled]="isDownloading"
+              (click)="toggleMainMenu($event)">
+        <fa-icon *ngIf="!isDownloading" [icon]="faDownload"></fa-icon>
+        <fa-icon *ngIf="isDownloading" [icon]="faSpinner" class="fa-spin"></fa-icon>
+      </button>
+
+      <!-- Main Dropdown Menu -->
+      <div class="dropdown-menu main-menu" *ngIf="showMainMenu && !isDownloading">
+        <!-- Video + Audio Option (if video content is available) -->
+        <div class="menu-item-wrapper"
+             *ngIf="hasCombinedUrls()"
+             (mouseenter)="showVideoMenu($event)"
+             (mouseleave)="showVideoSubmenu = false">
+          <div class="menu-item">
+            <span>Video</span>
+            <fa-icon [icon]="faChevronRight" class="submenu-arrow"></fa-icon>
+          </div>
+
+          <!-- Video Quality Submenu -->
+          <div class="dropdown-menu submenu" *ngIf="showVideoSubmenu">
+            <div class="menu-item" (click)="onDownload('best', 'combined', $event)">Best</div>
+            <div class="menu-item" (click)="onDownload('medium', 'combined', $event)">Medium</div>
+            <div class="menu-item" (click)="onDownload('worst', 'combined', $event)">Low</div>
+          </div>
+        </div>
+
+        <!-- Audio Only Option -->
+        <div class="menu-item-wrapper"
+             *ngIf="hasAudioUrls()"
+             (mouseenter)="showAudioMenu($event)"
+             (mouseleave)="showAudioSubmenu = false">
+          <div class="menu-item">
+            <span>Audio</span>
+            <fa-icon [icon]="faChevronRight" class="submenu-arrow"></fa-icon>
+          </div>
+
+          <!-- Audio Quality Submenu -->
+          <div class="dropdown-menu submenu" *ngIf="showAudioSubmenu">
+            <div class="menu-item" (click)="onDownload('best', 'audio', $event)">Best</div>
+            <div class="menu-item" (click)="onDownload('medium', 'audio', $event)">Medium</div>
+            <div class="menu-item" (click)="onDownload('worst', 'audio', $event)">Low</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
