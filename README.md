@@ -4,7 +4,7 @@
 </p>
 <p align="center">
   <strong>ArgonFetch is Yet Another Media Downloader.</strong> 
-  A powerful tool for downloading videos, music, and other media from various online sources.
+  A powerful tool for downloading videos, music, and other media from various online sources. 
 </p>
 <p align="center">
   <a><img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FArgonFetch%2FArgonFetch&count_bg=%23A855F6&title_bg=%23555555&icon=powershell.svg&icon_color=%23E7E7E7&title=Visits&edge_flat=false"/></a>
