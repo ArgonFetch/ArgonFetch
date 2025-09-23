@@ -64,7 +64,7 @@ volumes:
 2. **Create a .env file:**
 
 ```env
-# Database
+# Database 
 POSTGRES_USER=argonfetch
 POSTGRES_PASSWORD=changeme123
 POSTGRES_DB=argonfetch
