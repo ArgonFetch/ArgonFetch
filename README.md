@@ -3,8 +3,8 @@
   <img src="assets/logo-simple.svg" width="200" alt="ArgonFetch Logo">
 </p>
 <p align="center">
-  <strong>ArgonFetch is Yet Another Media Downloader.</strong> 
-  A powerful tool for downloading videos, music, and other media from various online sources. 
+  <strong>ArgonFetch is Yet Another Media Downloader.</strong>
+  A powerful tool for downloading videos, music, and other media from various online sources.
 </p>
 <p align="center">
   <a href="https://github.com/ArgonFetch/ArgonFetch"><img src="https://badgetrack.pianonic.ch/badge?tag=argon-fetch&label=visits&color=9f54e5&style=flat" alt="visits" /></a>
@@ -17,83 +17,102 @@
 
 > **⚠️ Important Note:** This project is currently under development and may not function as described directly from the main branch. For a working version, please check the [Releases tab](https://github.com/ArgonFetch/ArgonFetch/releases) for the latest stable release.
 
-<!-- [![Version](https://img.shields.io/github/v/release/ArgonFetch/ArgonFetch?color=%230567ff&label=Latest%20Release&style=for-the-badge)](https://github.com/ArgonFetch/ArgonFetch/releases/latest) -->
+## ✨ Features
 
-## 🚀 Features
-- 📥 Download videos, music, and more from multiple sources 
-- 🎯 Easy-to-use interface with powerful options 
-- 🔗 Supports a wide range of websites 
+- Download from Spotify, YouTube, and more
+- Multiple formats: MP3, MP4, WebM
+- Docker ready
+- Web interface and API
 
 ## 📸 Screenshots
-<p align="center">
-  <img src=".\assets\startpage.png" width="1000" alt="ArgonFetch Screenshot">
-</p>
 
-## 📦 Installation
+![ArgonFetch Homepage](./assets/startpage.png)
 
-### Preparations:
+## 🐳 Docker Setup
 
-- For Spotify Support you'll need to [create an App using Spotify for Developers](https://developer.spotify.com/documentation/web-api/concepts/apps).
-  From there you'll get a Client ID and a Client Secret, which you will have to provide during the install.
+1. **Create a compose.yml file:**
 
-#### Clone Run the setup script:
-   
-   **Linux/macOS:**
-   ```sh
-   # Download Source
-   curl -fsSL -o argonfetch.tar.gz https://github.com/ArgonFetch/ArgonFetch/archive/refs/heads/main.tar.gz
-   # Unpack Source, remove tar and cd into the source directory
-   tar -xzf argonfetch.tar.gz
-   rm argonfetch.tar.gz
-   cd ArgonFetch-main
-   # Make the script executable
-   chmod +x setup.sh
-   
-   # Run interactively
-   ./setup.sh
-   ```
-   
-   **Windows (PowerShell):**
-   ```powershell   
-   # Download the source using Invoke-WebRequest
-   Invoke-WebRequest -Uri "https://github.com/ArgonFetch/ArgonFetch/archive/refs/heads/main.tar.gz" -OutFile "argonfetch.tar.gz"
-   # Extract the tar.gz file (Windows 10 and later include tar)
-   tar -xzf argonfetch.tar.gz
-   # Remove the downloaded archive
-   Remove-Item argonfetch.tar.gz
-   # Change directory into the extracted folder
-   Set-Location ArgonFetch-main
+```yaml
+services:
+  postgres:
+    image: postgres:15
+    container_name: argonfetch-db
+    env_file: .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
 
-   # Run interactively
-   .\setup.ps1
-   ```
+  argonfetch:
+    image: ghcr.io/argonfetch/argonfetch:latest
+    # Alternative: docker.io/pianonic/argonfetch:latest
+    container_name: argonfetch
+    env_file: .env
+    environment:
+      ConnectionStrings__ArgonFetchDatabase: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
 
-After the installation, ArgonFetch should be accessible at http://localhost:8080.
+volumes:
+  postgres_data:
+```
+
+2. **Create a .env file:**
+
+```env
+# Database
+POSTGRES_USER=argonfetch
+POSTGRES_PASSWORD=changeme123
+POSTGRES_DB=argonfetch
+
+# Spotify API (Required)
+Spotify__ClientId=your_spotify_client_id
+Spotify__ClientSecret=your_spotify_client_secret
+```
+
+3. **Start it:**
+
+```bash
+docker compose up -d
+```
+
+The application will be available at `http://localhost:8080`.
+
+Get Spotify credentials from [Spotify Developer Dashboard](https://developer.spotify.com/documentation/web-api/concepts/apps).
+
 
 ## 🛠️ Usage
-Simply launch ArgonFetch and paste the URL of the media you want to download. 
-<!--- Choose your preferred format and quality, then start downloading! --->
 
-## 🛣️ Roadmap
+1. Navigate to `http://localhost:8080`
+2. Paste a media URL
+3. Download
+
+API docs: `http://localhost:8080/swagger`
+
+## 📋 Roadmap
+
 - [x] Spotify Songs
 - [ ] Spotify Playlists
 - [ ] Spotify Albums
 - [x] YouTube Media
 - [ ] SoundCloud Media
+
 ### Future Plans
 - [ ] Social Media Support (X, Instagram, TikTok ...)
 
-## 💻 Development Environment Setup
-To setup the development environment follow [this](devenv.md) guide.
+## 💻 Development
+
+See [Development Guide](devenv.md).
+
 
 ## 📜 License
-This project is licensed under the GPL-3.0 License. 
-See the [LICENSE](LICENSE) file for more details.
 
-## Contributors
-<a href="https://github.com/argonfetch/argonfetch/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=argonfetch/argonfetch " />
-</a>
+This project is licensed under the GPL-3.0 License. See [LICENSE](LICENSE) for details.
 
 ---
-<p align="center">Made with ❤️ by <a href="https://github.com/Pianonic">PianoNic</a> and <a href="https://github.com/MyDrift-user">MyDrift</a></p>
+
+**Made with ❤️ by [PianoNic](https://github.com/Pianonic) and [MyDrift](https://github.com/MyDrift-user)**
