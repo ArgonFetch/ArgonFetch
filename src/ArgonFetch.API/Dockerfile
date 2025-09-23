@@ -31,7 +31,6 @@ WORKDIR "/src/ArgonFetch.API"
 RUN dotnet publish "ArgonFetch.API.csproj" \
     -c $BUILD_CONFIGURATION \
     -o /app/publish \
-    --no-restore \
     /p:UseAppHost=false
 
 # Stage 4: Frontend dependencies
