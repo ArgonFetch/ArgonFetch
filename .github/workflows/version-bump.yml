@@ -1,0 +1,78 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      version:
+        description: 'Specific version (overrides bump_type)'
+        required: false
+        type: string
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+
+      - name: Setup Node.js (for semver)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install semver
+        run: npm install -g semver
+
+      - name: Get current version from csproj
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(grep -oP '<Version>\K[^<]+' src/ArgonFetch.API/ArgonFetch.API.csproj)
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            NEW_VERSION="${{ github.event.inputs.version }}"
+          else
+            CURRENT_VERSION="${{ steps.current_version.outputs.CURRENT_VERSION }}"
+            BUMP_TYPE="${{ github.event.inputs.bump_type }}"
+            NEW_VERSION=$(semver -i $BUMP_TYPE $CURRENT_VERSION)
+          fi
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Update project version
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.NEW_VERSION }}"
+          echo "Updating version to: $NEW_VERSION"
+
+          # Update all .csproj files with Version tag
+          find src -name "*.csproj" -type f -exec sed -i "s/<Version>.*<\/Version>/<Version>$NEW_VERSION<\/Version>/g" {} \;
+
+          echo "Updated project files:"
+          grep -h "<Version>" src/**/*.csproj || true
+
+      - name: Commit version bump
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.NEW_VERSION }}"
+          git add src/**/*.csproj
+          git commit -m "Bump version to $NEW_VERSION [skip ci]"
+          git push origin HEAD:main
