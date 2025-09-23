@@ -48,12 +48,13 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
                 return new MediaInformationDto
                 {
                     RequestedUrl = CleanHtml(queryUrl),
-                    StreamingVideoUrls = new StreamingUrlDto
+                    Video = new StreamingUrlDto  // TikTok videos have audio included
                     {
                         BestQualityDescription = "Best Quality",
                         BestQuality = CleanHtml(downloadLink),
-                        BestQualityFileExtension = "mp4",
+                        BestQualityFileExtension = ".mp4",
                     },
+                    Audio = null,  // TikTok doesn't provide audio-only
                     CoverUrl = CleanHtml(imageUrl),
                     Title = CleanHtml(title),
                     Author = CleanHtml(author)

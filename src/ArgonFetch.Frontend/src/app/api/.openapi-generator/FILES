@@ -5,6 +5,7 @@ api/api.ts
 api/app.service.ts
 api/fetch.service.ts
 api/proxy.service.ts
+api/stream.service.ts
 configuration.ts
 encoder.ts
 git_push.sh
@@ -16,5 +17,6 @@ model/models.ts
 model/problemDetails.ts
 model/proxyHeadResponse.ts
 model/resourceInformationDto.ts
+model/streamingUrlDto.ts
 param.ts
 variables.ts

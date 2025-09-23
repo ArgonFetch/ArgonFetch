@@ -3,6 +3,7 @@ using ArgonFetch.Application.Enums;
 using ArgonFetch.Application.Services;
 using ArgonFetch.Application.Services.DDLFetcherServices;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using SpotifyAPI.Web;
 using YoutubeDLSharp;
@@ -28,13 +29,21 @@ namespace ArgonFetch.Application.Queries
         private readonly YTMusicAPI.SearchClient _ytmSearchClient;
         private readonly TikTokDllFetcherService _tikTokDllFetcherService;
         private readonly IMemoryCache _memoryCache;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ICombinedStreamUrlBuilder _combinedUrlBuilder;
+        private readonly IMediaUrlCacheService _cacheService;
+        private readonly IProxyUrlBuilder _proxyUrlBuilder;
 
         public GetMediaQueryHandler(
             SpotifyClient spotifyClient,
             YTMusicAPI.SearchClient ytmSearchClient,
             YoutubeDL youtubeDL,
             TikTokDllFetcherService tikTokDllFetcherService,
-            IMemoryCache memoryCache
+            IMemoryCache memoryCache,
+            IHttpContextAccessor httpContextAccessor,
+            ICombinedStreamUrlBuilder combinedUrlBuilder,
+            IMediaUrlCacheService cacheService,
+            IProxyUrlBuilder proxyUrlBuilder
             )
         {
             _spotifyClient = spotifyClient;
@@ -42,6 +51,10 @@ namespace ArgonFetch.Application.Queries
             _youtubeDL = youtubeDL;
             _tikTokDllFetcherService = tikTokDllFetcherService;
             _memoryCache = memoryCache;
+            _httpContextAccessor = httpContextAccessor;
+            _combinedUrlBuilder = combinedUrlBuilder;
+            _cacheService = cacheService;
+            _proxyUrlBuilder = proxyUrlBuilder;
         }
 
         public async Task<ResourceInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
@@ -76,6 +89,52 @@ namespace ArgonFetch.Application.Queries
                     }
                 }
 
+                // First, check if we have formats that already contain both video AND audio
+                var combinedFormats = ExtractCombinedFormatsAndCacheNewUrl(resultData.Formats);
+
+                StreamingUrlDto? combinedUrls = null;
+                StreamingUrlDto? videoUrls = null;
+                StreamingUrlDto? audioUrls = null;
+
+                if (HasValidUrls(combinedFormats))
+                {
+                    // We have pre-muxed formats! Use them directly (FAST!)
+                    // These go through the proxy endpoint, not the combine endpoint
+                    if (_httpContextAccessor.HttpContext != null)
+                    {
+                        combinedUrls = _proxyUrlBuilder.BuildProxyUrls(combinedFormats, _httpContextAccessor.HttpContext.Request, _cacheService);
+                    }
+                    else
+                    {
+                        combinedUrls = combinedFormats;
+                    }
+
+                    // Still extract audio-only for "Audio Only" option
+                    audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
+                    if (_httpContextAccessor.HttpContext != null)
+                    {
+                        audioUrls = _proxyUrlBuilder.BuildProxyUrls(audioUrls, _httpContextAccessor.HttpContext.Request, _cacheService, forceAudio: true);
+                    }
+                }
+                else
+                {
+                    // No combined formats available, use separate streams (slower, needs FFmpeg)
+                    videoUrls = ExtractThreeVideoQualitiesAndCacheNewUrl(resultData.Formats);
+                    audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
+
+                    // Build combined URLs using the combine endpoint (FFmpeg muxing)
+                    combinedUrls = _httpContextAccessor.HttpContext != null
+                        ? _combinedUrlBuilder.BuildCombinedUrls(videoUrls, audioUrls, _httpContextAccessor.HttpContext.Request, _cacheService)
+                        : null;
+
+                    // Build proxy URLs for separate streams if needed
+                    if (_httpContextAccessor.HttpContext != null)
+                    {
+                        videoUrls = _proxyUrlBuilder.BuildProxyUrls(videoUrls, _httpContextAccessor.HttpContext.Request, _cacheService);
+                        audioUrls = _proxyUrlBuilder.BuildProxyUrls(audioUrls, _httpContextAccessor.HttpContext.Request, _cacheService, forceAudio: true);
+                    }
+                }
+
                 return new ResourceInformationDto
                 {
                     Type = MediaType.Media,
@@ -84,8 +143,8 @@ namespace ArgonFetch.Application.Queries
                             new MediaInformationDto
                             {
                                 RequestedUrl = request.Query,
-                                StreamingVideoUrls = ExtractThreeVideoQualitiesAndCacheNewUrl(resultData.Formats),
-                                StreamingAudioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats),
+                                Video = combinedUrls,  // Either pre-muxed or FFmpeg-combined
+                                Audio = audioUrls,      // Audio-only option
                                 CoverUrl = thumbnailUrl,
                                 Title = resultData.Title,
                                 Author = resultData.Uploader
@@ -97,19 +156,86 @@ namespace ArgonFetch.Application.Queries
                 throw new NotSupportedException("This isn't implemented yet");
         }
 
+        private StreamingUrlDto ExtractCombinedFormatsAndCacheNewUrl(FormatData[] formatData)
+        {
+            // Get formats that already have both video AND audio (no muxing needed!)
+            var combinedFormats = formatData
+                .Where(f =>
+                    !string.IsNullOrEmpty(f.VideoCodec) &&
+                    !string.IsNullOrEmpty(f.AudioCodec) &&
+                    f.VideoCodec != "none" &&
+                    f.AudioCodec != "none" &&
+                    !f.Protocol.Contains("mhtml") &&
+                    !f.Protocol.Contains("m3u8") &&
+                    (f.Extension?.Equals(".mp4", StringComparison.OrdinalIgnoreCase) == true ||
+                     f.Extension?.Equals(".webm", StringComparison.OrdinalIgnoreCase) == true)
+                )
+                .OrderByDescending(f => f.Height ?? 0)
+                .ThenByDescending(f => f.Bitrate)
+                .ToList();
+
+            if (combinedFormats.Any())
+            {
+                var bestVideo = combinedFormats.FirstOrDefault();
+                var mediumVideo = combinedFormats.ElementAtOrDefault(combinedFormats.Count() / 2);
+                var worstVideo = combinedFormats.LastOrDefault();
+
+                return new StreamingUrlDto
+                {
+                    BestQualityDescription = bestVideo?.Format,
+                    BestQuality = bestVideo?.Url,
+                    BestQualityFileExtension = bestVideo?.Extension,
+
+                    MediumQualityDescription = mediumVideo?.Format,
+                    MediumQuality = mediumVideo?.Url,
+                    MediumQualityFileExtension = mediumVideo?.Extension,
+
+                    WorstQualityDescription = worstVideo?.Format,
+                    WorstQuality = worstVideo?.Url,
+                    WorstQualityFileExtension = worstVideo?.Extension,
+                };
+            }
+
+            return new StreamingUrlDto();
+        }
+
+        private bool HasValidUrls(StreamingUrlDto? urls)
+        {
+            return urls != null &&
+                   (!string.IsNullOrEmpty(urls.BestQuality) ||
+                    !string.IsNullOrEmpty(urls.MediumQuality) ||
+                    !string.IsNullOrEmpty(urls.WorstQuality));
+        }
+
         private StreamingUrlDto ExtractThreeVideoQualitiesAndCacheNewUrl(FormatData[] formatData)
         {
-            var mp4Formats = formatData
+            // Only get video-only formats (for separate stream approach)
+            // These will be combined with audio using FFmpeg
+            var videoOnlyFormats = formatData
                 .Where(f =>
-                    !f.Format.Contains("audio") &&
+                    !string.IsNullOrEmpty(f.VideoCodec) &&
+                    f.VideoCodec != "none" &&
+                    (string.IsNullOrEmpty(f.AudioCodec) || f.AudioCodec == "none") && // Video only!
                     !f.Protocol.Contains("mhtml") &&
                     !f.Protocol.Contains("m3u8")
                 )
-                .OrderByDescending(f => f.Bitrate);
+                .OrderByDescending(f => f.Height ?? 0)
+                .ThenByDescending(f => f.Bitrate)
+                .ToList();
 
-            var bestVideo = mp4Formats.FirstOrDefault();
-            var mediumVideo = mp4Formats.ElementAtOrDefault(mp4Formats.Count() / 2);
-            var worstVideo = mp4Formats.LastOrDefault();
+            // Prefer MP4 if available
+            var mp4Formats = videoOnlyFormats
+                .Where(f => f.Extension?.Equals(".mp4", StringComparison.OrdinalIgnoreCase) == true)
+                .ToList();
+
+            if (mp4Formats.Any())
+            {
+                videoOnlyFormats = mp4Formats;
+            }
+
+            var bestVideo = videoOnlyFormats.FirstOrDefault();
+            var mediumVideo = videoOnlyFormats.ElementAtOrDefault(videoOnlyFormats.Count() / 2);
+            var worstVideo = videoOnlyFormats.LastOrDefault();
 
             return new StreamingUrlDto
             {
@@ -129,20 +255,40 @@ namespace ArgonFetch.Application.Queries
 
         private StreamingUrlDto ExtractThreeAudioQualitiesAndCacheNewUrl(FormatData[] formatData)
         {
-            var mp3Formats = formatData
+            // First try to get MP3/M4A formats (no conversion needed, faster)
+            var audioFormats = formatData
                 .Where(f =>
                     !string.IsNullOrEmpty(f.AudioCodec) &&
                     f.Format.Contains("audio") &&
                     !f.Protocol.Contains("mhtml") &&
                     !f.Protocol.Contains("m3u8") &&
                     f.AudioBitrate != null &&
-                    f.AudioBitrate != 0
+                    f.AudioBitrate != 0 &&
+                    (f.Extension?.Equals(".mp3", StringComparison.OrdinalIgnoreCase) == true ||
+                     f.Extension?.Equals(".m4a", StringComparison.OrdinalIgnoreCase) == true)
                 )
-                .OrderByDescending(f => f.Bitrate);
+                .OrderByDescending(f => f.Bitrate)
+                .ToList();
 
-            var bestAudio = mp3Formats.FirstOrDefault();
-            var mediumAudio = mp3Formats.ElementAtOrDefault(mp3Formats.Count() / 2);
-            var worstAudio = mp3Formats.LastOrDefault();
+            // If no MP3/M4A formats, fall back to any audio format
+            if (!audioFormats.Any())
+            {
+                audioFormats = formatData
+                    .Where(f =>
+                        !string.IsNullOrEmpty(f.AudioCodec) &&
+                        f.Format.Contains("audio") &&
+                        !f.Protocol.Contains("mhtml") &&
+                        !f.Protocol.Contains("m3u8") &&
+                        f.AudioBitrate != null &&
+                        f.AudioBitrate != 0
+                    )
+                    .OrderByDescending(f => f.Bitrate)
+                    .ToList();
+            }
+
+            var bestAudio = audioFormats.FirstOrDefault();
+            var mediumAudio = audioFormats.ElementAtOrDefault(audioFormats.Count() / 2);
+            var worstAudio = audioFormats.LastOrDefault();
 
             return new StreamingUrlDto
             {
@@ -202,6 +348,17 @@ namespace ArgonFetch.Application.Queries
 
             var result = await YT_DLP_Fetch(ytmTrackUrl);
 
+            var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(result.Formats);
+
+            // Build proxy URLs if HTTP context is available
+            // Force audio mode for Spotify tracks
+            if (_httpContextAccessor.HttpContext != null)
+            {
+                audioUrls = _proxyUrlBuilder.BuildProxyUrls(audioUrls, _httpContextAccessor.HttpContext.Request, _cacheService, forceAudio: true);
+            }
+
+            // Spotify typically only has audio, so combined URLs would be null
+
             return new ResourceInformationDto
             {
                 Type = MediaType.Media,
@@ -210,7 +367,8 @@ namespace ArgonFetch.Application.Queries
                     new MediaInformationDto
                     {
                         RequestedUrl = query,
-                        StreamingAudioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(result.Formats),
+                        Video = null,  // Spotify has no video
+                        Audio = audioUrls,  // Audio-only
                         CoverUrl = searchResponse.Album.Images.First().Url,
                         Title = searchResponse.Name,
                         Author = searchResponse.Artists.First().Name,

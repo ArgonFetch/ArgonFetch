@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh api:*)",
+      "Bash(gh auth:*)",
+      "Bash(where gh)",
+      "Bash(cmd /c \"gh auth status\")",
+      "Bash(powershell:*)",
+      "WebSearch",
+      "Bash(dotnet build)",
+      "Bash(dotnet build:*)",
+      "Bash(npm run build:*)",
+      "Bash(ng serve:*)",
+      "Bash(cmd.exe /c \"ng serve --port 4200\")",
+      "Bash(dotnet run:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

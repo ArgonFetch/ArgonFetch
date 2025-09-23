@@ -18,6 +18,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ArgonFetch.Domain\ArgonFetch.Domain.csproj" />
+    <ProjectReference Include="..\ArgonFetch.Application\ArgonFetch.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.5" />
   </ItemGroup>
 
 </Project>
