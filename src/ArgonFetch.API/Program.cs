@@ -4,7 +4,6 @@ using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services.DDLFetcherServices;
 using ArgonFetch.Application.Validators;
 using ArgonFetch.Infrastructure;
-using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MediatR;
@@ -14,6 +13,23 @@ using SpotifyAPI.Web;
 using YoutubeDLSharp;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load .env file if it exists (for local development)
+if (File.Exists(".env"))
+{
+    foreach (var line in File.ReadAllLines(".env"))
+    {
+        var trimmedLine = line.Trim();
+        if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#"))
+            continue;
+
+        var parts = trimmedLine.Split('=', 2);
+        if (parts.Length == 2)
+        {
+            Environment.SetEnvironmentVariable(parts[0], parts[1]);
+        }
+    }
+}
 
 #region Configure Services
 // Add services to the container.
@@ -59,22 +75,16 @@ builder.Services.AddScoped<SpotifyClient>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
 
-    string clientId, clientSecret;
-
-    if (builder.Environment.IsDevelopment())
-    {
-        clientId = config["Spotify:ClientId"];
-        clientSecret = config["Spotify:ClientSecret"];
-    }
-    else
-    {
-        Env.Load();
-        clientId = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_ID");
-        clientSecret = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_SECRET");
-    }
+    // Use Configuration pattern consistently - same as ConnectionStrings
+    string clientId = config["Spotify:ClientId"];
+    string clientSecret = config["Spotify:ClientSecret"];
 
     if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
-        throw new InvalidOperationException("Spotify ClientId and ClientSecret must be provided.");
+    {
+        var logger = sp.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning("Spotify API credentials not configured. Spotify features will be disabled.");
+        return null;
+    }
 
     var spotifyConfig = SpotifyClientConfig
        .CreateDefault()
