@@ -1,30 +1,27 @@
 name-template: 'v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
+
 categories:
   - title: '🚀 Features'
     labels:
+      - 'feature'
       - '🚀 feature'
-  - title: '✨ enhancement'
+  - title: '✨ Enhancements'
     labels:
+      - 'enhancement'
       - '✨ enhancement'
+  - title: '🛠️ Refactors'
+    labels:
+      - 'refactor'
+      - '🏗 refactor'
   - title: '🐛 Bug Fixes'
     labels:
+      - 'bug'
       - '🐛 bug'
-  - title: '🏗 Refactoring'
-    labels:
-      - '🏗 refactor'
-
-include-labels:
-  - '🚀 feature'
-  - '✨ enhancement'
-  - '🐛 bug'
-  - '🏗 refactor'
 
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
-change-title-escapes: '\<*_&' # Add # and @ to disable mentions, and add ` to disable code blocks.
 
-# We're not using the version resolver anymore since we're providing the version directly
-# But keeping it as a fallback in case the version extraction fails
+no-changes-template: 'No changes in this release.'
+
 version-resolver:
   major:
     labels:
@@ -32,11 +29,15 @@ version-resolver:
       - 'breaking'
   minor:
     labels:
+      - 'feature'
       - '🚀 feature'
+      - 'enhancement'
       - '✨ enhancement'
   patch:
     labels:
+      - 'bug'
       - '🐛 bug'
+      - 'refactor'
       - '🏗 refactor'
   default: patch
 
@@ -45,4 +46,4 @@ template: |
 
   $CHANGES
 
-  **Full Changelog**: https://github.com/ArgonFetch/ArgonFetch/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION

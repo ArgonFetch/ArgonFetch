@@ -2,33 +2,30 @@ name: Release Drafter
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
-
-permissions:
-  contents: read
+    branches: [main]
+  pull_request:
+    types: [closed]
 
 jobs:
   update_release_draft:
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
-
-    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Extract version from project file
         id: extract_version
         run: |
           VERSION=$(grep -oP '<Version>\K[^<]+' src/ArgonFetch.API/ArgonFetch.API.csproj)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
-        
-      - uses: release-drafter/release-drafter@v5
+
+      - uses: release-drafter/release-drafter@v6
         with:
-          version: ${{ env.VERSION }}
+          config-name: release-drafter.yml
+          version: ${{ steps.extract_version.outputs.VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

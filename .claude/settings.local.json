@@ -16,7 +16,10 @@
       "Bash(taskkill:*)",
       "Bash(cmd /c:*)",
       "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Read(//d/SchulwareAPI/.github/workflows/**)",
+      "Read(//d/Schuly/.github/workflows/**)",
+      "Read(//d/SchulwareAPI/.github/**)"
     ],
     "deny": [],
     "ask": []
