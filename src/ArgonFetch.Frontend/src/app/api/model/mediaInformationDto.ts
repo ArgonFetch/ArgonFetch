@@ -7,13 +7,13 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
-import { StreamingUrlDto } from './streamingUrlDto';
+import { StreamReferenceDto } from './streamReferenceDto';
 
 
 export interface MediaInformationDto { 
     requestedUrl: string | null;
-    video?: StreamingUrlDto;
-    audio?: StreamingUrlDto;
+    video?: StreamReferenceDto;
+    audio?: StreamReferenceDto;
     coverUrl: string | null;
     title: string | null;
     author: string | null;

@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { faDownload, faChevronRight, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { ResourceInformationDto } from '../../api';
 import { HttpClient, HttpEventType, HttpClientModule } from '@angular/common/http';
+import { ResourceUrlService } from '../../services/resource-url.service';
 
 @Component({
   selector: 'app-single-song-container',
@@ -35,7 +36,8 @@ export class SingleSongContainerComponent {
 
   constructor(
     private elementRef: ElementRef,
-    private http: HttpClient
+    private http: HttpClient,
+    private resourceUrlService: ResourceUrlService
   ) {}
 
   @HostListener('document:click', ['$event'])
@@ -101,48 +103,24 @@ export class SingleSongContainerComponent {
 
     if (type === 'combined') {
       // Handle video streams (with audio)
-      const videoUrls = mediaItem.video;
-      if (!videoUrls) {
-        console.error('No video URLs available');
+      const videoRef = mediaItem.video as any; // Cast to any since the API models might not be updated yet
+      if (!videoRef) {
+        console.error('No video references available');
         return;
       }
 
-      switch (quality) {
-        case 'best':
-          url = videoUrls.bestQuality;
-          extension = videoUrls.bestQualityFileExtension || '.mp4';
-          break;
-        case 'medium':
-          url = videoUrls.mediumQuality;
-          extension = videoUrls.mediumQualityFileExtension || '.mp4';
-          break;
-        case 'worst':
-          url = videoUrls.worstQuality;
-          extension = videoUrls.worstQualityFileExtension || '.mp4';
-          break;
-      }
+      url = this.resourceUrlService.buildResourceUrl(videoRef, quality);
+      extension = this.resourceUrlService.getFileExtension(videoRef, quality) || '.mp4';
     } else if (type === 'audio') {
       // Handle audio-only streams
-      const audioUrls = mediaItem.audio;
-      if (!audioUrls) {
-        console.error('No audio URLs available');
+      const audioRef = mediaItem.audio as any; // Cast to any since the API models might not be updated yet
+      if (!audioRef) {
+        console.error('No audio references available');
         return;
       }
 
-      switch (quality) {
-        case 'best':
-          url = audioUrls.bestQuality;
-          extension = audioUrls.bestQualityFileExtension || '.mp3';
-          break;
-        case 'medium':
-          url = audioUrls.mediumQuality;
-          extension = audioUrls.mediumQualityFileExtension || '.mp3';
-          break;
-        case 'worst':
-          url = audioUrls.worstQuality;
-          extension = audioUrls.worstQualityFileExtension || '.mp3';
-          break;
-      }
+      url = this.resourceUrlService.buildResourceUrl(audioRef, quality);
+      extension = this.resourceUrlService.getFileExtension(audioRef, quality) || '.mp3';
     }
 
     if (!url) {

@@ -17,6 +17,7 @@ model/models.ts
 model/problemDetails.ts
 model/proxyHeadResponse.ts
 model/resourceInformationDto.ts
-model/streamingUrlDto.ts
+model/streamReferenceDto.ts
+model/urlType.ts
 param.ts
 variables.ts

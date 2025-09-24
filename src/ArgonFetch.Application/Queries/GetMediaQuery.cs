@@ -92,47 +92,30 @@ namespace ArgonFetch.Application.Queries
                 // First, check if we have formats that already contain both video AND audio
                 var combinedFormats = ExtractCombinedFormatsAndCacheNewUrl(resultData.Formats);
 
-                StreamingUrlDto? combinedUrls = null;
-                StreamingUrlDto? videoUrls = null;
-                StreamingUrlDto? audioUrls = null;
+                StreamReferenceDto? combinedReferences = null;
+                StreamReferenceDto? audioReferences = null;
 
                 if (HasValidUrls(combinedFormats))
                 {
                     // We have pre-muxed formats! Use them directly (FAST!)
                     // These go through the proxy endpoint, not the combine endpoint
-                    if (_httpContextAccessor.HttpContext != null)
-                    {
-                        combinedUrls = _proxyUrlBuilder.BuildProxyUrls(combinedFormats, _httpContextAccessor.HttpContext.Request, _cacheService);
-                    }
-                    else
-                    {
-                        combinedUrls = combinedFormats;
-                    }
+                    combinedReferences = _proxyUrlBuilder.BuildProxyReferences(combinedFormats, _cacheService);
 
                     // Still extract audio-only for "Audio Only" option
-                    audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
-                    if (_httpContextAccessor.HttpContext != null)
-                    {
-                        audioUrls = _proxyUrlBuilder.BuildProxyUrls(audioUrls, _httpContextAccessor.HttpContext.Request, _cacheService, forceAudio: true);
-                    }
+                    var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
+                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true);
                 }
                 else
                 {
                     // No combined formats available, use separate streams (slower, needs FFmpeg)
-                    videoUrls = ExtractThreeVideoQualitiesAndCacheNewUrl(resultData.Formats);
-                    audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
+                    var videoUrls = ExtractThreeVideoQualitiesAndCacheNewUrl(resultData.Formats);
+                    var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
 
-                    // Build combined URLs using the combine endpoint (FFmpeg muxing)
-                    combinedUrls = _httpContextAccessor.HttpContext != null
-                        ? _combinedUrlBuilder.BuildCombinedUrls(videoUrls, audioUrls, _httpContextAccessor.HttpContext.Request, _cacheService)
-                        : null;
+                    // Build combined references using the combine endpoint (FFmpeg muxing)
+                    combinedReferences = _combinedUrlBuilder.BuildCombinedReferences(videoUrls, audioUrls, _cacheService);
 
-                    // Build proxy URLs for separate streams if needed
-                    if (_httpContextAccessor.HttpContext != null)
-                    {
-                        videoUrls = _proxyUrlBuilder.BuildProxyUrls(videoUrls, _httpContextAccessor.HttpContext.Request, _cacheService);
-                        audioUrls = _proxyUrlBuilder.BuildProxyUrls(audioUrls, _httpContextAccessor.HttpContext.Request, _cacheService, forceAudio: true);
-                    }
+                    // Build proxy references for audio-only option
+                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true);
                 }
 
                 return new ResourceInformationDto
@@ -143,8 +126,8 @@ namespace ArgonFetch.Application.Queries
                             new MediaInformationDto
                             {
                                 RequestedUrl = request.Query,
-                                Video = combinedUrls,  // Either pre-muxed or FFmpeg-combined
-                                Audio = audioUrls,      // Audio-only option
+                                Video = combinedReferences,  // Either pre-muxed or FFmpeg-combined
+                                Audio = audioReferences,      // Audio-only option
                                 CoverUrl = thumbnailUrl,
                                 Title = resultData.Title,
                                 Author = resultData.Uploader
@@ -350,12 +333,9 @@ namespace ArgonFetch.Application.Queries
 
             var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(result.Formats);
 
-            // Build proxy URLs if HTTP context is available
+            // Build proxy references
             // Force audio mode for Spotify tracks
-            if (_httpContextAccessor.HttpContext != null)
-            {
-                audioUrls = _proxyUrlBuilder.BuildProxyUrls(audioUrls, _httpContextAccessor.HttpContext.Request, _cacheService, forceAudio: true);
-            }
+            var audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true);
 
             // Spotify typically only has audio, so combined URLs would be null
 
@@ -368,7 +348,7 @@ namespace ArgonFetch.Application.Queries
                     {
                         RequestedUrl = query,
                         Video = null,  // Spotify has no video
-                        Audio = audioUrls,  // Audio-only
+                        Audio = audioReferences,  // Audio-only
                         CoverUrl = searchResponse.Album.Images.First().Url,
                         Title = searchResponse.Name,
                         Author = searchResponse.Artists.First().Name,

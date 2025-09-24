@@ -11,6 +11,14 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
     {
         private static readonly HttpClient _httpClient = new HttpClient();
         private readonly HtmlParser _htmlParser = new HtmlParser();
+        private readonly IProxyUrlBuilder _proxyUrlBuilder;
+        private readonly IMediaUrlCacheService _cacheService;
+
+        public TikTokDllFetcherService(IProxyUrlBuilder proxyUrlBuilder, IMediaUrlCacheService cacheService)
+        {
+            _proxyUrlBuilder = proxyUrlBuilder;
+            _cacheService = cacheService;
+        }
 
         public async Task<MediaInformationDto> FetchLinkAsync(string queryUrl, DllFetcherOptions dllFetcherOptions = null, CancellationToken cancellationToken = default)
         {
@@ -45,15 +53,20 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
                 var imageUrl = document.QuerySelector("img")?.GetAttribute("src") ?? string.Empty;
                 var downloadLink = document.QuerySelectorAll("a[href]").FirstOrDefault()?.GetAttribute("href") ?? string.Empty;
 
+                var videoUrls = new StreamingUrlDto  // TikTok videos have audio included
+                {
+                    BestQualityDescription = "Best Quality",
+                    BestQuality = CleanHtml(downloadLink),
+                    BestQualityFileExtension = ".mp4",
+                };
+
+                // Build proxy references for the video
+                var videoReferences = _proxyUrlBuilder.BuildProxyReferences(videoUrls, _cacheService);
+
                 return new MediaInformationDto
                 {
                     RequestedUrl = CleanHtml(queryUrl),
-                    Video = new StreamingUrlDto  // TikTok videos have audio included
-                    {
-                        BestQualityDescription = "Best Quality",
-                        BestQuality = CleanHtml(downloadLink),
-                        BestQualityFileExtension = ".mp4",
-                    },
+                    Video = videoReferences,  // TikTok videos have audio included
                     Audio = null,  // TikTok doesn't provide audio-only
                     CoverUrl = CleanHtml(imageUrl),
                     Title = CleanHtml(title),

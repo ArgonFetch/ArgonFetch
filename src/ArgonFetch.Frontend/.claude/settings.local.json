@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//f/Coding/ArgonFetch/src/ArgonFetch.Infrastructure/**)",
+      "Read(//f/Coding/ArgonFetch/src/ArgonFetch.API/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

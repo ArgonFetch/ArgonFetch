@@ -1,31 +1,31 @@
 ﻿using ArgonFetch.Application.Dtos;
+using ArgonFetch.Application.Enums;
 using Microsoft.AspNetCore.Http;
 
 namespace ArgonFetch.Application.Services
 {
     public interface IProxyUrlBuilder
     {
-        StreamingUrlDto? BuildProxyUrls(
+        StreamReferenceDto? BuildProxyReferences(
             StreamingUrlDto? originalUrls,
-            HttpRequest httpRequest,
             IMediaUrlCacheService cacheService,
             bool forceAudio = false);
     }
 
     public class ProxyUrlBuilder : IProxyUrlBuilder
     {
-        public StreamingUrlDto? BuildProxyUrls(
+        public StreamReferenceDto? BuildProxyReferences(
             StreamingUrlDto? originalUrls,
-            HttpRequest httpRequest,
             IMediaUrlCacheService cacheService,
             bool forceAudio = false)
         {
             if (originalUrls == null)
                 return null;
 
-            var baseUrl = $"{httpRequest.Scheme}://{httpRequest.Host}/api/stream/media";
-
-            var proxyUrls = new StreamingUrlDto();
+            var proxyReferences = new StreamReferenceDto
+            {
+                UrlType = UrlType.Media
+            };
 
             // Determine if these are audio URLs
             // Check extensions OR if descriptions contain "audio" OR forced audio mode
@@ -37,37 +37,37 @@ namespace ArgonFetch.Application.Services
                           ContainsAudioIndicator(originalUrls.MediumQualityDescription) ||
                           ContainsAudioIndicator(originalUrls.WorstQualityDescription);
 
-            // Build proxy URL for best quality
+            // Build proxy reference for best quality
             if (!string.IsNullOrEmpty(originalUrls.BestQuality))
             {
                 var cacheKey = cacheService.CacheSingleUrl(originalUrls.BestQuality, isAudio);
-                proxyUrls.BestQuality = $"{baseUrl}/{cacheKey}";
-                proxyUrls.BestQualityDescription = originalUrls.BestQualityDescription;
+                proxyReferences.BestQualityKey = cacheKey;
+                proxyReferences.BestQualityDescription = originalUrls.BestQualityDescription;
                 // Standardize file extension to mp3 for audio, mp4 for video
-                proxyUrls.BestQualityFileExtension = isAudio ? ".mp3" : ".mp4";
+                proxyReferences.BestQualityFileExtension = isAudio ? ".mp3" : ".mp4";
             }
 
-            // Build proxy URL for medium quality
+            // Build proxy reference for medium quality
             if (!string.IsNullOrEmpty(originalUrls.MediumQuality))
             {
                 var cacheKey = cacheService.CacheSingleUrl(originalUrls.MediumQuality, isAudio);
-                proxyUrls.MediumQuality = $"{baseUrl}/{cacheKey}";
-                proxyUrls.MediumQualityDescription = originalUrls.MediumQualityDescription;
+                proxyReferences.MediumQualityKey = cacheKey;
+                proxyReferences.MediumQualityDescription = originalUrls.MediumQualityDescription;
                 // Standardize file extension to mp3 for audio, mp4 for video
-                proxyUrls.MediumQualityFileExtension = isAudio ? ".mp3" : ".mp4";
+                proxyReferences.MediumQualityFileExtension = isAudio ? ".mp3" : ".mp4";
             }
 
-            // Build proxy URL for worst quality
+            // Build proxy reference for worst quality
             if (!string.IsNullOrEmpty(originalUrls.WorstQuality))
             {
                 var cacheKey = cacheService.CacheSingleUrl(originalUrls.WorstQuality, isAudio);
-                proxyUrls.WorstQuality = $"{baseUrl}/{cacheKey}";
-                proxyUrls.WorstQualityDescription = originalUrls.WorstQualityDescription;
+                proxyReferences.WorstQualityKey = cacheKey;
+                proxyReferences.WorstQualityDescription = originalUrls.WorstQualityDescription;
                 // Standardize file extension to mp3 for audio, mp4 for video
-                proxyUrls.WorstQualityFileExtension = isAudio ? ".mp3" : ".mp4";
+                proxyReferences.WorstQualityFileExtension = isAudio ? ".mp3" : ".mp4";
             }
 
-            return proxyUrls;
+            return proxyReferences;
         }
 
         private bool IsAudioFormat(string? fileExtension)

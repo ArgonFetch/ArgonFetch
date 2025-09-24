@@ -11,8 +11,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArgonFetch.Infrastructure.Migrations
 {
     [DbContext(typeof(ArgonFetchDbContext))]
-    [Migration("20250530104315_Init")]
-    partial class Init
+    [Migration("20250924120839_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
