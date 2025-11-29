@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/ArgonFetch.API/ArgonFetch.API.csproj" />
+  <Project Path="src/ArgonFetch.Application/ArgonFetch.Application.csproj" />
+  <Project Path="src/ArgonFetch.Domain/ArgonFetch.Domain.csproj" />
+  <Project Path="src/ArgonFetch.Infrastructure/ArgonFetch.Infrastructure.csproj" />
+  <Project Path="src/ArgonFetch.Tests/ArgonFetch.Tests.csproj" />
+</Solution>
