@@ -47,6 +47,9 @@ builder.Services.AddScoped<TikTokDllFetcherService>();
 
 // Register In memory caching
 builder.Services.AddMemoryCache();
+
+// Register Application Info Service
+builder.Services.AddSingleton<ArgonFetch.Application.Services.IApplicationInfoService, ArgonFetch.Infrastructure.Services.ApplicationInfoService>();
 #endregion
 
 #region Database Configuration

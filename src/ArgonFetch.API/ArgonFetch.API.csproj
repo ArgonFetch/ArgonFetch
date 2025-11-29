@@ -1,12 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-	<Version>1.0.0</Version>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>afdb85db-2341-41df-8afb-b35f66ffcc1a</UserSecretsId>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <ApplicationPropertiesFile>$(MSBuildProjectDirectory)\..\..\application.properties</ApplicationPropertiesFile>
+  </PropertyGroup>
+
+  <Target Name="ReadVersionFromProperties" BeforeTargets="BeforeBuild">
+    <XmlPeek XmlInputPath="$(ApplicationPropertiesFile)" Query="/properties/version/text()">
+      <Output TaskParameter="Result" PropertyName="Version" />
+    </XmlPeek>
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="11.11.0" />
