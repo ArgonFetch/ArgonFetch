@@ -1,20 +1,20 @@
 # Stage 1: Base runtime with dependencies
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
 USER root
-# Install dependencies in one layer with cleanup
+# Install dependencies and latest yt-dlp from GitHub
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg \
+        git \
+        build-essential \
         ca-certificates \
-        python3 \
-        python3-pip && \
-    # Install yt-dlp via pip for better compatibility
-    pip3 install --no-cache-dir --break-system-packages yt-dlp && \
+        curl && \
+    # Download latest yt-dlp standalone binary (no Python required)
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /usr/local/bin/yt-dlp && \
+    chmod 755 /usr/local/bin/yt-dlp && \
     # Verify yt-dlp installation
     yt-dlp --version && \
-    # Ensure yt-dlp is executable by all users
-    chmod 755 /usr/local/bin/yt-dlp && \
     # Clean up apt cache
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -22,8 +22,10 @@ USER $APP_UID
 EXPOSE 8080 8081
 
 # Stage 2: Backend dependencies restore
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS backend-deps
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-deps
 WORKDIR /src
+# Copy version properties file
+COPY application.properties /application.properties
 # Copy all csproj files for better caching
 COPY ["src/ArgonFetch.API/ArgonFetch.API.csproj", "src/ArgonFetch.API/"]
 COPY ["src/ArgonFetch.Application/ArgonFetch.Application.csproj", "src/ArgonFetch.Application/"]

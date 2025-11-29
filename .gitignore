@@ -401,3 +401,6 @@ FodyWeavers.xsd
 
 # env
 .env
+
+# claude
+.claude/
