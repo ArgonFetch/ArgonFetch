@@ -44,8 +44,36 @@ dotnet user-secrets set "Spotify:ClientId" "your_spotify_client_id"
 dotnet user-secrets set "Spotify:ClientSecret" "your_spotify_client_secret"
 ```
 
-#### Option B: Using .env File
+#### Option B: Using appsettings.Development.json
+
+<details>
+<summary>📋 Click to copy appsettings.Development.json template</summary>
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "ConnectionStrings": {
+    "ArgonFetchDatabase": "Host=localhost;Port=5432;Database=argonfetch;Username=argonfetch;Password=changeme123"
+  },
+  "Spotify": {
+    "ClientId": "your_spotify_client_id",
+    "ClientSecret": "your_spotify_client_secret"
+  }
+}
+```
+
+**⚠️ Important:** Add `appsettings.Development.json` to your `.gitignore` to prevent committing credentials.
+
+</details>
+
+#### Option C: Using .env File
 Create a `.env` file in the project root:
+
 ```env
 # Database
 ConnectionStrings__ArgonFetchDatabase=Host=localhost;Port=5432;Database=argonfetch;Username=argonfetch;Password=changeme123
@@ -94,8 +122,8 @@ npm start
 ```
 
 ### Using Docker Compose for Full Stack
-
 For a complete development environment with database:
+
 ```bash
 # Copy and configure environment variables
 cp .env.example .env
