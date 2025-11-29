@@ -2,20 +2,21 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
 USER root
-# Install dependencies and latest yt-dlp from GitHub
+# Install dependencies and yt-dlp standalone binary
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg \
-        git \
-        build-essential \
-        ca-certificates \
-        curl && \
-    # Download latest yt-dlp standalone binary (no Python required)
-    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /usr/local/bin/yt-dlp && \
-    chmod 755 /usr/local/bin/yt-dlp && \
-    # Verify yt-dlp installation
+        python3 \
+        curl \
+        ca-certificates && \
+    # Download yt-dlp standalone binary (still needs Python to run)
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
+    chmod a+rx /usr/local/bin/yt-dlp && \
+    # Verify installations
     yt-dlp --version && \
-    # Clean up apt cache
+    ffmpeg -version && \
+    # Clean up apt cache and curl
+    apt-get remove -y curl && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 USER $APP_UID
