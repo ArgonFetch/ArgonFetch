@@ -22,11 +22,11 @@ cd ArgonFetch
 ```bash
 # Start PostgreSQL using Docker
 docker run -d \
-  --name argonfetch-db \
-  -e POSTGRES_USER=argonfetch \
-  -e POSTGRES_PASSWORD=changeme123 \
-  -e POSTGRES_DB=argonfetch \
-  -p 5432:5432 \
+  --name argonfetch-postgres-dev \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=d4vpas8w0rd13!!! \
+  -e POSTGRES_DB=argonfetchdb-dev \
+  -p 3941:5432 \
   postgres:15
 ```
 
@@ -37,28 +37,22 @@ Create a database and user for ArgonFetch in your existing PostgreSQL installati
 
 #### Option A: Using User Secrets (Recommended for Development)
 
-**Via Command Line:**
 ```bash
 cd src/ArgonFetch.API
 dotnet user-secrets init
-dotnet user-secrets set "ConnectionStrings:ArgonFetchDatabase" "Host=localhost;Port=5432;Database=argonfetch;Username=argonfetch;Password=changeme123"
+dotnet user-secrets set "ConnectionStrings:ArgonFetchDatabase" "Host=localhost;Port=3941;Database=argonfetchdb-dev;Username=postgres;Password=d4vpas8w0rd13!!!"
 dotnet user-secrets set "Spotify:ClientId" "your_spotify_client_id"
 dotnet user-secrets set "Spotify:ClientSecret" "your_spotify_client_secret"
 ```
 
-**Via Visual Studio:**
+**Visual Studio Users:**
 
-<details>
-<summary>📋 Click to copy secrets.json template for Visual Studio</summary>
-
-1. Right-click on `ArgonFetch.API` project in Solution Explorer
-2. Select **Manage User Secrets**
-3. Replace the contents with:
+Right-click on `ArgonFetch.API` project in Solution Explorer, select **Manage User Secrets**, and replace the contents with:
 
 ```json
 {
   "ConnectionStrings": {
-    "ArgonFetchDatabase": "Host=localhost;Port=5432;Database=argonfetch;Username=argonfetch;Password=changeme123"
+    "ArgonFetchDatabase": "Host=localhost;Port=3941;Database=argonfetchdb-dev;Username=postgres;Password=d4vpas8w0rd13!!!"
   },
   "Spotify": {
     "ClientId": "your_spotify_client_id",
@@ -67,41 +61,13 @@ dotnet user-secrets set "Spotify:ClientSecret" "your_spotify_client_secret"
 }
 ```
 
-</details>
+#### Option B: Using .env File
 
-#### Option B: Using appsettings.Development.json
-
-<details>
-<summary>📋 Click to copy appsettings.Development.json template</summary>
-
-```json
-{
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  },
-  "ConnectionStrings": {
-    "ArgonFetchDatabase": "Host=localhost;Port=5432;Database=argonfetch;Username=argonfetch;Password=changeme123"
-  },
-  "Spotify": {
-    "ClientId": "your_spotify_client_id",
-    "ClientSecret": "your_spotify_client_secret"
-  }
-}
-```
-
-**⚠️ Important:** Add `appsettings.Development.json` to your `.gitignore` to prevent committing credentials.
-
-</details>
-
-#### Option C: Using .env File
 Create a `.env` file in the project root:
 
 ```env
 # Database
-ConnectionStrings__ArgonFetchDatabase=Host=localhost;Port=5432;Database=argonfetch;Username=argonfetch;Password=changeme123
+ConnectionStrings__ArgonFetchDatabase=Host=localhost;Port=3941;Database=argonfetchdb-dev;Username=postgres;Password=d4vpas8w0rd13!!!
 
 # Spotify API
 Spotify__ClientId=your_spotify_client_id
@@ -199,7 +165,7 @@ npm run build:prod
 ### Common Issues
 
 **PostgreSQL Connection Failed**
-- Ensure PostgreSQL is running on port 5432
+- Ensure PostgreSQL is running on port 3941
 - Check credentials in user secrets or .env file
 - Verify database exists
 
@@ -210,7 +176,7 @@ npm run build:prod
 **Port Already in Use**
 - Backend default: 5000 (change with `ASPNETCORE_URLS`)
 - Frontend default: 4200 (change with `ng serve --port`)
-- Database default: 5432 (change in connection string)
+- Database default: 3941 (change in connection string)
 
 ## Additional Resources
 - [Spotify App Creation](https://developer.spotify.com/documentation/web-api/concepts/apps)
