@@ -36,6 +36,8 @@ Create a database and user for ArgonFetch in your existing PostgreSQL installati
 ### 3. Configure API Credentials
 
 #### Option A: Using User Secrets (Recommended for Development)
+
+**Via Command Line:**
 ```bash
 cd src/ArgonFetch.API
 dotnet user-secrets init
@@ -43,6 +45,29 @@ dotnet user-secrets set "ConnectionStrings:ArgonFetchDatabase" "Host=localhost;P
 dotnet user-secrets set "Spotify:ClientId" "your_spotify_client_id"
 dotnet user-secrets set "Spotify:ClientSecret" "your_spotify_client_secret"
 ```
+
+**Via Visual Studio:**
+
+<details>
+<summary>📋 Click to copy secrets.json template for Visual Studio</summary>
+
+1. Right-click on `ArgonFetch.API` project in Solution Explorer
+2. Select **Manage User Secrets**
+3. Replace the contents with:
+
+```json
+{
+  "ConnectionStrings": {
+    "ArgonFetchDatabase": "Host=localhost;Port=5432;Database=argonfetch;Username=argonfetch;Password=changeme123"
+  },
+  "Spotify": {
+    "ClientId": "your_spotify_client_id",
+    "ClientSecret": "your_spotify_client_secret"
+  }
+}
+```
+
+</details>
 
 #### Option B: Using appsettings.Development.json
 
