@@ -134,7 +134,7 @@ builder.Services.AddCors(options =>
         }
 
         corsBuilder.WithOrigins(allowedOrigins);
-        corsBuilder.WithExposedHeaders("Content-Disposition");
+        corsBuilder.WithExposedHeaders("Content-Disposition", "X-Estimated-Content-Length");
         corsBuilder.AllowAnyHeader();
         corsBuilder.AllowAnyMethod();
         corsBuilder.AllowCredentials();

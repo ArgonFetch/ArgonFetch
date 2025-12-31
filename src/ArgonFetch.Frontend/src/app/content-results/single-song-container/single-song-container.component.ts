@@ -6,6 +6,12 @@ import { ResourceInformationDto } from '../../api';
 import { HttpClient, HttpEventType, HttpClientModule } from '@angular/common/http';
 import { ResourceUrlService } from '../../services/resource-url.service';
 
+export enum Quality {
+  Best = 'best',
+  Medium = 'medium',
+  Worst = 'worst'
+}
+
 @Component({
   selector: 'app-single-song-container',
   standalone: true,
@@ -15,6 +21,9 @@ import { ResourceUrlService } from '../../services/resource-url.service';
 })
 export class SingleSongContainerComponent {
   @Input() resourceInformation!: ResourceInformationDto;
+
+  // Expose enum to template
+  Quality = Quality;
 
   faDownload = faDownload;
   faChevronRight = faChevronRight;
@@ -33,6 +42,8 @@ export class SingleSongContainerComponent {
   lastDownloadBytes = 0;
   totalBytes = 0;
   downloadedMB = '';
+  totalMB = '';
+  estimatedContentLength = 0; // Store estimated size from X-Estimated-Content-Length header
 
   constructor(
     private elementRef: ElementRef,
@@ -84,7 +95,7 @@ export class SingleSongContainerComponent {
     this.showAudioSubmenu = false;
   }
 
-  async onDownload(quality: 'best' | 'medium' | 'worst', type: 'combined' | 'audio', event: Event) {
+  async onDownload(quality: Quality, type: 'combined' | 'audio', event: Event) {
     event.stopPropagation();
 
     if (this.isDownloading) {
@@ -100,6 +111,7 @@ export class SingleSongContainerComponent {
     let url: string | null | undefined = null;
     let filename = mediaItem.title || 'download';
     let extension = '';
+    let qualityDescription = '';
 
     if (type === 'combined') {
       // Handle video streams (with audio)
@@ -111,6 +123,15 @@ export class SingleSongContainerComponent {
 
       url = this.resourceUrlService.buildResourceUrl(videoRef, quality);
       extension = this.resourceUrlService.getFileExtension(videoRef, quality) || '.mp4';
+
+      // Get quality description based on selected quality
+      if (quality === Quality.Best) {
+        qualityDescription = videoRef.bestQualityDescription || '';
+      } else if (quality === Quality.Medium) {
+        qualityDescription = videoRef.mediumQualityDescription || '';
+      } else {
+        qualityDescription = videoRef.worstQualityDescription || '';
+      }
     } else if (type === 'audio') {
       // Handle audio-only streams
       const audioRef = mediaItem.audio as any; // Cast to any since the API models might not be updated yet
@@ -121,6 +142,15 @@ export class SingleSongContainerComponent {
 
       url = this.resourceUrlService.buildResourceUrl(audioRef, quality);
       extension = this.resourceUrlService.getFileExtension(audioRef, quality) || '.mp3';
+
+      // Get quality description based on selected quality
+      if (quality === Quality.Best) {
+        qualityDescription = audioRef.bestQualityDescription || '';
+      } else if (quality === Quality.Medium) {
+        qualityDescription = audioRef.mediumQualityDescription || '';
+      } else {
+        qualityDescription = audioRef.worstQualityDescription || '';
+      }
     }
 
     if (!url) {
@@ -130,20 +160,59 @@ export class SingleSongContainerComponent {
 
     // Close menus and start download
     this.closeAllMenus();
-    this.currentDownloadName = `${filename}${extension}`;
-    // Pass the type and quality to downloadFile for better size estimation
-    await this.downloadFile(url, this.currentDownloadName, type, quality);
+
+    // Extract quality info from description (e.g., "2160p60", "480p", "144p")
+    const qualityInfo = this.extractQualityInfo(qualityDescription, type);
+
+    // Full filename for the actual download
+    const fullFilename = `${filename} (${qualityInfo})${extension}`;
+
+    // Simplified display name for progress bar (just quality + extension)
+    this.currentDownloadName = `${qualityInfo}${extension}`;
+
+    await this.downloadFile(url, fullFilename);
   }
 
-  private async downloadFile(url: string, filename: string, type: 'combined' | 'audio' = 'combined', quality: 'best' | 'medium' | 'worst' = 'medium') {
+  private extractQualityInfo(description: string, type: 'combined' | 'audio'): string {
+    if (!description) {
+      return type === 'combined' ? 'Video' : 'Audio';
+    }
+
+    // For video: extract resolution like "2160p60", "1080p", "480p", "144p"
+    if (type === 'combined') {
+      const resolutionMatch = description.match(/(\d{3,4}p\d{0,3})/);
+      if (resolutionMatch) {
+        return resolutionMatch[1];
+      }
+      // Fallback: try to extract dimensions like "3840x2160"
+      const dimensionsMatch = description.match(/(\d{3,4})x(\d{3,4})/);
+      if (dimensionsMatch) {
+        const height = parseInt(dimensionsMatch[2]);
+        return `${height}p`;
+      }
+    } else {
+      // For audio: extract quality info like "medium", "low", "high"
+      const audioQualityMatch = description.match(/audio only \(([^,)]+)/);
+      if (audioQualityMatch) {
+        const audioQuality = audioQualityMatch[1];
+        return `Audio ${audioQuality.charAt(0).toUpperCase() + audioQuality.slice(1)}`;
+      }
+    }
+
+    return type === 'combined' ? 'Video' : 'Audio';
+  }
+
+  private async downloadFile(url: string, filename: string) {
     this.isDownloading = true;
     this.downloadProgress = 0;
     this.downloadSpeed = '';
     this.lastDownloadTime = Date.now();
     this.lastDownloadBytes = 0;
-    this.currentDownloadName = filename;
+    // currentDownloadName is already set before calling this method - don't overwrite it
     this.totalBytes = 0;
-    this.downloadedMB = '0';
+    this.downloadedMB = '';
+    this.totalMB = '';
+    this.estimatedContentLength = 0;
 
     try {
       // Use HttpClient to download with progress tracking
@@ -153,6 +222,17 @@ export class SingleSongContainerComponent {
         observe: 'events'
       }).subscribe({
         next: (event) => {
+          // Capture X-Estimated-Content-Length header when response headers are available
+          if (event.type === HttpEventType.ResponseHeader) {
+            const estimatedLength = event.headers.get('x-estimated-content-length');
+            if (estimatedLength) {
+              const estimated = parseInt(estimatedLength, 10);
+              if (!isNaN(estimated) && estimated > 0) {
+                this.estimatedContentLength = estimated;
+              }
+            }
+          }
+
           if (event.type === HttpEventType.DownloadProgress) {
             // Store total bytes if available
             this.totalBytes = event.total || 0;
@@ -161,48 +241,14 @@ export class SingleSongContainerComponent {
             if (event.total) {
               // Content-Length is known, show real progress
               const progress = Math.round((event.loaded / event.total) * 100);
-              // Clamp progress between 0 and 100
               this.downloadProgress = Math.min(100, Math.max(0, progress));
-            } else {
-              // Content-Length is unknown, estimate based on typical file sizes
-              // Use smarter estimation based on content type and quality
-              let estimatedSize: number;
-
-              if (type === 'audio') {
-                // Audio files vary by quality
-                switch (quality) {
-                  case 'best':
-                    estimatedSize = 15 * 1024 * 1024; // 15MB for best audio
-                    break;
-                  case 'medium':
-                    estimatedSize = 10 * 1024 * 1024; // 10MB for medium audio
-                    break;
-                  case 'worst':
-                    estimatedSize = 5 * 1024 * 1024; // 5MB for low audio
-                    break;
-                  default:
-                    estimatedSize = 10 * 1024 * 1024;
-                }
-              } else {
-                // Video files (combined) vary significantly by quality
-                switch (quality) {
-                  case 'best':
-                    estimatedSize = 100 * 1024 * 1024; // 100MB for best video
-                    break;
-                  case 'medium':
-                    estimatedSize = 30 * 1024 * 1024; // 30MB for medium video
-                    break;
-                  case 'worst':
-                    estimatedSize = 10 * 1024 * 1024; // 10MB for low video
-                    break;
-                  default:
-                    estimatedSize = 30 * 1024 * 1024;
-                }
-              }
-
-              // Calculate progress but cap at 95% until download actually completes
-              const estimatedProgress = Math.min(95, Math.round((event.loaded / estimatedSize) * 100));
-              this.downloadProgress = estimatedProgress;
+              this.totalMB = (event.total / 1024 / 1024).toFixed(1);
+            } else if (this.estimatedContentLength > 0) {
+              // Use X-Estimated-Content-Length for progress tracking (FFmpeg combined streams)
+              const progress = Math.round((event.loaded / this.estimatedContentLength) * 100);
+              // Cap at 99% until actual completion (since it's an estimate)
+              this.downloadProgress = Math.min(99, Math.max(0, progress));
+              this.totalMB = (this.estimatedContentLength / 1024 / 1024).toFixed(1);
             }
 
             // Always update MB downloaded
@@ -210,11 +256,11 @@ export class SingleSongContainerComponent {
 
             // Calculate download speed
             const currentTime = Date.now();
-            const timeDiff = (currentTime - this.lastDownloadTime) / 1000; // in seconds
+            const timeDiff = (currentTime - this.lastDownloadTime) / 1000;
 
-            if (timeDiff > 0.5) { // Update speed every 0.5 seconds
+            if (timeDiff > 0.5) {
               const bytesDiff = event.loaded - this.lastDownloadBytes;
-              const speed = bytesDiff / timeDiff; // bytes per second
+              const speed = bytesDiff / timeDiff;
               this.downloadSpeed = this.formatSpeed(speed);
 
               this.lastDownloadTime = currentTime;
@@ -232,6 +278,7 @@ export class SingleSongContainerComponent {
             this.downloadSpeed = '';
             this.totalBytes = 0;
             this.downloadedMB = '';
+            this.totalMB = '';
           }
         },
         error: (error) => {
@@ -242,6 +289,7 @@ export class SingleSongContainerComponent {
           this.downloadSpeed = '';
           this.totalBytes = 0;
           this.downloadedMB = '';
+          this.totalMB = '';
         }
       });
     } catch (error) {
@@ -252,6 +300,7 @@ export class SingleSongContainerComponent {
       this.downloadSpeed = '';
       this.totalBytes = 0;
       this.downloadedMB = '';
+      this.totalMB = '';
     }
   }
 
@@ -282,5 +331,75 @@ export class SingleSongContainerComponent {
     } else {
       return `${(bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`;
     }
+  }
+
+  hasVideoQuality(quality: Quality): boolean {
+    const mediaItem = this.resourceInformation.mediaItems?.[0];
+    if (!mediaItem?.video) {
+      return false;
+    }
+
+    const videoRef = mediaItem.video as any;
+    const key = quality === Quality.Best ? videoRef.bestQualityKey :
+                quality === Quality.Medium ? videoRef.mediumQualityKey :
+                videoRef.worstQualityKey;
+
+    return !!key;
+  }
+
+  hasAudioQuality(quality: Quality): boolean {
+    const mediaItem = this.resourceInformation.mediaItems?.[0];
+    if (!mediaItem?.audio) {
+      return false;
+    }
+
+    const audioRef = mediaItem.audio as any;
+    const key = quality === Quality.Best ? audioRef.bestQualityKey :
+                quality === Quality.Medium ? audioRef.mediumQualityKey :
+                audioRef.worstQualityKey;
+
+    return !!key;
+  }
+
+  getVideoQuality(quality: Quality): string {
+    const mediaItem = this.resourceInformation.mediaItems?.[0];
+    if (!mediaItem?.video) {
+      return '';
+    }
+
+    const videoRef = mediaItem.video as any;
+    let description = '';
+
+    if (quality === Quality.Best) {
+      description = videoRef.bestQualityDescription || '';
+    } else if (quality === Quality.Medium) {
+      description = videoRef.mediumQualityDescription || '';
+    } else {
+      description = videoRef.worstQualityDescription || '';
+    }
+
+    return this.extractQualityInfo(description, 'combined');
+  }
+
+  getAudioQuality(quality: Quality): string {
+    const mediaItem = this.resourceInformation.mediaItems?.[0];
+    if (!mediaItem?.audio) {
+      return '';
+    }
+
+    const audioRef = mediaItem.audio as any;
+    let description = '';
+
+    if (quality === Quality.Best) {
+      description = audioRef.bestQualityDescription || '';
+    } else if (quality === Quality.Medium) {
+      description = audioRef.mediumQualityDescription || '';
+    } else {
+      description = audioRef.worstQualityDescription || '';
+    }
+
+    // For audio menu, just show the quality level without "Audio" prefix
+    const fullQuality = this.extractQualityInfo(description, 'audio');
+    return fullQuality.replace('Audio ', '');
   }
 }

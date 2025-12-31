@@ -30,6 +30,33 @@ namespace ArgonFetch.Infrastructure.Services
             return memoryStream;
         }
 
+        public async Task<long?> GetContentLengthAsync(
+            string url,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var httpClient = _httpClientFactory.CreateClient();
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+
+                using var headRequest = new HttpRequestMessage(HttpMethod.Head, url);
+                using var headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
+
+                if (!headResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("HEAD request failed, cannot determine content length");
+                    return null;
+                }
+
+                return headResponse.Content.Headers.ContentLength;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting content length");
+                return null;
+            }
+        }
+
         public async Task StreamWithAccelerationAsync(
             string url,
             Stream outputStream,

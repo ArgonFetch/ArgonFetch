@@ -24,15 +24,18 @@ namespace ArgonFetch.Application.Queries
     {
         private readonly IFfmpegStreamingService _ffmpegStreamingService;
         private readonly IMediaUrlCacheService _cacheService;
+        private readonly IAcceleratedDownloadService _acceleratedDownloadService;
         private readonly ILogger<StreamCombinedMediaQueryHandler> _logger;
 
         public StreamCombinedMediaQueryHandler(
             IFfmpegStreamingService ffmpegStreamingService,
             IMediaUrlCacheService cacheService,
+            IAcceleratedDownloadService acceleratedDownloadService,
             ILogger<StreamCombinedMediaQueryHandler> logger)
         {
             _ffmpegStreamingService = ffmpegStreamingService;
             _cacheService = cacheService;
+            _acceleratedDownloadService = acceleratedDownloadService;
             _logger = logger;
         }
 
@@ -59,7 +62,30 @@ namespace ArgonFetch.Application.Queries
                 request.Response.Headers.Append("Content-Disposition", "inline; filename=\"video.mp4\"");
                 request.Response.Headers.Append("Cache-Control", "no-cache");
 
-                // Start streaming - once this starts, we cannot change headers
+                // Get estimated size and pass it to frontend as custom header
+                var videoSize = await _acceleratedDownloadService.GetContentLengthAsync(actualVideoUrl, request.CancellationToken);
+                var audioSize = await _acceleratedDownloadService.GetContentLengthAsync(actualAudioUrl, request.CancellationToken);
+
+                if (videoSize.HasValue && audioSize.HasValue)
+                {
+                    var estimatedSize = videoSize.Value + audioSize.Value;
+
+                    // Pass estimated size to frontend via custom header
+                    // Frontend can use this for progress tracking even with chunked encoding
+                    request.Response.Headers.Append("X-Estimated-Content-Length", estimatedSize.ToString());
+
+                    _logger.LogInformation(
+                        "Streaming combined media with estimated size: {EstimatedSize} MB (video: {VideoSize} MB, audio: {AudioSize} MB)",
+                        estimatedSize / 1024 / 1024,
+                        videoSize.Value / 1024 / 1024,
+                        audioSize.Value / 1024 / 1024);
+                }
+                else
+                {
+                    _logger.LogWarning("Could not determine source sizes, no size estimate available");
+                }
+
+                // Stream directly using chunked encoding (no buffering needed!)
                 await _ffmpegStreamingService.StreamCombinedMediaAsync(
                     actualVideoUrl,
                     actualAudioUrl,

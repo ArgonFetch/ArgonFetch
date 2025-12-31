@@ -108,6 +108,23 @@ namespace ArgonFetch.Infrastructure.Services
             }
         }
 
+        public async Task<MemoryStream> GenerateCombinedMediaAsync(string videoUrl, string audioUrl, CancellationToken cancellationToken = default)
+        {
+            var memoryStream = new MemoryStream();
+
+            try
+            {
+                await StreamCombinedMediaAsync(videoUrl, audioUrl, memoryStream, cancellationToken);
+                memoryStream.Position = 0;
+                return memoryStream;
+            }
+            catch
+            {
+                memoryStream.Dispose();
+                throw;
+            }
+        }
+
         public async Task ConvertAndStreamMediaAsync(string sourceUrl, Stream outputStream, bool isAudio, CancellationToken cancellationToken = default)
         {
             var ffmpegPath = GetFfmpegPath();

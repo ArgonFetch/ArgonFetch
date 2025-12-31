@@ -100,8 +100,21 @@ namespace ArgonFetch.Application.Queries
                     // Add cache headers
                     request.Response.Headers.Append("Cache-Control", "public, max-age=3600");
 
-                    // Note: We don't set Content-Length as we might be chunking
-                    // The accelerated download will handle range requests if supported
+                    // Get content length for proper download handling and progress tracking
+                    var contentLength = await _acceleratedDownloadService.GetContentLengthAsync(
+                        mediaUrl,
+                        request.CancellationToken);
+
+                    if (contentLength.HasValue)
+                    {
+                        request.Response.ContentLength = contentLength.Value;
+                        request.Response.Headers.Append("Accept-Ranges", "bytes");
+                        _logger.LogInformation("Set Content-Length to {Size} bytes", contentLength.Value);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Could not determine content length, progress tracking may not work");
+                    }
 
                     try
                     {
@@ -111,6 +124,8 @@ namespace ArgonFetch.Application.Queries
                             request.Response.Body,
                             null, // No progress reporting needed here
                             request.CancellationToken);
+
+                        _logger.LogInformation("Media streaming completed successfully");
                     }
                     catch (Exception ex)
                     {
@@ -128,6 +143,13 @@ namespace ArgonFetch.Application.Queries
                         if (!response.IsSuccessStatusCode)
                         {
                             return StreamResult.BadGateway($"Failed to fetch media: {response.ReasonPhrase}");
+                        }
+
+                        // Set Content-Length if available and not already set
+                        if (response.Content.Headers.ContentLength.HasValue && !request.Response.ContentLength.HasValue)
+                        {
+                            request.Response.ContentLength = response.Content.Headers.ContentLength.Value;
+                            _logger.LogInformation("Set Content-Length from fallback response: {Size} bytes", response.Content.Headers.ContentLength.Value);
                         }
 
                         await response.Content.CopyToAsync(request.Response.Body, request.CancellationToken);

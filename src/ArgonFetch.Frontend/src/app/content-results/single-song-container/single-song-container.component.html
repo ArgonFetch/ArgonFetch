@@ -5,16 +5,19 @@
     </div>
 
     <div class="song-info">
-      <h3 class="song-title">{{ resourceInformation.mediaItems?.[0]?.title }}</h3>
+      <h3 class="song-title" [title]="resourceInformation.mediaItems?.[0]?.title || ''">{{ resourceInformation.mediaItems?.[0]?.title }}</h3>
       <p class="song-artist">{{ resourceInformation.mediaItems?.[0]?.author }}</p>
 
       <!-- Download Progress Bar -->
       <div class="download-progress-container" *ngIf="isDownloading">
         <div class="download-info">
-          <span class="download-filename">{{ currentDownloadName }}</span>
+          <span></span>
           <div class="download-stats">
             <span class="download-speed" *ngIf="downloadSpeed">{{ downloadSpeed }}</span>
-            <span class="download-size" *ngIf="downloadedMB">{{ downloadedMB }} MB</span>
+            <span class="download-size" *ngIf="downloadedMB">
+              {{ downloadedMB }} MB
+              <span *ngIf="totalMB"> / {{ totalMB }} MB</span>
+            </span>
             <span class="download-percentage">{{ downloadProgress }}%</span>
           </div>
         </div>
@@ -47,9 +50,9 @@
 
           <!-- Video Quality Submenu -->
           <div class="dropdown-menu submenu" *ngIf="showVideoSubmenu">
-            <div class="menu-item" (click)="onDownload('best', 'combined', $event)">Best</div>
-            <div class="menu-item" (click)="onDownload('medium', 'combined', $event)">Medium</div>
-            <div class="menu-item" (click)="onDownload('worst', 'combined', $event)">Low</div>
+            <div class="menu-item" *ngIf="hasVideoQuality(Quality.Best)" (click)="onDownload(Quality.Best, 'combined', $event)">Best ({{ getVideoQuality(Quality.Best) }})</div>
+            <div class="menu-item" *ngIf="hasVideoQuality(Quality.Medium)" (click)="onDownload(Quality.Medium, 'combined', $event)">Medium ({{ getVideoQuality(Quality.Medium) }})</div>
+            <div class="menu-item" *ngIf="hasVideoQuality(Quality.Worst)" (click)="onDownload(Quality.Worst, 'combined', $event)">Low ({{ getVideoQuality(Quality.Worst) }})</div>
           </div>
         </div>
 
@@ -65,9 +68,9 @@
 
           <!-- Audio Quality Submenu -->
           <div class="dropdown-menu submenu" *ngIf="showAudioSubmenu">
-            <div class="menu-item" (click)="onDownload('best', 'audio', $event)">Best</div>
-            <div class="menu-item" (click)="onDownload('medium', 'audio', $event)">Medium</div>
-            <div class="menu-item" (click)="onDownload('worst', 'audio', $event)">Low</div>
+            <div class="menu-item" *ngIf="hasAudioQuality(Quality.Best)" (click)="onDownload(Quality.Best, 'audio', $event)">Best ({{ getAudioQuality(Quality.Best) }})</div>
+            <div class="menu-item" *ngIf="hasAudioQuality(Quality.Medium)" (click)="onDownload(Quality.Medium, 'audio', $event)">Medium ({{ getAudioQuality(Quality.Medium) }})</div>
+            <div class="menu-item" *ngIf="hasAudioQuality(Quality.Worst)" (click)="onDownload(Quality.Worst, 'audio', $event)">Low ({{ getAudioQuality(Quality.Worst) }})</div>
           </div>
         </div>
       </div>

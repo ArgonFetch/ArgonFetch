@@ -11,5 +11,9 @@ namespace ArgonFetch.Application.Interfaces
             Stream outputStream,
             IProgress<double>? progress = null,
             CancellationToken cancellationToken = default);
+
+        Task<long?> GetContentLengthAsync(
+            string url,
+            CancellationToken cancellationToken = default);
     }
 }
