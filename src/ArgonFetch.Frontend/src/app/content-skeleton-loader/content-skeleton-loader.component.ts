@@ -1,10 +1,10 @@
-import { NgFor, NgIf } from '@angular/common';
+
 import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-content-skeleton-loader',
   standalone: true,
-  imports: [NgIf, NgFor],
+  imports: [],
   templateUrl: './content-skeleton-loader.component.html',
   styleUrl: './content-skeleton-loader.component.scss'
 })

@@ -1,13 +1,13 @@
 // confirmation-modal.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { NgIf } from '@angular/common';
+
 import { Subscription } from 'rxjs';
 import { ModalService } from '../services/modal.service';
 
 @Component({
   selector: 'app-confirmation-modal',
   standalone: true,
-  imports: [NgIf],
+  imports: [],
   templateUrl: './confirmation-modal.component.html',
   styleUrls: ['./confirmation-modal.component.scss']
 })

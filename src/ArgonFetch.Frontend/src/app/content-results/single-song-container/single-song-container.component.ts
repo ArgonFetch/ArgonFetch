@@ -1,6 +1,6 @@
 import { Component, Input, HostListener, ElementRef } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { CommonModule } from '@angular/common';
+
 import { faDownload, faChevronRight, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { ResourceInformationDto } from '../../api';
 import { HttpClient, HttpEventType, HttpClientModule } from '@angular/common/http';
@@ -9,7 +9,7 @@ import { ResourceUrlService } from '../../services/resource-url.service';
 @Component({
   selector: 'app-single-song-container',
   standalone: true,
-  imports: [FontAwesomeModule, CommonModule, HttpClientModule],
+  imports: [FontAwesomeModule, HttpClientModule],
   templateUrl: './single-song-container.component.html',
   styleUrl: './single-song-container.component.scss'
 })

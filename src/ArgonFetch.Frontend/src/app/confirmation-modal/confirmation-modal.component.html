@@ -1,14 +1,20 @@
-<div class="modal-overlay" *ngIf="isOpen">
+@if (isOpen) {
+  <div class="modal-overlay">
     <div class="modal-container">
-        <div class="modal-header">
-            <h2>{{ title }}</h2>
-        </div>
-        <div class="modal-content">
-            <p>{{ confirmationText }}</p>
-        </div>
-        <div class="modal-actions">
-            <button class="btn btn-cancel" (click)="onCancelClick()" *ngIf="showCancelButton">Cancel</button>
-            <button class="btn btn-confirm" (click)="onConfirmClick()" *ngIf="showConfirmButton">Ok</button>
-        </div>
+      <div class="modal-header">
+        <h2>{{ title }}</h2>
+      </div>
+      <div class="modal-content">
+        <p>{{ confirmationText }}</p>
+      </div>
+      <div class="modal-actions">
+        @if (showCancelButton) {
+          <button class="btn btn-cancel" (click)="onCancelClick()">Cancel</button>
+        }
+        @if (showConfirmButton) {
+          <button class="btn btn-confirm" (click)="onConfirmClick()">Ok</button>
+        }
+      </div>
     </div>
-</div>
+  </div>
+}
