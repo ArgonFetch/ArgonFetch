@@ -51,7 +51,7 @@ RUN dotnet publish "ArgonFetch.API.csproj" \
     /p:UseAppHost=false
 
 # Stage 4: Frontend dependencies
-FROM node:18-alpine AS frontend-deps
+FROM node:22-alpine AS frontend-deps
 WORKDIR /src/frontend
 COPY src/ArgonFetch.Frontend/package*.json ./
 RUN npm ci --prefer-offline --no-audit --no-fund
