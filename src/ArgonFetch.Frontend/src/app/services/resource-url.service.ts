@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 
+// Mirrors ArgonFetch.Application.Enums.UrlType, serialized by name.
 export enum UrlType {
-  Combined = 0,
-  Media = 1
+  Combined = 'Combined',
+  Media = 'Media'
 }
 
 export interface StreamReferenceDto {
