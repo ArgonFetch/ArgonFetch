@@ -41,8 +41,6 @@ Create a database and user for ArgonFetch in your existing PostgreSQL installati
 cd src/ArgonFetch.API
 dotnet user-secrets init
 dotnet user-secrets set "ConnectionStrings:ArgonFetchDatabase" "Host=localhost;Port=3941;Database=argonfetchdb-dev;Username=postgres;Password=d4vpas8w0rd13!!!"
-dotnet user-secrets set "Spotify:ClientId" "your_spotify_client_id"
-dotnet user-secrets set "Spotify:ClientSecret" "your_spotify_client_secret"
 ```
 
 **Visual Studio Users:**
@@ -53,10 +51,6 @@ Right-click on `ArgonFetch.API` project in Solution Explorer, select **Manage Us
 {
   "ConnectionStrings": {
     "ArgonFetchDatabase": "Host=localhost;Port=3941;Database=argonfetchdb-dev;Username=postgres;Password=d4vpas8w0rd13!!!"
-  },
-  "Spotify": {
-    "ClientId": "your_spotify_client_id",
-    "ClientSecret": "your_spotify_client_secret"
   }
 }
 ```
@@ -68,10 +62,6 @@ Create a `.env` file in the project root:
 ```env
 # Database
 ConnectionStrings__ArgonFetchDatabase=Host=localhost;Port=3941;Database=argonfetchdb-dev;Username=postgres;Password=d4vpas8w0rd13!!!
-
-# Spotify API
-Spotify__ClientId=your_spotify_client_id
-Spotify__ClientSecret=your_spotify_client_secret
 ```
 
 ### 4. Install Dependencies

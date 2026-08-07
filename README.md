@@ -69,9 +69,6 @@ POSTGRES_USER=argonfetch
 POSTGRES_PASSWORD=changeme123
 POSTGRES_DB=argonfetch
 
-# Spotify API (Required)
-Spotify__ClientId=your_spotify_client_id
-Spotify__ClientSecret=your_spotify_client_secret
 
 # CORS Configuration (Required for production)
 # Comma-separated list of allowed origins
@@ -86,7 +83,6 @@ docker compose up -d
 
 The application will be available at `http://localhost:8080`.
 
-Get Spotify credentials from [Spotify Developer Dashboard](https://developer.spotify.com/documentation/web-api/concepts/apps).
 
 
 ## 🛠️ Usage

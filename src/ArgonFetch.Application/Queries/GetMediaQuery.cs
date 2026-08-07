@@ -5,7 +5,6 @@ using ArgonFetch.Application.Services.DDLFetcherServices;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
-using SpotifyAPI.Web;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Metadata;
 using YoutubeDLSharp.Options;
@@ -25,7 +24,7 @@ namespace ArgonFetch.Application.Queries
     public class GetMediaQueryHandler : IRequestHandler<GetMediaQuery, ResourceInformationDto>
     {
         private readonly YoutubeDL _youtubeDL;
-        private readonly SpotifyClientProvider _spotifyClientProvider;
+        private readonly ISpotifyMetadataService _spotifyMetadataService;
         private readonly YTMusicAPI.SearchClient _ytmSearchClient;
         private readonly TikTokDllFetcherService _tikTokDllFetcherService;
         private readonly IMemoryCache _memoryCache;
@@ -35,7 +34,7 @@ namespace ArgonFetch.Application.Queries
         private readonly IProxyUrlBuilder _proxyUrlBuilder;
 
         public GetMediaQueryHandler(
-            SpotifyClientProvider spotifyClientProvider,
+            ISpotifyMetadataService spotifyMetadataService,
             YTMusicAPI.SearchClient ytmSearchClient,
             YoutubeDL youtubeDL,
             TikTokDllFetcherService tikTokDllFetcherService,
@@ -46,7 +45,7 @@ namespace ArgonFetch.Application.Queries
             IProxyUrlBuilder proxyUrlBuilder
             )
         {
-            _spotifyClientProvider = spotifyClientProvider;
+            _spotifyMetadataService = spotifyMetadataService;
             _ytmSearchClient = ytmSearchClient;
             _youtubeDL = youtubeDL;
             _tikTokDllFetcherService = tikTokDllFetcherService;
@@ -315,21 +314,42 @@ namespace ArgonFetch.Application.Queries
 
         private async Task<ResourceInformationDto> HandleSpotify(string query, CancellationToken cancellationToken)
         {
-            var spotifyClient = _spotifyClientProvider.Require();
+            var track = await _spotifyMetadataService.GetTrackAsync(query, cancellationToken);
 
-            var uri = new Uri(query);
-            var segments = uri.Segments;
-            var searchResponse = await spotifyClient.Tracks.Get(segments.Last(), cancellationToken);
-
-            if (searchResponse == null)
-                throw new ArgumentException("Track not found");
+            // Spotify only supplies the metadata; the audio comes from the matching
+            // YouTube Music result.
+            var searchQuery = YouTubeMusicMatcher.SearchQuery(track.Artist, track.Title);
 
             var response = await _ytmSearchClient.SearchTracksAsync(new YTMusicAPI.Model.QueryRequest
             {
-                Query = $"{searchResponse.Name} by {searchResponse.Artists.First().Name}"
+                Query = searchQuery
             }, cancellationToken);
 
-            var ytmTrackUrl = response.Result.First().Url;
+            var results = response.Result.ToList();
+
+            // Taking the first hit matches covers, karaoke versions and instrumentals as readily as
+            // the real recording, so score the candidates instead.
+            var candidates = results
+                .Select(r => new MatchCandidate(
+                    r.Title ?? string.Empty,
+                    r.Author,
+                    (long)(r.Duration?.TotalSeconds ?? 0),
+                    r.Author ?? string.Empty))
+                .ToList();
+
+            var best = YouTubeMusicMatcher.BestMatch(
+                candidates,
+                track.Title,
+                track.Artist,
+                track.DurationMs,
+                officialShelf: true);
+
+            if (best is null)
+                throw new ArgumentException($"No YouTube Music match found for '{searchQuery}'");
+
+            // Reference equality, not IndexOf: MatchCandidate is a record, so two results with the
+            // same title, artist and length would compare equal and resolve to the wrong URL.
+            var ytmTrackUrl = results[candidates.FindIndex(c => ReferenceEquals(c, best))].Url;
 
             var result = await YT_DLP_Fetch(ytmTrackUrl);
 
@@ -351,9 +371,9 @@ namespace ArgonFetch.Application.Queries
                         RequestedUrl = query,
                         Video = null,  // Spotify has no video
                         Audio = audioReferences,  // Audio-only
-                        CoverUrl = searchResponse.Album.Images.First().Url,
-                        Title = searchResponse.Name,
-                        Author = searchResponse.Artists.First().Name,
+                        CoverUrl = track.CoverUrl,
+                        Title = track.Title,
+                        Author = track.Artist,
                     }
                 ]
             };

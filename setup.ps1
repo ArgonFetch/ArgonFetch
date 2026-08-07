@@ -1,11 +1,6 @@
 # ArgonFetch Setup Script for Windows
 # This script automates the setup process for ArgonFetch
 
-param (
-    [string]$SpotifyId,
-    [string]$SpotifySecret
-)
-
 $ShortcutName = "ArgonFetch Setup.lnk"
 $desktopPath = [Environment]::GetFolderPath("Desktop")
 $shortcutPath = [System.IO.Path]::Combine($desktopPath, $ShortcutName)
@@ -144,70 +139,6 @@ function Check-DockerInstallation {
 Check-DockerInstallation
 
 write-host ""
-
-#===========================================================================
-# Spotify Credentials + .env file creation
-#===========================================================================
-
-# Check if .env file already exists
-$envFileExists = Test-Path ".env"
-$useExistingEnv = $false
-
-if ($envFileExists) {
-    # Read the existing .env file to check if it has the required credentials
-    $envContent = Get-Content ".env" -Raw
-    $hasSpotifyId = $envContent -match "SPOTIFY_CLIENT_ID=.+"
-    $hasSpotifySecret = $envContent -match "SPOTIFY_CLIENT_SECRET=.+"
-    
-    if ($hasSpotifyId -and $hasSpotifySecret) {
-        Write-Color "> The existing .env file contains Spotify credentials." "Green"
-        $useExistingEnv = Read-YesNo "Would you like to use the existing credentials?"
-    } else {
-        Write-Color "> Incomplete or invalid .env file found." "Yellow"
-        $useExistingEnv = $false
-    }
-}
-
-# Only ask for credentials if we're not using an existing .env file
-if (-not $useExistingEnv) {
-    # Display information about Spotify credentials
-    if (-not $SpotifyId -or -not $SpotifySecret) {
-        Write-Color "📝 Spotify Credentials Required" "Blue"
-        Write-Color "For Spotify support, you will need to create an App using Spotify for Developers:" "White"
-        Write-Color "https://developer.spotify.com/documentation/web-api/concepts/apps" "White"
-        Write-Output ""
-    }
-
-    # If Spotify credentials are not provided, ask for them
-    if (-not $SpotifyId) {
-        Write-Color "Enter your Spotify Client ID:" "Yellow"
-        $secureId = Read-Host -AsSecureString
-        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureId)
-        $SpotifyId = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
-    }
-
-    if (-not $SpotifySecret) {
-        Write-Color "Enter your Spotify Client Secret:" "Yellow"
-        $secureSecret = Read-Host -AsSecureString
-        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureSecret)
-        $SpotifySecret = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
-    }
-
-    # Check if credentials are provided
-    if (-not $SpotifyId -or -not $SpotifySecret) {
-        Write-Color "Error: Spotify credentials are required." "Red"
-        exit 1
-    }
-
-    # Create .env file
-    Write-Color "Creating .env file..." "Green"
-    @"
-SPOTIFY_CLIENT_ID=$SpotifyId
-SPOTIFY_CLIENT_SECRET=$SpotifySecret
-"@ | Out-File -FilePath ".env" -Encoding utf8
-}
 
 #===========================================================================
 # Docker Compose Start

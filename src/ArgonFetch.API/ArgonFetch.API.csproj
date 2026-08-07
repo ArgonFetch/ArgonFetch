@@ -21,7 +21,6 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-    <PackageReference Include="SpotifyAPI.Web" Version="7.2.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.1" />
 	<PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="10.0.10" />
 	<PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="8.1.2" />

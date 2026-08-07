@@ -14,10 +14,6 @@ Add the following to your user secrets:
 
 ```json
 {
-  "Spotify": {
-    "ClientId": "",
-    "ClientSecret": ""
-  },
   "ConnectionStrings": {
     "ArgonFetchDatabase": "Host=localhost;Port=3941;Database=argonfetchdb-dev;Username=postgres;Password=d4vpas8w0rd13!!!;"
   }
