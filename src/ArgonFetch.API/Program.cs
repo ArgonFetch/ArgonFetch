@@ -74,25 +74,28 @@ builder.Services.AddEndpointsApiExplorer();
 
 #region External Services Configuration
 // Register SpotifyAPI
-builder.Services.AddScoped<SpotifyClient>(sp =>
+// Spotify support is optional. The provider is always resolvable so handlers can be
+// constructed for non-Spotify requests; it reports whether a client is available
+// rather than handing out null.
+builder.Services.AddScoped<ArgonFetch.Application.Services.SpotifyClientProvider>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
 
     // Use Configuration pattern consistently - same as ConnectionStrings
-    string clientId = config["Spotify:ClientId"];
-    string clientSecret = config["Spotify:ClientSecret"];
+    string? clientId = config["Spotify:ClientId"];
+    string? clientSecret = config["Spotify:ClientSecret"];
 
     if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
     {
         var logger = sp.GetRequiredService<ILogger<Program>>();
         logger.LogWarning("Spotify API credentials not configured. Spotify features will be disabled.");
-        return null;
+        return new ArgonFetch.Application.Services.SpotifyClientProvider(null);
     }
 
     var spotifyConfig = SpotifyClientConfig
        .CreateDefault()
        .WithAuthenticator(new ClientCredentialsAuthenticator(clientId, clientSecret));
-    return new SpotifyClient(spotifyConfig);
+    return new ArgonFetch.Application.Services.SpotifyClientProvider(new SpotifyClient(spotifyConfig));
 });
 
 // Register YoutubeMusicAPI and YoutubeDL
