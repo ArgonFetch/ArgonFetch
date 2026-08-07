@@ -48,6 +48,9 @@ builder.Services.AddScoped<TikTokDllFetcherService>();
 // Register In memory caching
 builder.Services.AddMemoryCache();
 
+// Keep yt-dlp current at runtime; the image only downloads it at build time.
+builder.Services.AddHostedService<ArgonFetch.Infrastructure.Services.YtDlpUpdateService>();
+
 // Register Application Info Service
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IApplicationInfoService, ArgonFetch.Infrastructure.Services.ApplicationInfoService>();
 #endregion
