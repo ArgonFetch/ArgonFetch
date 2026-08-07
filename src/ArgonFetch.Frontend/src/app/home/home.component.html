@@ -1,5 +1,7 @@
 <main class="main-content">
-  <div class="when-content-arrives-spacing" *ngIf="mediaType || resourceInformation || isLoading"></div>
+  @if (mediaType || resourceInformation || isLoading) {
+    <div class="when-content-arrives-spacing"></div>
+  }
   <div class="hero">
     <h1>ArgonFetch</h1>
     <p class="subtitle">Universal Media Downloader</p>
@@ -8,9 +10,11 @@
       <div class="url-input-wrapper">
         <fa-icon [icon]="faLink" class="url-icon"></fa-icon>
         <input type="text" placeholder="Enter URL to download..." [(ngModel)]="url">
-        <button *ngIf="url" class="clear-btn" (click)="url = ''" aria-label="Clear input">
-          <fa-icon [icon]="faTimes"></fa-icon>
-        </button>
+        @if (url) {
+          <button class="clear-btn" (click)="url = ''" aria-label="Clear input">
+            <fa-icon [icon]="faTimes"></fa-icon>
+          </button>
+        }
       </div>
       <button class="search-btn" (click)="download()" [disabled]="isLoading">
         <fa-icon [icon]="faSearch"></fa-icon>
@@ -19,18 +23,24 @@
     </div>
 
     <!-- Skeleton Loader -->
-    <app-content-skeleton-loader *ngIf="isLoading" [type]="loaderType" [animate]="true" class="content-container" />
+    @if (isLoading) {
+      <app-content-skeleton-loader [type]="loaderType" [animate]="true" class="content-container" />
+    }
 
     <!-- Actual Content -->
     <div class="content-container">
-      <app-single-song-container *ngIf="resourceInformation?.type === mediaTypeEnum.Media && resourceInformation" [resourceInformation]="resourceInformation" />
-      <app-playlist-container *ngIf="resourceInformation?.type === mediaTypeEnum.PlayList && resourceInformation" [resourceInformation]="resourceInformation" />
+      @if (resourceInformation?.type === mediaTypeEnum.Media && resourceInformation) {
+        <app-single-song-container [resourceInformation]="resourceInformation" />
+      }
+      @if (resourceInformation?.type === mediaTypeEnum.PlayList && resourceInformation) {
+        <app-playlist-container [resourceInformation]="resourceInformation" />
+      }
     </div>
 
     <div class="disclaimer-content">
       <fa-icon [icon]="faWarning"></fa-icon>
       <p>Please ensure you have the right to download and use the content. Respect copyright laws and platform terms of
-        service.</p>
+      service.</p>
     </div>
   </div>
 </main>

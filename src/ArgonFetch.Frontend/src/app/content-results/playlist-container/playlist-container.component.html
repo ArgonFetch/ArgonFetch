@@ -4,7 +4,7 @@
       <div class="playlist-thumbnail">
         <img [src]="resourceInformation.coverUrl" alt="Playlist Cover">
       </div>
-      
+
       <div class="playlist-info">
         <div class="title-row">
           <h3 class="playlist-title">{{ resourceInformation.title }}</h3>
@@ -19,16 +19,18 @@
 
   <div class="songs-list">
     <ul>
-      <li *ngFor="let song of resourceInformation.mediaItems" class="song-item">
-        <img [src]="song.coverUrl" alt="Song Cover" class="song-cover">
-        <div class="song-info">
-          <p class="song-name">{{ song.title }}</p>
-          <p class="song-author">{{ song.author }}</p>
-        </div>
-        <button class="action-button download-button">
-          <fa-icon [icon]="faDownload"></fa-icon>
-        </button>
-      </li>
+      @for (song of resourceInformation.mediaItems; track song) {
+        <li class="song-item">
+          <img [src]="song.coverUrl" alt="Song Cover" class="song-cover">
+          <div class="song-info">
+            <p class="song-name">{{ song.title }}</p>
+            <p class="song-author">{{ song.author }}</p>
+          </div>
+          <button class="action-button download-button">
+            <fa-icon [icon]="faDownload"></fa-icon>
+          </button>
+        </li>
+      }
     </ul>
   </div>
 </div>

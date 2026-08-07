@@ -1,54 +1,59 @@
 <div class="skeleton-container" [class.fade-in]="animate">
-    <!-- Single Song Skeleton -->
-    <div *ngIf="type === 'single-song'" class="song-container skeleton-song">
-        <div class="song-content">
-            <div class="skeleton-thumbnail pulse"></div>
-
-            <div class="skeleton-info">
-                <div class="title-row">
-                    <div class="skeleton-title pulse"></div>
-                </div>
-                <div class="skeleton-artist pulse"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Playlist Skeleton -->
-    <div *ngIf="type === 'playlist'" class="playlist-container skeleton-playlist">
-        <div class="playlist-header">
-            <div class="playlist-content">
-                <div class="skeleton-thumbnail pulse"></div>
-
-                <div class="skeleton-info">
-                    <div class="title-row">
-                        <div class="skeleton-title pulse"></div>
-                    </div>
-                    <div class="skeleton-artist pulse"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="songs-list">
-            <ul>
-                <li *ngFor="let item of [1,2,3,4,5]" class="song-item">
-                    <div class="skeleton-song-cover pulse"></div>
-                    <div class="skeleton-song-info">
-                        <div class="skeleton-song-name pulse"></div>
-                        <div class="skeleton-song-author pulse"></div>
-                    </div>
-                </li>
-            </ul>
-        </div>
-    </div>
-    
-    <!-- Unknown Content Skeleton -->
-    <div *ngIf="type === 'unknown'" class="unknown-container skeleton-unknown">
-        <div class="question-mark-container pulse">
-            <div class="question-mark">?</div>
-        </div>
-        <div class="unknown-info">
+  <!-- Single Song Skeleton -->
+  @if (type === 'single-song') {
+    <div class="song-container skeleton-song">
+      <div class="song-content">
+        <div class="skeleton-thumbnail pulse"></div>
+        <div class="skeleton-info">
+          <div class="title-row">
             <div class="skeleton-title pulse"></div>
-            <div class="skeleton-subtitle pulse"></div>
+          </div>
+          <div class="skeleton-artist pulse"></div>
         </div>
+      </div>
     </div>
+  }
+
+  <!-- Playlist Skeleton -->
+  @if (type === 'playlist') {
+    <div class="playlist-container skeleton-playlist">
+      <div class="playlist-header">
+        <div class="playlist-content">
+          <div class="skeleton-thumbnail pulse"></div>
+          <div class="skeleton-info">
+            <div class="title-row">
+              <div class="skeleton-title pulse"></div>
+            </div>
+            <div class="skeleton-artist pulse"></div>
+          </div>
+        </div>
+      </div>
+      <div class="songs-list">
+        <ul>
+          @for (item of [1,2,3,4,5]; track item) {
+            <li class="song-item">
+              <div class="skeleton-song-cover pulse"></div>
+              <div class="skeleton-song-info">
+                <div class="skeleton-song-name pulse"></div>
+                <div class="skeleton-song-author pulse"></div>
+              </div>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+
+  <!-- Unknown Content Skeleton -->
+  @if (type === 'unknown') {
+    <div class="unknown-container skeleton-unknown">
+      <div class="question-mark-container pulse">
+        <div class="question-mark">?</div>
+      </div>
+      <div class="unknown-info">
+        <div class="skeleton-title pulse"></div>
+        <div class="skeleton-subtitle pulse"></div>
+      </div>
+    </div>
+  }
 </div>

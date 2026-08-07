@@ -51,7 +51,13 @@ RUN dotnet publish "ArgonFetch.API.csproj" \
     /p:UseAppHost=false
 
 # Stage 4: Frontend dependencies
-FROM oven/bun:1-alpine AS frontend-deps
+# Bun is the package manager and script runner, but the Angular CLI still runs on Node
+# and enforces a minimum version. The oven/bun image ships Node v24.3, which Angular 22
+# rejects (it wants >= v24.15), so the bun binary is copied onto a current Node base
+# instead. No npm is involved.
+FROM oven/bun:1-alpine AS bun
+FROM node:24-alpine AS frontend-deps
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /src/frontend
 COPY src/ArgonFetch.Frontend/package.json src/ArgonFetch.Frontend/bun.lock ./
 # --frozen-lockfile is the equivalent of `npm ci`: fail rather than resolve anew.

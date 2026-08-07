@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { 
   faYoutube, 
@@ -22,7 +22,8 @@ import {
   templateUrl: './about.component.html',
   styleUrls: ['./about.component.scss'],
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule]
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [FontAwesomeModule]
 })
 export class AboutComponent {
   // Font Awesome Icons

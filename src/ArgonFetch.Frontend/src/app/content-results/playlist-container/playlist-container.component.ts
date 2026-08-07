@@ -1,14 +1,15 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faDownload } from '@fortawesome/free-solid-svg-icons';
-import { CommonModule } from '@angular/common';
+
 import { ResourceInformationDto } from '../../api';
 
 @Component({
   selector: 'app-playlist-container',
   standalone: true,
-  imports: [FontAwesomeModule, CommonModule],
+  imports: [FontAwesomeModule],
   templateUrl: './playlist-container.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './playlist-container.component.scss'
 })
 export class PlaylistContainerComponent {

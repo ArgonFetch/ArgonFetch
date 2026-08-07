@@ -1,6 +1,6 @@
-import { Component, DestroyRef } from '@angular/core';
+import { Component, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,14 +16,14 @@ import { MediaType, ResourceInformationDto, FetchService } from '../api';
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
-    CommonModule,
     FontAwesomeModule,
     PlaylistContainerComponent,
     SingleSongContainerComponent,
     ContentSkeletonLoaderComponent
-  ]
+]
 })
 export class HomeComponent {
   faLink = faLink;
