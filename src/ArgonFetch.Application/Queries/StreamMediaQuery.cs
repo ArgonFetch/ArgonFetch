@@ -117,8 +117,7 @@ namespace ArgonFetch.Application.Queries
                         _logger.LogWarning(ex, "Accelerated download failed, falling back to single connection");
 
                         // Fallback to single connection if accelerated fails
-                        var httpClient = _httpClientFactory.CreateClient();
-                        httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                        var httpClient = _httpClientFactory.CreateClient(MediaHttpClientDefaults.ClientName);
 
                         using var response = await httpClient.GetAsync(
                             mediaUrl,

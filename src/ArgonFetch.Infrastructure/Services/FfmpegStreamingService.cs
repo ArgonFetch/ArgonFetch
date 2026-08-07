@@ -1,4 +1,5 @@
 ﻿using ArgonFetch.Application.Interfaces;
+using ArgonFetch.Application.Services;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
@@ -25,9 +26,9 @@ namespace ArgonFetch.Infrastructure.Services
 
             // Use HTTP input for better streaming support
             // Add user-agent header to avoid 403 errors from YouTube
-            var arguments = $"-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\" " +
+            var arguments = $"-user_agent \"{MediaHttpClientDefaults.UserAgent}\" " +
                            $"-i \"{videoUrl}\" " +
-                           $"-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\" " +
+                           $"-user_agent \"{MediaHttpClientDefaults.UserAgent}\" " +
                            $"-i \"{audioUrl}\" " +
                            "-map 0:v -map 1:a " +
                            "-c:v copy -c:a copy " +
@@ -120,7 +121,7 @@ namespace ArgonFetch.Infrastructure.Services
             if (isAudio)
             {
                 // Convert any audio format to MP3
-                arguments = $"-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\" " +
+                arguments = $"-user_agent \"{MediaHttpClientDefaults.UserAgent}\" " +
                            $"-i \"{sourceUrl}\" " +
                            "-vn " +  // Disable video
                            "-c:a mp3 " +  // Convert audio to MP3
@@ -132,7 +133,7 @@ namespace ArgonFetch.Infrastructure.Services
             else
             {
                 // Convert any video format to MP4 (with audio if present)
-                arguments = $"-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\" " +
+                arguments = $"-user_agent \"{MediaHttpClientDefaults.UserAgent}\" " +
                            $"-i \"{sourceUrl}\" " +
                            "-c:v libx264 " +  // Use H.264 codec for video
                            "-preset ultrafast " +  // Fast encoding for streaming

@@ -101,6 +101,12 @@ builder.Services.AddScoped<YoutubeDL>();
 
 // Register FFmpeg and streaming services
 builder.Services.AddHttpClient();
+
+// Client used for all upstream media fetches; carries the User-Agent that avoids 403s.
+builder.Services.AddHttpClient(
+    ArgonFetch.Application.Services.MediaHttpClientDefaults.ClientName,
+    client => client.DefaultRequestHeaders.UserAgent.ParseAdd(
+        ArgonFetch.Application.Services.MediaHttpClientDefaults.UserAgent));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ArgonFetch.Application.Interfaces.IFfmpegStreamingService, ArgonFetch.Infrastructure.Services.FfmpegStreamingService>();
 builder.Services.AddScoped<ArgonFetch.Application.Interfaces.IAcceleratedDownloadService, ArgonFetch.Infrastructure.Services.AcceleratedDownloadService>();

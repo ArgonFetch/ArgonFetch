@@ -1,4 +1,5 @@
 using ArgonFetch.Application.Interfaces;
+using ArgonFetch.Application.Services;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net.Http.Headers;
@@ -39,8 +40,7 @@ namespace ArgonFetch.Infrastructure.Services
             try
             {
                 // First, check if the server supports range requests
-                var httpClient = _httpClientFactory.CreateClient();
-                httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                var httpClient = _httpClientFactory.CreateClient(MediaHttpClientDefaults.ClientName);
 
                 using var headRequest = new HttpRequestMessage(HttpMethod.Head, url);
                 using var headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
@@ -139,8 +139,7 @@ namespace ArgonFetch.Infrastructure.Services
             long rangeEnd,
             CancellationToken cancellationToken)
         {
-            var httpClient = _httpClientFactory.CreateClient();
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            var httpClient = _httpClientFactory.CreateClient(MediaHttpClientDefaults.ClientName);
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Range = new RangeHeaderValue(rangeStart, rangeEnd);
@@ -157,8 +156,7 @@ namespace ArgonFetch.Infrastructure.Services
             IProgress<double>? progress,
             CancellationToken cancellationToken)
         {
-            var httpClient = _httpClientFactory.CreateClient();
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            var httpClient = _httpClientFactory.CreateClient(MediaHttpClientDefaults.ClientName);
 
             using var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
