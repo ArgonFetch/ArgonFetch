@@ -9,9 +9,15 @@ RUN apt-get update && \
         python3 \
         curl \
         ca-certificates && \
-    # Download yt-dlp standalone binary (still needs Python to run)
-    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
-    chmod a+rx /usr/local/bin/yt-dlp && \
+    # Download yt-dlp standalone binary (still needs Python to run).
+    # It lives in /opt/yt-dlp rather than /usr/local/bin because yt-dlp --update
+    # replaces its own binary in place, which needs the directory and the file to be
+    # writable by the runtime user ($APP_UID), not just by root.
+    mkdir -p /opt/yt-dlp && \
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /opt/yt-dlp/yt-dlp && \
+    chmod 0755 /opt/yt-dlp/yt-dlp && \
+    chown -R $APP_UID:0 /opt/yt-dlp && \
+    ln -s /opt/yt-dlp/yt-dlp /usr/local/bin/yt-dlp && \
     # Verify installations
     yt-dlp --version && \
     ffmpeg -version && \
@@ -45,15 +51,22 @@ RUN dotnet publish "ArgonFetch.API.csproj" \
     /p:UseAppHost=false
 
 # Stage 4: Frontend dependencies
-FROM node:18-alpine AS frontend-deps
+# Bun is the package manager and script runner, but the Angular CLI still runs on Node
+# and enforces a minimum version. The oven/bun image ships Node v24.3, which Angular 22
+# rejects (it wants >= v24.15), so the bun binary is copied onto a current Node base
+# instead. No npm is involved.
+FROM oven/bun:1-alpine AS bun
+FROM node:24-alpine AS frontend-deps
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /src/frontend
-COPY src/ArgonFetch.Frontend/package*.json ./
-RUN npm ci --prefer-offline --no-audit --no-fund
+COPY src/ArgonFetch.Frontend/package.json src/ArgonFetch.Frontend/bun.lock ./
+# --frozen-lockfile is the equivalent of `npm ci`: fail rather than resolve anew.
+RUN bun install --frozen-lockfile
 
 # Stage 5: Frontend build
 FROM frontend-deps AS frontend-build
 COPY src/ArgonFetch.Frontend .
-RUN npm run build:agent -- --output-path=/.artifacts/frontend
+RUN bun run build:agent --output-path=/.artifacts/frontend
 
 # Stage 6: Final image
 FROM base AS final

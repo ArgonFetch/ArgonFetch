@@ -29,10 +29,10 @@
 
     <!-- Actual Content -->
     <div class="content-container">
-      @if (resourceInformation?.type === mediaTypeEnum.NUMBER_0 && resourceInformation) {
+      @if (resourceInformation?.type === mediaTypeEnum.Media && resourceInformation) {
         <app-single-song-container [resourceInformation]="resourceInformation" />
       }
-      @if (resourceInformation?.type === mediaTypeEnum.NUMBER_1 && resourceInformation) {
+      @if (resourceInformation?.type === mediaTypeEnum.PlayList && resourceInformation) {
         <app-playlist-container [resourceInformation]="resourceInformation" />
       }
     </div>

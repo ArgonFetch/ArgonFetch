@@ -1,4 +1,5 @@
 ﻿using ArgonFetch.Application.Interfaces;
+using ArgonFetch.Application.Services;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
@@ -6,6 +7,10 @@ namespace ArgonFetch.Infrastructure.Services
 {
     public class FfmpegStreamingService : IFfmpegStreamingService
     {
+        // Shared with the media HttpClient so the User-Agent that avoids upstream 403s
+        // is defined in exactly one place.
+        private const string UserAgent = MediaHttpClientDefaults.UserAgent;
+
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<FfmpegStreamingService> _logger;
 
@@ -23,30 +28,41 @@ namespace ArgonFetch.Infrastructure.Services
                 throw new InvalidOperationException("FFmpeg not found in system PATH");
             }
 
+            ValidateMediaUrl(videoUrl, nameof(videoUrl));
+            ValidateMediaUrl(audioUrl, nameof(audioUrl));
+
+            var processStartInfo = CreateProcessStartInfo(ffmpegPath);
+
             // Use HTTP input for better streaming support
             // Add user-agent header to avoid 403 errors from YouTube
-            var arguments = $"-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\" " +
-                           $"-i \"{videoUrl}\" " +
-                           $"-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\" " +
-                           $"-i \"{audioUrl}\" " +
-                           "-map 0:v -map 1:a " +
-                           "-c:v copy -c:a copy " +
-                           "-movflags frag_keyframe+empty_moov+faststart " +
-                           "-f mp4 " +
-                           "-loglevel warning " +
-                           "-max_muxing_queue_size 1024 " +
-                           "pipe:1";
+            // Arguments are passed as separate tokens so a URL can never be parsed as an option.
+            processStartInfo.ArgumentList.Add("-user_agent");
+            processStartInfo.ArgumentList.Add(UserAgent);
+            processStartInfo.ArgumentList.Add("-i");
+            processStartInfo.ArgumentList.Add(videoUrl);
+            processStartInfo.ArgumentList.Add("-user_agent");
+            processStartInfo.ArgumentList.Add(UserAgent);
+            processStartInfo.ArgumentList.Add("-i");
+            processStartInfo.ArgumentList.Add(audioUrl);
+            processStartInfo.ArgumentList.Add("-map");
+            processStartInfo.ArgumentList.Add("0:v");
+            processStartInfo.ArgumentList.Add("-map");
+            processStartInfo.ArgumentList.Add("1:a");
+            processStartInfo.ArgumentList.Add("-c:v");
+            processStartInfo.ArgumentList.Add("copy");
+            processStartInfo.ArgumentList.Add("-c:a");
+            processStartInfo.ArgumentList.Add("copy");
+            processStartInfo.ArgumentList.Add("-movflags");
+            processStartInfo.ArgumentList.Add("frag_keyframe+empty_moov+faststart");
+            processStartInfo.ArgumentList.Add("-f");
+            processStartInfo.ArgumentList.Add("mp4");
+            processStartInfo.ArgumentList.Add("-loglevel");
+            processStartInfo.ArgumentList.Add("warning");
+            processStartInfo.ArgumentList.Add("-max_muxing_queue_size");
+            processStartInfo.ArgumentList.Add("1024");
+            processStartInfo.ArgumentList.Add("pipe:1");
 
-            var processStartInfo = new ProcessStartInfo
-            {
-                FileName = ffmpegPath,
-                Arguments = arguments,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                RedirectStandardInput = false,
-                CreateNoWindow = true
-            };
+            var arguments = DescribeArguments(processStartInfo);
 
             using var process = new Process { StartInfo = processStartInfo };
 
@@ -116,45 +132,51 @@ namespace ArgonFetch.Infrastructure.Services
                 throw new InvalidOperationException("FFmpeg not found in system PATH");
             }
 
-            string arguments;
+            ValidateMediaUrl(sourceUrl, nameof(sourceUrl));
+
+            var processStartInfo = CreateProcessStartInfo(ffmpegPath);
+
+            // Arguments are passed as separate tokens so a URL can never be parsed as an option.
+            processStartInfo.ArgumentList.Add("-user_agent");
+            processStartInfo.ArgumentList.Add(UserAgent);
+            processStartInfo.ArgumentList.Add("-i");
+            processStartInfo.ArgumentList.Add(sourceUrl);
+
             if (isAudio)
             {
                 // Convert any audio format to MP3
-                arguments = $"-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\" " +
-                           $"-i \"{sourceUrl}\" " +
-                           "-vn " +  // Disable video
-                           "-c:a mp3 " +  // Convert audio to MP3
-                           "-b:a 192k " +  // Set bitrate to 192k
-                           "-f mp3 " +  // Force MP3 format
-                           "-loglevel warning " +
-                           "pipe:1";
+                processStartInfo.ArgumentList.Add("-vn");        // Disable video
+                processStartInfo.ArgumentList.Add("-c:a");
+                processStartInfo.ArgumentList.Add("mp3");        // Convert audio to MP3
+                processStartInfo.ArgumentList.Add("-b:a");
+                processStartInfo.ArgumentList.Add("192k");       // Set bitrate to 192k
+                processStartInfo.ArgumentList.Add("-f");
+                processStartInfo.ArgumentList.Add("mp3");        // Force MP3 format
             }
             else
             {
                 // Convert any video format to MP4 (with audio if present)
-                arguments = $"-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\" " +
-                           $"-i \"{sourceUrl}\" " +
-                           "-c:v libx264 " +  // Use H.264 codec for video
-                           "-preset ultrafast " +  // Fast encoding for streaming
-                           "-crf 23 " +  // Quality setting (lower = better quality)
-                           "-c:a aac " +  // Convert audio to AAC
-                           "-b:a 128k " +  // Audio bitrate
-                           "-movflags frag_keyframe+empty_moov+faststart " +
-                           "-f mp4 " +
-                           "-loglevel warning " +
-                           "pipe:1";
+                processStartInfo.ArgumentList.Add("-c:v");
+                processStartInfo.ArgumentList.Add("libx264");    // Use H.264 codec for video
+                processStartInfo.ArgumentList.Add("-preset");
+                processStartInfo.ArgumentList.Add("ultrafast");  // Fast encoding for streaming
+                processStartInfo.ArgumentList.Add("-crf");
+                processStartInfo.ArgumentList.Add("23");         // Quality setting (lower = better quality)
+                processStartInfo.ArgumentList.Add("-c:a");
+                processStartInfo.ArgumentList.Add("aac");        // Convert audio to AAC
+                processStartInfo.ArgumentList.Add("-b:a");
+                processStartInfo.ArgumentList.Add("128k");       // Audio bitrate
+                processStartInfo.ArgumentList.Add("-movflags");
+                processStartInfo.ArgumentList.Add("frag_keyframe+empty_moov+faststart");
+                processStartInfo.ArgumentList.Add("-f");
+                processStartInfo.ArgumentList.Add("mp4");
             }
 
-            var processStartInfo = new ProcessStartInfo
-            {
-                FileName = ffmpegPath,
-                Arguments = arguments,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                RedirectStandardInput = false,
-                CreateNoWindow = true
-            };
+            processStartInfo.ArgumentList.Add("-loglevel");
+            processStartInfo.ArgumentList.Add("warning");
+            processStartInfo.ArgumentList.Add("pipe:1");
+
+            var arguments = DescribeArguments(processStartInfo);
 
             using var process = new Process { StartInfo = processStartInfo };
 
@@ -214,6 +236,45 @@ namespace ArgonFetch.Infrastructure.Services
                 }
                 throw;
             }
+        }
+
+        private static ProcessStartInfo CreateProcessStartInfo(string ffmpegPath)
+        {
+            return new ProcessStartInfo
+            {
+                FileName = ffmpegPath,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = false,
+                CreateNoWindow = true
+            };
+        }
+
+        /// <summary>
+        /// FFmpeg treats a leading dash as an option and can read local paths as input,
+        /// so only absolute http(s) URLs are accepted as media sources.
+        /// </summary>
+        private static void ValidateMediaUrl(string url, string parameterName)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                throw new ArgumentException("Media URL must not be empty.", parameterName);
+            }
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                throw new ArgumentException("Media URL must be an absolute http or https URL.", parameterName);
+            }
+        }
+
+        /// <summary>
+        /// Renders the argument list for logging only - it is never handed to the process.
+        /// </summary>
+        private static string DescribeArguments(ProcessStartInfo processStartInfo)
+        {
+            return string.Join(' ', processStartInfo.ArgumentList);
         }
 
         private string? GetFfmpegPath()

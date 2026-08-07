@@ -26,20 +26,17 @@ namespace ArgonFetch.Application.Queries
         private readonly IMediaUrlCacheService _cacheService;
         private readonly IFfmpegStreamingService _ffmpegStreamingService;
         private readonly IAcceleratedDownloadService _acceleratedDownloadService;
-        private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<StreamMediaQueryHandler> _logger;
 
         public StreamMediaQueryHandler(
             IMediaUrlCacheService cacheService,
             IFfmpegStreamingService ffmpegStreamingService,
             IAcceleratedDownloadService acceleratedDownloadService,
-            IHttpClientFactory httpClientFactory,
             ILogger<StreamMediaQueryHandler> logger)
         {
             _cacheService = cacheService;
             _ffmpegStreamingService = ffmpegStreamingService;
             _acceleratedDownloadService = acceleratedDownloadService;
-            _httpClientFactory = httpClientFactory;
             _logger = logger;
         }
 
@@ -103,35 +100,14 @@ namespace ArgonFetch.Application.Queries
                     // Note: We don't set Content-Length as we might be chunking
                     // The accelerated download will handle range requests if supported
 
-                    try
-                    {
-                        // Use accelerated download service for better speed
-                        await _acceleratedDownloadService.StreamWithAccelerationAsync(
-                            mediaUrl,
-                            request.Response.Body,
-                            null, // No progress reporting needed here
-                            request.CancellationToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Accelerated download failed, falling back to single connection");
-
-                        // Fallback to single connection if accelerated fails
-                        var httpClient = _httpClientFactory.CreateClient();
-                        httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-
-                        using var response = await httpClient.GetAsync(
-                            mediaUrl,
-                            HttpCompletionOption.ResponseHeadersRead,
-                            request.CancellationToken);
-
-                        if (!response.IsSuccessStatusCode)
-                        {
-                            return StreamResult.BadGateway($"Failed to fetch media: {response.ReasonPhrase}");
-                        }
-
-                        await response.Content.CopyToAsync(request.Response.Body, request.CancellationToken);
-                    }
+                    // The service already falls back to a single connection internally, and only
+                    // while doing so is still safe. Retrying here would append a second copy of
+                    // the file to a response body that may already hold part of one.
+                    await _acceleratedDownloadService.StreamWithAccelerationAsync(
+                        mediaUrl,
+                        request.Response.Body,
+                        null, // No progress reporting needed here
+                        request.CancellationToken);
                 }
 
                 return StreamResult.Success();

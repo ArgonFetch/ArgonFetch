@@ -2,8 +2,8 @@
 
 ## Prerequisites
 - Git
-- Node.js 18+ and npm
-- Angular CLI (`npm install -g @angular/cli@19`)
+- Bun 1.x (https://bun.sh)
+- Angular CLI (`bun install -g @angular/cli@19`)
 - .NET 8 SDK
 - PostgreSQL 15+ (or use Docker)
 - FFmpeg and yt-dlp (for media processing)
@@ -85,7 +85,7 @@ dotnet restore
 #### Frontend Dependencies
 ```bash
 cd src/ArgonFetch.Frontend
-npm install
+bun install
 ```
 
 ### 5. Apply Database Migrations
@@ -108,7 +108,7 @@ dotnet run
 #### 2. Start the Frontend Application
 ```bash
 cd src/ArgonFetch.Frontend
-npm start
+bun start
 # Frontend will be available at http://localhost:4200
 ```
 
@@ -157,7 +157,7 @@ dotnet publish -c Release -o ./publish
 
 # Build frontend
 cd src/ArgonFetch.Frontend
-npm run build:prod
+bun run build:prod
 ```
 
 ## Troubleshooting
