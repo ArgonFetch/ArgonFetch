@@ -1,15 +1,18 @@
 using ArgonFetch.Application.Services;
+using System.Reflection;
 using System.Xml.Linq;
 
 namespace ArgonFetch.Infrastructure.Services;
 
 public class ApplicationInfoService : IApplicationInfoService
 {
+    private const string UnknownVersion = "unknown";
+
     private readonly string _version;
 
     public ApplicationInfoService()
     {
-        _version = LoadVersionFromPropertiesFile();
+        _version = LoadVersion();
     }
 
     public string GetVersion()
@@ -17,11 +20,50 @@ public class ApplicationInfoService : IApplicationInfoService
         return _version;
     }
 
-    private static string LoadVersionFromPropertiesFile()
+    private static string LoadVersion()
+    {
+        // The version is stamped into the assembly at build time from
+        // application.properties (see ReadVersionFromProperties in ArgonFetch.API.csproj),
+        // so the assembly is the reliable source at runtime - the properties file itself
+        // is not part of the published output.
+        return LoadVersionFromAssembly() ?? LoadVersionFromPropertiesFile() ?? UnknownVersion;
+    }
+
+    private static string? LoadVersionFromAssembly()
+    {
+        var assembly = typeof(ApplicationInfoService).Assembly;
+
+        var informationalVersion = assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+
+        // AssemblyInformationalVersion carries the source revision as "0.1.1+<commit sha>"
+        // when SourceLink is active; only the version part is wanted here.
+        if (!string.IsNullOrWhiteSpace(informationalVersion))
+        {
+            var version = informationalVersion.Split('+', 2)[0];
+            if (!string.IsNullOrWhiteSpace(version))
+            {
+                return version;
+            }
+        }
+
+        var assemblyVersion = assembly.GetName().Version;
+
+        // AssemblyVersion is always four-part; application.properties uses three,
+        // so drop a trailing zero revision to keep the two in sync.
+        return assemblyVersion is null
+            ? null
+            : assemblyVersion.Revision == 0
+                ? assemblyVersion.ToString(3)
+                : assemblyVersion.ToString();
+    }
+
+    private static string? LoadVersionFromPropertiesFile()
     {
         try
         {
-            // Navigate to the root directory where application.properties is located
+            // Development fallback: application.properties lives at the repository root.
             var currentDirectory = Directory.GetCurrentDirectory();
             var propertiesPath = Path.Combine(currentDirectory, "application.properties");
 
@@ -38,17 +80,17 @@ public class ApplicationInfoService : IApplicationInfoService
 
             if (!File.Exists(propertiesPath))
             {
-                return "unknown";
+                return null;
             }
 
             var doc = XDocument.Load(propertiesPath);
             var versionElement = doc.Root?.Element("version");
 
-            return versionElement?.Value ?? "unknown";
+            return string.IsNullOrWhiteSpace(versionElement?.Value) ? null : versionElement.Value;
         }
         catch
         {
-            return "unknown";
+            return null;
         }
     }
 }

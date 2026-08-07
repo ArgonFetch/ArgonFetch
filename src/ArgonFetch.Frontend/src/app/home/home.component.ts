@@ -76,7 +76,7 @@ export class HomeComponent {
           this.mediaType = resourceInformation.type;
 
           // Update loader type based on actual media type
-          if (resourceInformation.type === MediaType.NUMBER_1) {
+          if (resourceInformation.type === MediaType.PlayList) {
             this.loaderType = 'playlist';
           } else {
             this.loaderType = 'single-song';

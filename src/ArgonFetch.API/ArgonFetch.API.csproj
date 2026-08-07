@@ -7,31 +7,23 @@
     <UserSecretsId>afdb85db-2341-41df-8afb-b35f66ffcc1a</UserSecretsId>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <ApplicationPropertiesFile>$(MSBuildProjectDirectory)\..\..\application.properties</ApplicationPropertiesFile>
-  </PropertyGroup>
-
-  <Target Name="ReadVersionFromProperties" BeforeTargets="BeforeBuild">
-    <XmlPeek XmlInputPath="$(ApplicationPropertiesFile)" Query="/properties/version/text()">
-      <Output TaskParameter="Result" PropertyName="Version" />
-    </XmlPeek>
-  </Target>
+  <!-- Version is stamped for every project by Directory.Build.props at the repository root. -->
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="11.11.0" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
     <PackageReference Include="MediatR" Version="12.4.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.5">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.5" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="SpotifyAPI.Web" Version="7.2.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.1" />
-	<PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="8.0.13" />
+	<PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="10.0.10" />
 	<PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="8.1.2" />
 	<PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="8.1.2" />
 	<PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="8.1.2" />

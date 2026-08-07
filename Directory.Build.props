@@ -1,0 +1,27 @@
+<Project>
+
+  <!--
+    Single source of truth for the product version: application.properties at the
+    repository root. Stamping it here means every assembly carries the same version,
+    so runtime version lookups don't depend on which assembly they happen to run from.
+  -->
+  <PropertyGroup>
+    <ApplicationPropertiesFile>$(MSBuildThisFileDirectory)application.properties</ApplicationPropertiesFile>
+  </PropertyGroup>
+
+  <Target Name="ReadVersionFromProperties"
+          BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo"
+          Condition="Exists('$(ApplicationPropertiesFile)')">
+    <XmlPeek XmlInputPath="$(ApplicationPropertiesFile)" Query="/properties/version/text()">
+      <Output TaskParameter="Result" PropertyName="VersionFromProperties" />
+    </XmlPeek>
+    <PropertyGroup Condition="'$(VersionFromProperties)' != ''">
+      <Version>$(VersionFromProperties)</Version>
+      <VersionPrefix>$(VersionFromProperties)</VersionPrefix>
+      <AssemblyVersion>$(VersionFromProperties)</AssemblyVersion>
+      <FileVersion>$(VersionFromProperties)</FileVersion>
+      <InformationalVersion>$(VersionFromProperties)</InformationalVersion>
+    </PropertyGroup>
+  </Target>
+
+</Project>

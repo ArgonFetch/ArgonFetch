@@ -9,9 +9,15 @@ RUN apt-get update && \
         python3 \
         curl \
         ca-certificates && \
-    # Download yt-dlp standalone binary (still needs Python to run)
-    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
-    chmod a+rx /usr/local/bin/yt-dlp && \
+    # Download yt-dlp standalone binary (still needs Python to run).
+    # It lives in /opt/yt-dlp rather than /usr/local/bin because yt-dlp --update
+    # replaces its own binary in place, which needs the directory and the file to be
+    # writable by the runtime user ($APP_UID), not just by root.
+    mkdir -p /opt/yt-dlp && \
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /opt/yt-dlp/yt-dlp && \
+    chmod 0755 /opt/yt-dlp/yt-dlp && \
+    chown -R $APP_UID:0 /opt/yt-dlp && \
+    ln -s /opt/yt-dlp/yt-dlp /usr/local/bin/yt-dlp && \
     # Verify installations
     yt-dlp --version && \
     ffmpeg -version && \
