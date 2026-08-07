@@ -1,11 +1,12 @@
 
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-content-skeleton-loader',
   standalone: true,
   imports: [],
   templateUrl: './content-skeleton-loader.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './content-skeleton-loader.component.scss'
 })
 export class ContentSkeletonLoaderComponent implements OnInit {

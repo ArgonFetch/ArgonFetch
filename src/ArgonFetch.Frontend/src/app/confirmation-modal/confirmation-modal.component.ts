@@ -1,5 +1,5 @@
 // confirmation-modal.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 
 import { Subscription } from 'rxjs';
 import { ModalService } from '../services/modal.service';
@@ -9,6 +9,7 @@ import { ModalService } from '../services/modal.service';
   standalone: true,
   imports: [],
   templateUrl: './confirmation-modal.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./confirmation-modal.component.scss']
 })
 export class ConfirmationModalComponent implements OnInit, OnDestroy {

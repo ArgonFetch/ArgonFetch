@@ -1,4 +1,4 @@
-import { Component, Input, HostListener, ElementRef } from '@angular/core';
+import { Component, Input, HostListener, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 import { faDownload, faChevronRight, faSpinner } from '@fortawesome/free-solid-svg-icons';
@@ -11,6 +11,7 @@ import { ResourceUrlService } from '../../services/resource-url.service';
   standalone: true,
   imports: [FontAwesomeModule, HttpClientModule],
   templateUrl: './single-song-container.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './single-song-container.component.scss'
 })
 export class SingleSongContainerComponent {

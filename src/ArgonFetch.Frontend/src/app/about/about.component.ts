@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { 
@@ -22,6 +22,7 @@ import {
   templateUrl: './about.component.html',
   styleUrls: ['./about.component.scss'],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [FontAwesomeModule]
 })
 export class AboutComponent {

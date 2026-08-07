@@ -1,7 +1,7 @@
 <div class="song-container">
   <div class="song-content">
     <div class="song-thumbnail">
-      <img [src]="resourceInformation.mediaItems?.[0]?.coverUrl" alt="Song Cover">
+      <img [src]="$safeNavigationMigration(resourceInformation.mediaItems?.[0]?.coverUrl)" alt="Song Cover">
     </div>
 
     <div class="song-info">
