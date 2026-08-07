@@ -25,7 +25,7 @@ namespace ArgonFetch.Application.Queries
     public class GetMediaQueryHandler : IRequestHandler<GetMediaQuery, ResourceInformationDto>
     {
         private readonly YoutubeDL _youtubeDL;
-        private readonly SpotifyClient _spotifyClient;
+        private readonly SpotifyClientProvider _spotifyClientProvider;
         private readonly YTMusicAPI.SearchClient _ytmSearchClient;
         private readonly TikTokDllFetcherService _tikTokDllFetcherService;
         private readonly IMemoryCache _memoryCache;
@@ -35,7 +35,7 @@ namespace ArgonFetch.Application.Queries
         private readonly IProxyUrlBuilder _proxyUrlBuilder;
 
         public GetMediaQueryHandler(
-            SpotifyClient spotifyClient,
+            SpotifyClientProvider spotifyClientProvider,
             YTMusicAPI.SearchClient ytmSearchClient,
             YoutubeDL youtubeDL,
             TikTokDllFetcherService tikTokDllFetcherService,
@@ -46,7 +46,7 @@ namespace ArgonFetch.Application.Queries
             IProxyUrlBuilder proxyUrlBuilder
             )
         {
-            _spotifyClient = spotifyClient;
+            _spotifyClientProvider = spotifyClientProvider;
             _ytmSearchClient = ytmSearchClient;
             _youtubeDL = youtubeDL;
             _tikTokDllFetcherService = tikTokDllFetcherService;
@@ -315,9 +315,11 @@ namespace ArgonFetch.Application.Queries
 
         private async Task<ResourceInformationDto> HandleSpotify(string query, CancellationToken cancellationToken)
         {
+            var spotifyClient = _spotifyClientProvider.Require();
+
             var uri = new Uri(query);
             var segments = uri.Segments;
-            var searchResponse = await _spotifyClient.Tracks.Get(segments.Last(), cancellationToken);
+            var searchResponse = await spotifyClient.Tracks.Get(segments.Last(), cancellationToken);
 
             if (searchResponse == null)
                 throw new ArgumentException("Track not found");

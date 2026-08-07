@@ -103,7 +103,7 @@ export class SingleSongContainerComponent {
 
     if (type === 'combined') {
       // Handle video streams (with audio)
-      const videoRef = mediaItem.video as any; // Cast to any since the API models might not be updated yet
+      const videoRef = mediaItem.video;
       if (!videoRef) {
         console.error('No video references available');
         return;
@@ -113,7 +113,7 @@ export class SingleSongContainerComponent {
       extension = this.resourceUrlService.getFileExtension(videoRef, quality) || '.mp4';
     } else if (type === 'audio') {
       // Handle audio-only streams
-      const audioRef = mediaItem.audio as any; // Cast to any since the API models might not be updated yet
+      const audioRef = mediaItem.audio;
       if (!audioRef) {
         console.error('No audio references available');
         return;
@@ -145,13 +145,14 @@ export class SingleSongContainerComponent {
     this.totalBytes = 0;
     this.downloadedMB = '0';
 
-    try {
-      // Use HttpClient to download with progress tracking
-      this.http.get(url, {
-        responseType: 'blob',
-        reportProgress: true,
-        observe: 'events'
-      }).subscribe({
+    // Use HttpClient to download with progress tracking.
+    // Errors arrive on the error callback, not as a thrown exception - subscribe()
+    // returns as soon as the request is issued.
+    this.http.get(url, {
+      responseType: 'blob',
+      reportProgress: true,
+      observe: 'events'
+    }).subscribe({
         next: (event) => {
           if (event.type === HttpEventType.DownloadProgress) {
             // Store total bytes if available
@@ -226,33 +227,23 @@ export class SingleSongContainerComponent {
             if (blob) {
               this.saveBlob(blob, filename);
             }
-            this.isDownloading = false;
-            this.downloadProgress = 0;
-            this.currentDownloadName = '';
-            this.downloadSpeed = '';
-            this.totalBytes = 0;
-            this.downloadedMB = '';
+            this.resetDownloadState();
           }
         },
         error: (error) => {
           console.error('Download failed:', error);
-          this.isDownloading = false;
-          this.downloadProgress = 0;
-          this.currentDownloadName = '';
-          this.downloadSpeed = '';
-          this.totalBytes = 0;
-          this.downloadedMB = '';
+          this.resetDownloadState();
         }
       });
-    } catch (error) {
-      console.error('Download error:', error);
-      this.isDownloading = false;
-      this.downloadProgress = 0;
-      this.currentDownloadName = '';
-      this.downloadSpeed = '';
-      this.totalBytes = 0;
-      this.downloadedMB = '';
-    }
+  }
+
+  private resetDownloadState() {
+    this.isDownloading = false;
+    this.downloadProgress = 0;
+    this.currentDownloadName = '';
+    this.downloadSpeed = '';
+    this.totalBytes = 0;
+    this.downloadedMB = '';
   }
 
   private saveBlob(blob: Blob, filename: string) {

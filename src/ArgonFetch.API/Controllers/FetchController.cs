@@ -10,9 +10,12 @@ namespace ArgonFetch.API.Controllers
     public class FetchController : ControllerBase
     {
         private readonly IMediator _mediator;
-        public FetchController(IMediator mediator)
+        private readonly ILogger<FetchController> _logger;
+
+        public FetchController(IMediator mediator, ILogger<FetchController> logger)
         {
             _mediator = mediator;
+            _logger = logger;
         }
 
         [HttpGet("GetResource", Name = "GetResource")]
@@ -30,6 +33,8 @@ namespace ArgonFetch.API.Controllers
             }
             catch (ArgumentException ex)
             {
+                _logger.LogWarning(ex, "Resource not found for {Url}", url);
+
                 return NotFound(new ProblemDetails
                 {
                     Title = "Resource Not Found",
@@ -38,6 +43,8 @@ namespace ArgonFetch.API.Controllers
             }
             catch (NotSupportedException ex)
             {
+                _logger.LogWarning(ex, "Unsupported media type for {Url}", url);
+
                 return StatusCode(StatusCodes.Status415UnsupportedMediaType, new ProblemDetails
                 {
                     Title = "Unsupported Media Type",
@@ -46,6 +53,8 @@ namespace ArgonFetch.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to fetch {Url}", url);
+
                 return StatusCode(StatusCodes.Status502BadGateway, new ProblemDetails
                 {
                     Title = "Fetch Failed",
