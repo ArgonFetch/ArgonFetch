@@ -36,42 +36,86 @@ namespace ArgonFetch.Infrastructure.Services
             IProgress<double>? progress = null,
             CancellationToken cancellationToken = default)
         {
+            // Counts what has already been handed to the caller. Once any byte is written,
+            // restarting the download would append a second copy of the file, so a failure
+            // past that point has to propagate rather than fall back.
+            var output = new OutputTracker();
+
+            // Probe for range support first. This writes nothing, so failing here is
+            // always safe to recover from.
+            long? contentLength = null;
+            var acceptsRanges = false;
+            var probeSucceeded = false;
+
             try
             {
-                // First, check if the server supports range requests
                 var httpClient = _httpClientFactory.CreateClient();
                 httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
 
                 using var headRequest = new HttpRequestMessage(HttpMethod.Head, url);
                 using var headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
 
-                if (!headResponse.IsSuccessStatusCode)
+                if (headResponse.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("HEAD request failed, falling back to single connection download");
-                    await DownloadSingleConnectionAsync(url, outputStream, progress, cancellationToken);
-                    return;
+                    contentLength = headResponse.Content.Headers.ContentLength;
+                    acceptsRanges = headResponse.Headers.AcceptRanges?.Contains("bytes") ?? false;
+                    probeSucceeded = true;
                 }
-
-                var contentLength = headResponse.Content.Headers.ContentLength;
-                var acceptRanges = headResponse.Headers.AcceptRanges?.Contains("bytes") ?? false;
-
-                if (!contentLength.HasValue || !acceptRanges)
+                else
                 {
-                    _logger.LogInformation("Server doesn't support range requests, using single connection");
-                    await DownloadSingleConnectionAsync(url, outputStream, progress, cancellationToken);
-                    return;
+                    _logger.LogWarning("HEAD request failed with {StatusCode}, falling back to single connection download",
+                        (int)headResponse.StatusCode);
                 }
-
-                _logger.LogInformation("Starting accelerated download with {Connections} connections for {Size} bytes",
-                    MAX_PARALLEL_CONNECTIONS, contentLength.Value);
-
-                await DownloadInChunksAsync(url, outputStream, contentLength.Value, progress, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during accelerated download, falling back to single connection");
-                await DownloadSingleConnectionAsync(url, outputStream, progress, cancellationToken);
+                _logger.LogWarning(ex, "Range support probe failed, falling back to single connection download");
             }
+
+            if (!probeSucceeded || !contentLength.HasValue || !acceptsRanges)
+            {
+                if (probeSucceeded)
+                {
+                    _logger.LogInformation("Server doesn't support range requests, using single connection");
+                }
+
+                await DownloadSingleConnectionAsync(url, outputStream, progress, output, cancellationToken);
+                return;
+            }
+
+            _logger.LogInformation("Starting accelerated download with {Connections} connections for {Size} bytes",
+                MAX_PARALLEL_CONNECTIONS, contentLength.Value);
+
+            try
+            {
+                await DownloadInChunksAsync(url, outputStream, contentLength.Value, progress, output, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // The caller went away or the request was aborted; retrying is pointless.
+                throw;
+            }
+            catch (Exception ex) when (output.BytesWritten == 0)
+            {
+                // Nothing has reached the caller yet, so starting over is safe.
+                _logger.LogWarning(ex, "Accelerated download failed before writing any output, falling back to single connection");
+                await DownloadSingleConnectionAsync(url, outputStream, progress, output, cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// Tracks how much of the output stream has already been written, so callers can tell
+        /// whether restarting a transfer would duplicate bytes the consumer has already seen.
+        /// </summary>
+        private sealed class OutputTracker
+        {
+            public long BytesWritten { get; private set; }
+
+            public void Add(long count) => BytesWritten += count;
         }
 
         private async Task DownloadInChunksAsync(
@@ -79,6 +123,7 @@ namespace ArgonFetch.Infrastructure.Services
             Stream outputStream,
             long contentLength,
             IProgress<double>? progress,
+            OutputTracker output,
             CancellationToken cancellationToken)
         {
             var chunkSize = Math.Max(DEFAULT_CHUNK_SIZE, contentLength / (MAX_PARALLEL_CONNECTIONS * 2));
@@ -125,6 +170,9 @@ namespace ArgonFetch.Infrastructure.Services
             {
                 if (chunkData.TryGetValue(i, out var data))
                 {
+                    // Counted before the write: a write that throws may still have pushed
+                    // bytes to the consumer, so the output can no longer be restarted.
+                    output.Add(data.Length);
                     await outputStream.WriteAsync(data, 0, data.Length, cancellationToken);
                 }
             }
@@ -155,6 +203,7 @@ namespace ArgonFetch.Infrastructure.Services
             string url,
             Stream outputStream,
             IProgress<double>? progress,
+            OutputTracker output,
             CancellationToken cancellationToken)
         {
             var httpClient = _httpClientFactory.CreateClient();
@@ -172,6 +221,7 @@ namespace ArgonFetch.Infrastructure.Services
 
             while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) != 0)
             {
+                output.Add(bytesRead);
                 await outputStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
                 totalBytesRead += bytesRead;
 
