@@ -1,26 +1,12 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
+import { StreamReferenceDto, UrlType } from '../api';
 
-export enum UrlType {
-  Combined = 0,
-  Media = 1
-}
-
-export interface StreamReferenceDto {
-  bestQualityDescription?: string | null;
-  bestQualityKey?: string | null;
-  bestQualityFileExtension?: string | null;
-
-  mediumQualityDescription?: string | null;
-  mediumQualityKey?: string | null;
-  mediumQualityFileExtension?: string | null;
-
-  worstQualityDescription?: string | null;
-  worstQualityKey?: string | null;
-  worstQualityFileExtension?: string | null;
-
-  urlType: UrlType;
-}
+// StreamReferenceDto and UrlType come from the generated API client rather than being
+// redefined here - the local copies had drifted from the generated ones, which is why
+// callers had to cast through `any` to pass a DTO into this service.
+export type { StreamReferenceDto };
+export { UrlType };
 
 @Injectable({
   providedIn: 'root'

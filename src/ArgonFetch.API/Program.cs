@@ -10,6 +10,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using SpotifyAPI.Web;
+using System.Text.Json.Serialization;
 using YoutubeDLSharp;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,7 +34,11 @@ if (File.Exists(".env"))
 
 #region Configure Services
 // Add services to the container.
-builder.Services.AddControllers();
+// Enums are serialized by name so the wire format stays stable when members are
+// reordered, and clients don't have to mirror the numeric values.
+builder.Services.AddControllers()
+    .AddJsonOptions(o =>
+        o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSpaStaticFiles(spaStaticFilesOptions => { spaStaticFilesOptions.RootPath = "wwwroot/browser"; });
 
 // Add MediatR
@@ -47,6 +52,9 @@ builder.Services.AddScoped<TikTokDllFetcherService>();
 
 // Register In memory caching
 builder.Services.AddMemoryCache();
+
+// Keep yt-dlp current at runtime; the image only downloads it at build time.
+builder.Services.AddHostedService<ArgonFetch.Infrastructure.Services.YtDlpUpdateService>();
 
 // Register Application Info Service
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IApplicationInfoService, ArgonFetch.Infrastructure.Services.ApplicationInfoService>();
@@ -74,25 +82,28 @@ builder.Services.AddEndpointsApiExplorer();
 
 #region External Services Configuration
 // Register SpotifyAPI
-builder.Services.AddScoped<SpotifyClient>(sp =>
+// Spotify support is optional. The provider is always resolvable so handlers can be
+// constructed for non-Spotify requests; it reports whether a client is available
+// rather than handing out null.
+builder.Services.AddScoped<ArgonFetch.Application.Services.SpotifyClientProvider>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
 
     // Use Configuration pattern consistently - same as ConnectionStrings
-    string clientId = config["Spotify:ClientId"];
-    string clientSecret = config["Spotify:ClientSecret"];
+    string? clientId = config["Spotify:ClientId"];
+    string? clientSecret = config["Spotify:ClientSecret"];
 
     if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
     {
         var logger = sp.GetRequiredService<ILogger<Program>>();
         logger.LogWarning("Spotify API credentials not configured. Spotify features will be disabled.");
-        return null;
+        return new ArgonFetch.Application.Services.SpotifyClientProvider(null);
     }
 
     var spotifyConfig = SpotifyClientConfig
        .CreateDefault()
        .WithAuthenticator(new ClientCredentialsAuthenticator(clientId, clientSecret));
-    return new SpotifyClient(spotifyConfig);
+    return new ArgonFetch.Application.Services.SpotifyClientProvider(new SpotifyClient(spotifyConfig));
 });
 
 // Register YoutubeMusicAPI and YoutubeDL
@@ -124,21 +135,21 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 
 #region CORS Configuration
 // Configure CORS with environment variable support
+const string defaultCorsOrigin = "http://localhost:4200";
+
+// Get allowed origins from environment variable only
+var allowedOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? new[] { defaultCorsOrigin }; // Default for development
+
+// In production, ensure we have proper origins configured. The warning is emitted
+// after the host is built so it can use the application's own logger - resolving
+// one here would require building a second service provider (ASP0000).
+var corsUsesDevelopmentDefault = allowedOrigins.Length == 1 && allowedOrigins[0] == defaultCorsOrigin;
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(corsBuilder =>
     {
-        // Get allowed origins from environment variable only
-        var allowedOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            ?? new[] { "http://localhost:4200" }; // Default for development
-
-        // In production, ensure we have proper origins configured
-        if (builder.Environment.IsProduction() && allowedOrigins.Length == 1 && allowedOrigins[0] == "http://localhost:4200")
-        {
-            var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
-            logger.LogWarning("CORS is using default localhost origin in production. Please set CORS_ALLOWED_ORIGINS environment variable.");
-        }
-
         corsBuilder.WithOrigins(allowedOrigins);
         corsBuilder.WithExposedHeaders("Content-Disposition");
         corsBuilder.AllowAnyHeader();
@@ -162,6 +173,11 @@ const int maxRetries = 10;
 const int retryDelaySeconds = 5;
 
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+
+if (app.Environment.IsProduction() && corsUsesDevelopmentDefault)
+{
+    startupLogger.LogWarning("CORS is using default localhost origin in production. Please set CORS_ALLOWED_ORIGINS environment variable.");
+}
 
 while (!dbConnected && retryCount < maxRetries)
 {
@@ -257,7 +273,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "DockiUp API V1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ArgonFetch API V1");
     });
 }
 
