@@ -10,6 +10,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using SpotifyAPI.Web;
+using System.Text.Json.Serialization;
 using YoutubeDLSharp;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,7 +34,11 @@ if (File.Exists(".env"))
 
 #region Configure Services
 // Add services to the container.
-builder.Services.AddControllers();
+// Enums are serialized by name so the wire format stays stable when members are
+// reordered, and clients don't have to mirror the numeric values.
+builder.Services.AddControllers()
+    .AddJsonOptions(o =>
+        o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSpaStaticFiles(spaStaticFilesOptions => { spaStaticFilesOptions.RootPath = "wwwroot/browser"; });
 
 // Add MediatR
