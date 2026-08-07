@@ -161,74 +161,17 @@ check_docker_installation() {
 check_docker_installation
 
 #===========================================================================
-# Spotify Credentials + .env file creation
+# Arguments
 #===========================================================================
 
-# Parse command line arguments
-SPOTIFY_CLIENT_ID=""
-SPOTIFY_CLIENT_SECRET=""
-
+# Spotify no longer needs credentials: track details are read from the public
+# track page, so there is nothing to prompt for here.
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    --spotify-id) SPOTIFY_CLIENT_ID="$2"; shift ;;
-    --spotify-secret) SPOTIFY_CLIENT_SECRET="$2"; shift ;;
     *) echo "Unknown parameter: $1"; exit 1 ;;
   esac
   shift
 done
-
-# Check if .env file already exists
-USE_EXISTING_ENV=false
-if [ -f ".env" ]; then
-  # Check if the .env file contains the required credentials
-  if grep -q "SPOTIFY_CLIENT_ID=.*" .env && grep -q "SPOTIFY_CLIENT_SECRET=.*" .env; then
-    print_color "32" "> The existing .env file contains Spotify credentials."
-    if read_yes_no "Would you like to use the existing credentials?"; then
-      USE_EXISTING_ENV=true
-    else
-      print_color "33" "You've chosen to update the Spotify credentials."
-    fi
-  else
-    print_color "33" "> Incomplete or invalid .env file found."
-  fi
-fi
-
-# Only ask for credentials if we're not using an existing .env file
-if [ "$USE_EXISTING_ENV" = false ]; then
-  # Display information about Spotify credentials
-  if [ -z "$SPOTIFY_CLIENT_ID" ] || [ -z "$SPOTIFY_CLIENT_SECRET" ]; then
-    print_color "34" "📝 Spotify Credentials Required"
-    print_color "37" "For Spotify support, you'll need to create an App using Spotify for Developers:"
-    print_color "37" "https://developer.spotify.com/documentation/web-api/concepts/apps"
-    echo ""
-  fi
-
-  # If Spotify credentials are not provided, ask for them
-  if [ -z "$SPOTIFY_CLIENT_ID" ]; then
-    print_color "33" "Enter your Spotify Client ID:"
-    read -rs SPOTIFY_CLIENT_ID  # -s flag hides the input
-    echo # Add a newline after hidden input
-  fi
-
-  if [ -z "$SPOTIFY_CLIENT_SECRET" ]; then
-    print_color "33" "Enter your Spotify Client Secret:"
-    read -rs SPOTIFY_CLIENT_SECRET  # -s flag hides the input
-    echo # Add a newline after hidden input
-  fi
-
-  # Check if credentials are provided
-  if [ -z "$SPOTIFY_CLIENT_ID" ] || [ -z "$SPOTIFY_CLIENT_SECRET" ]; then
-    print_color "31" "Error: Spotify credentials are required."
-    exit 1
-  fi
-
-  # Create .env file
-  print_color "32" "Creating .env file..."
-  cat > .env << EOF
-SPOTIFY_CLIENT_ID=$SPOTIFY_CLIENT_ID
-SPOTIFY_CLIENT_SECRET=$SPOTIFY_CLIENT_SECRET
-EOF
-fi
 
 #===========================================================================
 # Docker Compose Start

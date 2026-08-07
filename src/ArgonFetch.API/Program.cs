@@ -9,7 +9,6 @@ using FluentValidation.AspNetCore;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using SpotifyAPI.Web;
 using System.Text.Json.Serialization;
 using YoutubeDLSharp;
 
@@ -81,30 +80,10 @@ builder.Services.AddEndpointsApiExplorer();
 #endregion
 
 #region External Services Configuration
-// Register SpotifyAPI
-// Spotify support is optional. The provider is always resolvable so handlers can be
-// constructed for non-Spotify requests; it reports whether a client is available
-// rather than handing out null.
-builder.Services.AddScoped<ArgonFetch.Application.Services.SpotifyClientProvider>(sp =>
-{
-    var config = sp.GetRequiredService<IConfiguration>();
-
-    // Use Configuration pattern consistently - same as ConnectionStrings
-    string? clientId = config["Spotify:ClientId"];
-    string? clientSecret = config["Spotify:ClientSecret"];
-
-    if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
-    {
-        var logger = sp.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning("Spotify API credentials not configured. Spotify features will be disabled.");
-        return new ArgonFetch.Application.Services.SpotifyClientProvider(null);
-    }
-
-    var spotifyConfig = SpotifyClientConfig
-       .CreateDefault()
-       .WithAuthenticator(new ClientCredentialsAuthenticator(clientId, clientSecret));
-    return new ArgonFetch.Application.Services.SpotifyClientProvider(new SpotifyClient(spotifyConfig));
-});
+// Spotify track details are read from the public track page, so no credentials
+// and no API client are needed.
+builder.Services.AddScoped<ArgonFetch.Application.Services.ISpotifyMetadataService,
+                           ArgonFetch.Application.Services.SpotifyMetadataService>();
 
 // Register YoutubeMusicAPI and YoutubeDL
 builder.Services.AddScoped<YTMusicAPI.SearchClient>();
