@@ -31,13 +31,13 @@ jobs:
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
 
-      - name: Setup Node.js (for semver)
-        uses: actions/setup-node@v4
+      - name: Setup Bun (for semver)
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: '18'
+          bun-version: latest
 
       - name: Install semver
-        run: npm install -g semver
+        run: bun install -g semver
 
       - name: Get current version from csproj
         id: current_version

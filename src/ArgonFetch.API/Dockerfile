@@ -51,15 +51,16 @@ RUN dotnet publish "ArgonFetch.API.csproj" \
     /p:UseAppHost=false
 
 # Stage 4: Frontend dependencies
-FROM node:22-alpine AS frontend-deps
+FROM oven/bun:1-alpine AS frontend-deps
 WORKDIR /src/frontend
-COPY src/ArgonFetch.Frontend/package*.json ./
-RUN npm ci --prefer-offline --no-audit --no-fund
+COPY src/ArgonFetch.Frontend/package.json src/ArgonFetch.Frontend/bun.lock ./
+# --frozen-lockfile is the equivalent of `npm ci`: fail rather than resolve anew.
+RUN bun install --frozen-lockfile
 
 # Stage 5: Frontend build
 FROM frontend-deps AS frontend-build
 COPY src/ArgonFetch.Frontend .
-RUN npm run build:agent -- --output-path=/.artifacts/frontend
+RUN bun run build:agent --output-path=/.artifacts/frontend
 
 # Stage 6: Final image
 FROM base AS final
