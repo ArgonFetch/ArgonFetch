@@ -31,8 +31,12 @@ EXPOSE 8080 8081
 # Stage 2: Backend dependencies restore
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-deps
 WORKDIR /src
-# Copy version properties file
-COPY application.properties /application.properties
+# Directory.Build.props stamps the version from application.properties into every
+# assembly. MSBuild finds it by walking up from each project, so both files have to sit
+# above the projects inside the image - copying application.properties to / (as this
+# previously did) put it somewhere nothing reads, and left every assembly on the SDK
+# default 1.0.0.
+COPY Directory.Build.props application.properties ./
 # Copy all csproj files for better caching
 COPY ["src/ArgonFetch.API/ArgonFetch.API.csproj", "src/ArgonFetch.API/"]
 COPY ["src/ArgonFetch.Application/ArgonFetch.Application.csproj", "src/ArgonFetch.Application/"]
