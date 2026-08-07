@@ -1,4 +1,5 @@
 ﻿using ArgonFetch.Application.Interfaces;
+using ArgonFetch.Application.Services;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
@@ -6,7 +7,9 @@ namespace ArgonFetch.Infrastructure.Services
 {
     public class FfmpegStreamingService : IFfmpegStreamingService
     {
-        private const string UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+        // Shared with the media HttpClient so the User-Agent that avoids upstream 403s
+        // is defined in exactly one place.
+        private const string UserAgent = MediaHttpClientDefaults.UserAgent;
 
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<FfmpegStreamingService> _logger;
