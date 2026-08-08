@@ -47,12 +47,16 @@ RUN dotnet restore "src/ArgonFetch.API/ArgonFetch.API.csproj"
 # Stage 3: Backend build
 FROM backend-deps AS backend-build
 ARG BUILD_CONFIGURATION=Release
+# Set by the release workflow from the git tag. Empty for local builds, where the
+# version falls back to application.properties.
+ARG APP_VERSION=
 COPY ./src .
 WORKDIR "/src/ArgonFetch.API"
 RUN dotnet publish "ArgonFetch.API.csproj" \
     -c $BUILD_CONFIGURATION \
     -o /app/publish \
-    /p:UseAppHost=false
+    /p:UseAppHost=false \
+    ${APP_VERSION:+/p:Version=$APP_VERSION}
 
 # Stage 4: Frontend dependencies
 # Bun is the package manager and script runner, but the Angular CLI still runs on Node

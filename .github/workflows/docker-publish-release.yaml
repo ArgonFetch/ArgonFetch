@@ -9,22 +9,17 @@ jobs:
     name: Build and Push Multi-Arch Docker Images
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       packages: write
 
     steps:
-      # Check out the default branch rather than the tag: the bump below is committed
-      # back, and the image must be built from the bumped state.
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      # The version bump is the first thing a release does. Previously it lived in a
-      # separate, manually dispatched workflow, so a release built whatever
-      # application.properties happened to say and shipped the previous version.
-      - name: Bump version to the release tag
+      # The published image must report the released version. Deriving it from the tag
+      # and passing it into the build avoids committing anything: main requires signed
+      # commits and pull requests, so a workflow push is rejected outright (#186).
+      - name: Resolve version from the release tag
         id: version
         run: |
           RAW_TAG="${{ github.event.release.tag_name }}"
@@ -35,28 +30,8 @@ jobs:
             exit 1
           fi
 
-          sed -i "s|<version>.*</version>|<version>$VERSION</version>|" application.properties
-
-          if ! grep -q "<version>$VERSION</version>" application.properties; then
-            echo "::error::Failed to write version $VERSION to application.properties"
-            exit 1
-          fi
-
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          cat application.properties
-
-      - name: Commit version bump
-        run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
-
-          if git diff --quiet application.properties; then
-            echo "application.properties already at ${{ steps.version.outputs.VERSION }}; nothing to commit"
-          else
-            git add application.properties
-            git commit -m "Bump version to ${{ steps.version.outputs.VERSION }} [skip ci]"
-            git push origin HEAD:${{ github.event.repository.default_branch }}
-          fi
+          echo "Building version $VERSION"
 
       - name: Prepare repository name
         id: prep
@@ -115,5 +90,6 @@ jobs:
           # Build in parallel where possible
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+            APP_VERSION=${{ steps.version.outputs.VERSION }}
           provenance: false
           sbom: false
