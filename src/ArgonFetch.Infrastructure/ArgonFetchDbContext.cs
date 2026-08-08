@@ -7,11 +7,19 @@ namespace ArgonFetch.Infrastructure
     public class ArgonFetchDbContext : DbContext
     {
         public DbSet<UrlReference> UrlReference { get; set; }
+        public DbSet<RequestCounter> RequestCounters { get; set; }
 
         public ArgonFetchDbContext(DbContextOptions<ArgonFetchDbContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // One row, seeded so the first read works before any request is served.
+            modelBuilder.Entity<RequestCounter>().HasData(new RequestCounter
+            {
+                Id = 1,
+                TotalRequests = 0,
+                LastRequestAtUtc = DateTime.MinValue
+            });
         }
     }
 
