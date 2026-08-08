@@ -80,7 +80,12 @@ namespace ArgonFetch.Application.Services
             var byArtist = titled.Where(c => ArtistMatches(c.Artist, wantArtistWords)).ToList();
             var viable = officialShelf && byArtist.Count == 0 ? titled : byArtist;
 
-            if (durationMs <= 0L)
+            // Duration is a tiebreaker, not a requirement. Some search backends do not report it
+            // at all - YTMusicAPI returns null for every row - and filtering on it then discards
+            // every candidate and resolves nothing.
+            var timed = viable.Where(c => c.DurationSec > 0).ToList();
+
+            if (durationMs <= 0L || timed.Count == 0)
             {
                 return viable.FirstOrDefault();
             }

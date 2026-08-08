@@ -1,0 +1,29 @@
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - generic [ref=e4]:
+      - link "ArgonFetch" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - button [ref=e8] [cursor=pointer]
+  - main [ref=e13]:
+    - generic [ref=e14]:
+      - heading "ArgonFetch" [level=1] [ref=e15]
+      - paragraph [ref=e16]: Universal Media Downloader
+      - generic [ref=e17]:
+        - textbox "Enter URL to download..." [ref=e22]
+        - button [ref=e23] [cursor=pointer]
+      - paragraph [ref=e31]: Please ensure you have the right to download and use the content. Respect copyright laws and platform terms of service.
+  - contentinfo [ref=e32]:
+    - generic [ref=e33]:
+      - link "ArgonFetch" [ref=e34] [cursor=pointer]:
+        - /url: https://www.argonfetch.dev
+      - generic [ref=e35]: •
+      - link "About" [ref=e36] [cursor=pointer]:
+        - /url: /about
+      - generic [ref=e37]: •
+      - link [ref=e38] [cursor=pointer]:
+        - /url: https://github.com/ArgonFetch/ArgonFetch
+      - generic [ref=e42]: •
+      - generic [ref=e43]: Production
+      - generic [ref=e44]: •
+      - link "v0.1.1" [ref=e45] [cursor=pointer]:
+        - /url: https://github.com/ArgonFetch/ArgonFetch/releases/tag/v0.1.1
