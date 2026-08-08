@@ -6,7 +6,7 @@ import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { faLink, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { PlaylistContainerComponent } from '../content-results/playlist-container/playlist-container.component';
-import { ModalService } from '../services/modal.service';
+import { NotificationService } from '../notifications/notification.service';
 import { ContentSkeletonLoaderComponent } from "../content-skeleton-loader/content-skeleton-loader.component";
 import { SingleSongContainerComponent } from '../content-results/single-song-container/single-song-container.component';
 import { MediaType, ResourceInformationDto, FetchService } from '../api';
@@ -43,7 +43,7 @@ export class HomeComponent {
   constructor(
     private fetchService: FetchService,
     private destroyRef: DestroyRef,
-    private modalService: ModalService
+    private notifications: NotificationService
   ) { }
 
   async download() {
@@ -54,11 +54,11 @@ export class HomeComponent {
     }
 
     if (!this.url) {
-      this.modalService.open({
-        title: 'Yoooo! No URL Detected',
-        confirmationText: 'You forgot to enter a URL! How do you expect me to fetch something from nothing?',
-        showCancelButton: false
-      }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+      this.notifications.show({
+        title: 'No URL detected',
+        message: 'Enter a URL to fetch something.',
+        tone: 'error'
+      });
       return;
     }
 
@@ -106,10 +106,6 @@ export class HomeComponent {
 
   private handleError(title: string, confirmationText: string) {
     this.isLoading = false;
-    this.modalService.open({
-      title: title,
-      confirmationText: confirmationText,
-      showCancelButton: false
-    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+    this.notifications.show({ title, message: confirmationText, tone: 'error' });
   }
 }
