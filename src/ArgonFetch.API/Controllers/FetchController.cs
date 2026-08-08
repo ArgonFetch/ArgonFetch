@@ -1,5 +1,6 @@
 ﻿using ArgonFetch.Application.Dtos;
 using ArgonFetch.Application.Queries;
+using ArgonFetch.Application.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,11 +11,13 @@ namespace ArgonFetch.API.Controllers
     public class FetchController : ControllerBase
     {
         private readonly IMediator _mediator;
+        private readonly IRequestCounterService _requestCounter;
         private readonly ILogger<FetchController> _logger;
 
-        public FetchController(IMediator mediator, ILogger<FetchController> logger)
+        public FetchController(IMediator mediator, IRequestCounterService requestCounter, ILogger<FetchController> logger)
         {
             _mediator = mediator;
+            _requestCounter = requestCounter;
             _logger = logger;
         }
 
@@ -29,6 +32,11 @@ namespace ArgonFetch.API.Controllers
             try
             {
                 var result = await _mediator.Send(new GetMediaQuery(url));
+
+                // Counted only on success, so the number reflects media actually served
+                // rather than every malformed URL someone pasted.
+                await _requestCounter.IncrementAsync();
+
                 return Ok(result);
             }
             catch (ArgumentException ex)

@@ -3,6 +3,7 @@ using System;
 using ArgonFetch.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArgonFetch.Infrastructure.Migrations
 {
     [DbContext(typeof(ArgonFetchDbContext))]
-    partial class ArgonFetchDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260808100337_AddRequestCounter")]
+    partial class AddRequestCounter
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
