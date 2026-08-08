@@ -33,6 +33,8 @@ export class SingleSongContainerComponent {
   lastDownloadTime = 0;
   lastDownloadBytes = 0;
   totalBytes = 0;
+  totalMB = '';
+  hasKnownTotal = false;
   downloadedMB = '';
 
   constructor(
@@ -132,11 +134,10 @@ export class SingleSongContainerComponent {
     // Close menus and start download
     this.closeAllMenus();
     this.currentDownloadName = `${filename}${extension}`;
-    // Pass the type and quality to downloadFile for better size estimation
-    await this.downloadFile(url, this.currentDownloadName, type, quality);
+    await this.downloadFile(url, this.currentDownloadName);
   }
 
-  private async downloadFile(url: string, filename: string, type: 'combined' | 'audio' = 'combined', quality: 'best' | 'medium' | 'worst' = 'medium') {
+  private async downloadFile(url: string, filename: string) {
     this.isDownloading = true;
     this.downloadProgress = 0;
     this.downloadSpeed = '';
@@ -144,6 +145,8 @@ export class SingleSongContainerComponent {
     this.lastDownloadBytes = 0;
     this.currentDownloadName = filename;
     this.totalBytes = 0;
+    this.totalMB = '';
+    this.hasKnownTotal = false;
     this.downloadedMB = '0';
 
     // Use HttpClient to download with progress tracking.
@@ -159,55 +162,24 @@ export class SingleSongContainerComponent {
             // Store total bytes if available
             this.totalBytes = event.total || 0;
 
-            // Calculate download progress
+            // Only report a percentage when the real transfer size is known. The size used
+            // to be guessed from hardcoded per-quality figures, which produced a bar that
+            // bore no relation to the transfer and then sat at 95% until it finished.
+            // The combined endpoint muxes on the fly, so it genuinely cannot send a length;
+            // there the bar runs indeterminate and the byte counter carries the information.
+            this.hasKnownTotal = !!event.total;
+
             if (event.total) {
-              // Content-Length is known, show real progress
               const progress = Math.round((event.loaded / event.total) * 100);
-              // Clamp progress between 0 and 100
               this.downloadProgress = Math.min(100, Math.max(0, progress));
+              this.totalMB = (event.total / 1024 / 1024).toFixed(1);
             } else {
-              // Content-Length is unknown, estimate based on typical file sizes
-              // Use smarter estimation based on content type and quality
-              let estimatedSize: number;
-
-              if (type === 'audio') {
-                // Audio files vary by quality
-                switch (quality) {
-                  case 'best':
-                    estimatedSize = 15 * 1024 * 1024; // 15MB for best audio
-                    break;
-                  case 'medium':
-                    estimatedSize = 10 * 1024 * 1024; // 10MB for medium audio
-                    break;
-                  case 'worst':
-                    estimatedSize = 5 * 1024 * 1024; // 5MB for low audio
-                    break;
-                  default:
-                    estimatedSize = 10 * 1024 * 1024;
-                }
-              } else {
-                // Video files (combined) vary significantly by quality
-                switch (quality) {
-                  case 'best':
-                    estimatedSize = 100 * 1024 * 1024; // 100MB for best video
-                    break;
-                  case 'medium':
-                    estimatedSize = 30 * 1024 * 1024; // 30MB for medium video
-                    break;
-                  case 'worst':
-                    estimatedSize = 10 * 1024 * 1024; // 10MB for low video
-                    break;
-                  default:
-                    estimatedSize = 30 * 1024 * 1024;
-                }
-              }
-
-              // Calculate progress but cap at 95% until download actually completes
-              const estimatedProgress = Math.min(95, Math.round((event.loaded / estimatedSize) * 100));
-              this.downloadProgress = estimatedProgress;
+              this.downloadProgress = 0;
+              this.totalMB = '';
             }
 
-            // Always update MB downloaded
+            // Always truthful, known on every event, and the only figure available when
+            // the server cannot declare a length.
             this.downloadedMB = (event.loaded / 1024 / 1024).toFixed(1);
 
             // Calculate download speed
@@ -241,6 +213,8 @@ export class SingleSongContainerComponent {
   private resetDownloadState() {
     this.isDownloading = false;
     this.downloadProgress = 0;
+    this.totalMB = '';
+    this.hasKnownTotal = false;
     this.currentDownloadName = '';
     this.downloadSpeed = '';
     this.totalBytes = 0;

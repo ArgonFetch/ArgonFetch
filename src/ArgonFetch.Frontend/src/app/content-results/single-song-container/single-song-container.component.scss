@@ -317,3 +317,14 @@
     }
   }
 }
+// Shown when the transfer size is unknown (muxed streams send no Content-Length).
+// Motion communicates "in progress" without asserting a percentage.
+.progress-bar--indeterminate {
+  width: 35%;
+  animation: progress-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+  0%   { margin-left: -35%; }
+  100% { margin-left: 100%; }
+}
