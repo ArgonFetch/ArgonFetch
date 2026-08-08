@@ -6,21 +6,21 @@
     <h1>ArgonFetch</h1>
     <p class="subtitle">Universal Media Downloader</p>
 
-    <div class="download-box">
+    <form class="download-box" (ngSubmit)="download()">
       <div class="url-input-wrapper">
         <fa-icon [icon]="faLink" class="url-icon"></fa-icon>
-        <input type="text" placeholder="Enter URL to download..." [(ngModel)]="url">
+        <input type="text" name="url" placeholder="Enter URL to download..." [(ngModel)]="url">
         @if (url) {
-          <button class="clear-btn" (click)="url = ''" aria-label="Clear input">
+          <button type="button" class="clear-btn" (click)="url = ''" aria-label="Clear input">
             <fa-icon [icon]="faTimes"></fa-icon>
           </button>
         }
       </div>
-      <button class="search-btn" (click)="download()" [disabled]="isLoading">
+      <button type="submit" class="search-btn" [disabled]="isLoading">
         <fa-icon [icon]="faSearch"></fa-icon>
         {{ isLoading ? 'Searching...' : 'Search' }}
       </button>
-    </div>
+    </form>
 
     <!-- Skeleton Loader -->
     @if (isLoading) {

@@ -47,6 +47,12 @@ export class HomeComponent {
   ) { }
 
   async download() {
+    // Enter can fire while a fetch is already running; the Search button is disabled
+    // for the same reason.
+    if (this.isLoading) {
+      return;
+    }
+
     if (!this.url) {
       this.modalService.open({
         title: 'Yoooo! No URL Detected',
