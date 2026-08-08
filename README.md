@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://github.com/ArgonFetch/ArgonFetch"><img src="https://badgetrack.pianonic.ch/badge?tag=argon-fetch&label=visits&color=9f54e5&style=flat" alt="visits" /></a>
   <a href="https://www.argonfetch.dev/"><img src="https://img.shields.io/badge/Cloud%20Version-argonfetch.dev-9f54e5.svg"/></a>
-  <a href="https://github.com/ArgonFetch/ArgonFetch?tab=readme-ov-file#-quick-start"><img src="https://img.shields.io/badge/Selfhost-Instructions-9f54e5.svg"/></a>
+  <a href="https://github.com/ArgonFetch/ArgonFetch?tab=readme-ov-file#quick-start"><img src="https://img.shields.io/badge/Selfhost-Instructions-9f54e5.svg"/></a>
   <a href="https://github.com/ArgonFetch/ArgonFetch/blob/main/devenv.md"><img src="https://img.shields.io/badge/Development-Setup-9f54e5.svg"/></a>
 </p>
 
@@ -17,7 +17,7 @@
 
 > **⚠️ Important Note:** This project is currently under development and may not function as described directly from the main branch. For a working version, please check the [Releases tab](https://github.com/ArgonFetch/ArgonFetch/releases) for the latest stable release.
 
-## ✨ What it does
+## What it does
 
 Paste a link, get the media. ArgonFetch resolves the URL, picks the best available
 streams and serves them back as a normal file download.
@@ -27,11 +27,11 @@ streams and serves them back as a normal file download.
 - **Web interface and REST API**, with Swagger docs.
 - **One container plus a database.** Runs anywhere Docker does.
 
-## 📸 Screenshots
+## Screenshots
 
 ![ArgonFetch Homepage](./assets/startpage.png)
 
-## 🎯 Platform support
+## Platform support
 
 | Platform | Status | Notes |
 |---|---|---|
@@ -45,7 +45,7 @@ streams and serves them back as a normal file download.
 
 Audio downloads are delivered as MP3 and video as MP4.
 
-## 🚀 Quick start
+## Quick start
 
 **1. Create `compose.yml`:**
 
@@ -97,7 +97,7 @@ docker compose up -d
 
 Open `http://localhost:8080`. No further configuration is required.
 
-## ⚙️ Configuration
+## Configuration
 
 Everything is set through environment variables in `.env`.
 
@@ -118,7 +118,7 @@ on-disk format changed and the volume mount path moved. An existing
 `postgres_data` volume will not start under 18 — dump the old database and
 restore it into the new one, or run `pg_upgrade`.
 
-## 🛠️ Usage
+## Usage
 
 1. Navigate to `http://localhost:8080`
 2. Paste a media URL and press Enter
@@ -126,7 +126,7 @@ restore it into the new one, or run `pg_upgrade`.
 
 API docs are at `http://localhost:8080/swagger` when running in `Development`.
 
-## 📋 Roadmap
+## Roadmap
 
 - [x] Spotify tracks
 - [x] YouTube media
@@ -138,11 +138,11 @@ API docs are at `http://localhost:8080/swagger` when running in `Development`.
 ### Future plans
 - [ ] Wider social media support (X, Instagram, ...)
 
-## 💻 Development
+## Development
 
 See the [Development Guide](devenv.md).
 
-## 📜 License
+## License
 
 This project is licensed under the GPL-3.0 License. See [LICENSE](LICENSE) for details.
 
