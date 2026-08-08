@@ -404,3 +404,5 @@ FodyWeavers.xsd
 
 # claude
 .claude/
+# Playwright MCP session artifacts
+.playwright-mcp/
