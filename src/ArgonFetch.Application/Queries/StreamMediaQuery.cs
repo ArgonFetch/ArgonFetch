@@ -153,19 +153,55 @@ namespace ArgonFetch.Application.Queries
             }
         }
 
+        /// <summary>
+        /// Whether the source can be served untouched.
+        /// <para>
+        /// ProxyUrlBuilder promises ".mp3" for audio and ".mp4" for video, so audio still
+        /// converts unless the source really is MP3. Video that is already MP4 does not need
+        /// re-encoding, but that was never detected: this looked at the URL's file extension
+        /// and real media URLs (googlevideo videoplayback?...) have none, so every video was
+        /// re-encoded with libx264 to produce another MP4.
+        /// </para>
+        /// </summary>
         private bool IsStandardFormat(string url, bool isAudio)
         {
-            var extension = GetFileExtension(url);
+            var mimeType = GetMimeType(url);
 
             if (isAudio)
             {
-                // Only MP3 is considered standard for audio
-                return extension.Equals(".mp3", StringComparison.OrdinalIgnoreCase);
+                // The delivered file is advertised as MP3, so anything else has to be converted.
+                return mimeType is "audio/mpeg" or "audio/mp3"
+                    || GetFileExtension(url).Equals(".mp3", StringComparison.OrdinalIgnoreCase);
             }
-            else
+
+            return mimeType == "video/mp4"
+                || GetFileExtension(url).Equals(".mp4", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// The source's media type. Media URLs carry it as a "mime" query parameter
+        /// (e.g. mime=video%2Fmp4) even though the path has no file extension.
+        /// </summary>
+        private string? GetMimeType(string url)
+        {
+            try
             {
-                // Only MP4 is considered standard for video
-                return extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase);
+                var query = new Uri(url).Query;
+
+                if (string.IsNullOrEmpty(query))
+                {
+                    return null;
+                }
+
+                var mime = Microsoft.AspNetCore.WebUtilities.QueryHelpers
+                    .ParseQuery(query)
+                    .TryGetValue("mime", out var values) ? values.ToString() : null;
+
+                return string.IsNullOrWhiteSpace(mime) ? null : mime.Trim().ToLowerInvariant();
+            }
+            catch
+            {
+                return null;
             }
         }
 
