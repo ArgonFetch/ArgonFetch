@@ -147,7 +147,7 @@ dotnet publish -c Release -o ./publish
 
 # Build frontend
 cd src/ArgonFetch.Frontend
-bun run build:prod
+bun run build
 ```
 
 ## Troubleshooting
