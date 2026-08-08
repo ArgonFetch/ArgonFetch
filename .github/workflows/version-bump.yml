@@ -39,10 +39,18 @@ jobs:
       - name: Install semver
         run: bun install -g semver
 
-      - name: Get current version from csproj
+      - name: Get current version
         id: current_version
         run: |
-          CURRENT_VERSION=$(grep -oP '<Version>\K[^<]+' src/ArgonFetch.API/ArgonFetch.API.csproj)
+          # application.properties is the single source of truth; Directory.Build.props
+          # stamps it into every assembly at build time.
+          CURRENT_VERSION=$(grep -oP '<version>\K[^<]+' application.properties)
+
+          if [ -z "$CURRENT_VERSION" ]; then
+            echo "::error::Could not read <version> from application.properties"
+            exit 1
+          fi
+
           echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $CURRENT_VERSION"
 
@@ -59,20 +67,23 @@ jobs:
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "New version: $NEW_VERSION"
 
-      - name: Update project version
+      - name: Update version
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.NEW_VERSION }}"
           echo "Updating version to: $NEW_VERSION"
 
-          # Update all .csproj files with Version tag
-          find src -name "*.csproj" -type f -exec sed -i "s/<Version>.*<\/Version>/<Version>$NEW_VERSION<\/Version>/g" {} \;
+          sed -i "s|<version>.*</version>|<version>$NEW_VERSION</version>|" application.properties
 
-          echo "Updated project files:"
-          grep -h "<Version>" src/**/*.csproj || true
+          if ! grep -q "<version>$NEW_VERSION</version>" application.properties; then
+            echo "::error::Failed to write version $NEW_VERSION to application.properties"
+            exit 1
+          fi
+
+          cat application.properties
 
       - name: Commit version bump
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.NEW_VERSION }}"
-          git add src/**/*.csproj
+          git add application.properties
           git commit -m "Bump version to $NEW_VERSION [skip ci]"
           git push origin HEAD:main
