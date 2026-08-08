@@ -107,7 +107,7 @@ For a complete development environment with database:
 
 ```bash
 # Copy and configure environment variables
-cp .env.example .env
+cp template.env .env
 # Edit .env with your Spotify credentials
 
 # Start all services
