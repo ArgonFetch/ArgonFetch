@@ -5,11 +5,10 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faSun, faMoon } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { ThemeService } from './services/theme.service';
-import { ConfirmationModalComponent } from "./confirmation-modal/confirmation-modal.component";
 import { AppService } from '../app/api';
 import { catchError, firstValueFrom, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ModalService } from './services/modal.service';
+import { NotificationService } from './notifications/notification.service';
 
 @Component({
   selector: 'app-root',
@@ -17,7 +16,7 @@ import { ModalService } from './services/modal.service';
   styleUrls: ['./app.component.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [RouterModule, CommonModule, FontAwesomeModule, ConfirmationModalComponent]
+  imports: [RouterModule, CommonModule, FontAwesomeModule]
 })
 export class AppComponent {
   faSun = faSun;
@@ -30,7 +29,7 @@ export class AppComponent {
   constructor(
     private themeService: ThemeService,
     private appService: AppService,
-    private modalService: ModalService
+    private notifications: NotificationService
   ) {
     this.initializeApp();
     this.isDarkTheme$ = this.themeService.isDarkTheme$;
@@ -41,11 +40,12 @@ export class AppComponent {
       this.appService.getAppInfo().pipe(
         takeUntilDestroyed(),
         catchError(() => {
-          this.modalService.open({
-            title: 'Noorr! Backend is Missing in Action',
-            confirmationText: 'Houston, we have a problem! The backend server seems to be on vacation. Perhaps it\'s sipping cocktails on a digital beach somewhere?',
-            showCancelButton: false,
-            showConfirmButton: false,
+          this.notifications.show({
+            title: 'Backend unreachable',
+            message: 'Could not reach the ArgonFetch API. Downloads will not work until it is back.',
+            tone: 'error',
+            // Stays until dismissed: nothing works while the backend is down.
+            durationMs: 0
           });
           return of({ version: 'unknown', environment: 'unknown' });
         })
