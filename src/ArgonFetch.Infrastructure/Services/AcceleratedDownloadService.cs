@@ -34,6 +34,41 @@ namespace ArgonFetch.Infrastructure.Services
             return memoryStream;
         }
 
+        /// <summary>
+        /// Length the upstream reports, or null when it does not report one. A failure here is
+        /// not fatal - the caller simply cannot declare Content-Length and the response is chunked.
+        /// </summary>
+        public async Task<long?> GetContentLengthAsync(
+            string url,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var httpClient = _httpClientFactory.CreateClient(MediaHttpClientDefaults.ClientName);
+
+                using var headRequest = new HttpRequestMessage(HttpMethod.Head, url);
+                using var headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
+
+                if (!headResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("HEAD request returned {StatusCode}; cannot determine content length",
+                        (int)headResponse.StatusCode);
+                    return null;
+                }
+
+                return headResponse.Content.Headers.ContentLength;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not determine content length for {Url}", url);
+                return null;
+            }
+        }
+
         public async Task StreamWithAccelerationAsync(
             string url,
             Stream outputStream,

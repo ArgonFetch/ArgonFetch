@@ -97,8 +97,26 @@ namespace ArgonFetch.Application.Queries
                     // Add cache headers
                     request.Response.Headers.Append("Cache-Control", "public, max-age=3600");
 
-                    // Note: We don't set Content-Length as we might be chunking
-                    // The accelerated download will handle range requests if supported
+                    // This path copies the upstream bytes through unchanged, so the upstream
+                    // length is the response length and can be declared. Without it the client
+                    // gets no Content-Length and cannot show real download progress.
+                    //
+                    // Only declared when the probe returns a length: whatever is written must
+                    // match it exactly or Kestrel throws on response completion. Conversion is
+                    // handled in the branch above, where the output length is not knowable.
+                    var upstreamLength = await _acceleratedDownloadService.GetContentLengthAsync(
+                        mediaUrl,
+                        request.CancellationToken);
+
+                    if (upstreamLength.HasValue)
+                    {
+                        request.Response.ContentLength = upstreamLength.Value;
+                        _logger.LogInformation("Declared Content-Length {Length} for {Url}", upstreamLength.Value, mediaUrl);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Upstream did not report a length for {Url}; response will be chunked", mediaUrl);
+                    }
 
                     // The service already falls back to a single connection internally, and only
                     // while doing so is still safe. Retrying here would append a second copy of
