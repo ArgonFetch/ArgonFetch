@@ -35,11 +35,11 @@
 ```yaml
 services:
   postgres:
-    image: postgres:15
+    image: postgres:18
     container_name: argonfetch-db
     env_file: .env
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     ports:
       - "5432:5432"
     restart: unless-stopped
@@ -64,16 +64,17 @@ volumes:
 2. **Create a .env file:**
 
 ```env
-# Database 
+# Database
 POSTGRES_USER=argonfetch
 POSTGRES_PASSWORD=changeme123
 POSTGRES_DB=argonfetch
-
 
 # CORS Configuration (Required for production)
 # Comma-separated list of allowed origins
 CORS_ALLOWED_ORIGINS=https://app.argonfetch.dev,https://argonfetch.dev,http://localhost:4200
 ```
+
+No API keys or credentials are needed. Spotify links work out of the box.
 
 3. **Start it:**
 
