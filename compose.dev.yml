@@ -9,7 +9,7 @@ services:
     ports:
       - "3941:5432"
     volumes:
-      - postgres-data-dev:/var/lib/postgresql/data
+      - postgres-data-dev:/var/lib/postgresql
  
 volumes:
   postgres-data-dev:
