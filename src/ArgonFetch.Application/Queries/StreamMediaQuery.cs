@@ -1,4 +1,4 @@
-using ArgonFetch.Application.Interfaces;
+﻿using ArgonFetch.Application.Interfaces;
 using ArgonFetch.Application.Services;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -9,12 +9,19 @@ namespace ArgonFetch.Application.Queries
 {
     public class StreamMediaQuery : IRequest<StreamResult>
     {
-        public StreamMediaQuery(string key, HttpResponse response, CancellationToken cancellationToken)
+        public StreamMediaQuery(string key, HttpResponse response, CancellationToken cancellationToken, string? format = null)
         {
             Key = key;
             Response = response;
             CancellationToken = cancellationToken;
+            Format = format;
         }
+
+        /// <summary>
+        /// Container the caller insists on, currently only "mp3". Null serves the source
+        /// untouched, which is faster and keeps the original quality.
+        /// </summary>
+        public string? Format { get; }
 
         public string Key { get; }
         public HttpResponse Response { get; }
@@ -58,10 +65,17 @@ namespace ArgonFetch.Application.Queries
                     return StreamResult.NotFound("Cache key expired or not found");
                 }
 
-                var (mediaUrl, isAudio) = cacheData.Value;
+                var (mediaUrl, isAudio, advertisedMimeType, proxy) = cacheData.Value;
 
-                // Determine if conversion is needed based on URL extension
-                bool needsConversion = !IsStandardFormat(mediaUrl, isAudio);
+                // The fetch response already committed to a media type for this key. When it
+                // knows one, those bytes go out untouched: re-encoding Opus into MP3 cost a
+                // generation of quality, every tag the source carried, and the FFmpeg pass.
+                var passThroughMimeType = advertisedMimeType ?? StandardFormatMimeType(mediaUrl, isAudio);
+
+                // A caller can still ask for MP3 explicitly - players that cannot read Opus are
+                // the reason the endpoint used to convert everything - but it is opt-in now.
+                var mp3Requested = string.Equals(request.Format, "mp3", StringComparison.OrdinalIgnoreCase);
+                bool needsConversion = passThroughMimeType == null || (isAudio && mp3Requested);
 
                 if (needsConversion)
                 {
@@ -77,22 +91,16 @@ namespace ArgonFetch.Application.Queries
                         mediaUrl,
                         request.Response.Body,
                         isAudio,
+                        proxy,
                         request.CancellationToken);
                 }
                 else
                 {
-                    // Standard format, stream directly without conversion
-                    _logger.LogInformation("Streaming standard format media from {Url} using accelerated download", mediaUrl);
+                    // Source format, stream directly without conversion
+                    _logger.LogInformation("Streaming {MimeType} media from {Url} using accelerated download via {Proxy}",
+                        passThroughMimeType, mediaUrl, MediaHttpClients.Describe(proxy));
 
-                    // Set proper content type
-                    if (isAudio)
-                    {
-                        request.Response.ContentType = "audio/mpeg";
-                    }
-                    else
-                    {
-                        request.Response.ContentType = "video/mp4";
-                    }
+                    request.Response.ContentType = passThroughMimeType;
 
                     // Add cache headers
                     request.Response.Headers.Append("Cache-Control", "public, max-age=3600");
@@ -106,6 +114,7 @@ namespace ArgonFetch.Application.Queries
                     // handled in the branch above, where the output length is not knowable.
                     var upstreamLength = await _acceleratedDownloadService.GetContentLengthAsync(
                         mediaUrl,
+                        proxy,
                         request.CancellationToken);
 
                     if (upstreamLength.HasValue)
@@ -125,6 +134,7 @@ namespace ArgonFetch.Application.Queries
                         mediaUrl,
                         request.Response.Body,
                         null, // No progress reporting needed here
+                        proxy,
                         request.CancellationToken);
                 }
 
@@ -154,28 +164,27 @@ namespace ArgonFetch.Application.Queries
         }
 
         /// <summary>
-        /// Whether the source can be served untouched.
+        /// The media type to serve a source with untouched, or null when it has to be converted.
         /// <para>
-        /// ProxyUrlBuilder promises ".mp3" for audio and ".mp4" for video, so audio still
-        /// converts unless the source really is MP3. Video that is already MP4 does not need
-        /// re-encoding, but that was never detected: this looked at the URL's file extension
-        /// and real media URLs (googlevideo videoplayback?...) have none, so every video was
-        /// re-encoded with libx264 to produce another MP4.
+        /// Only reached for keys cached before the fetch response started recording the type,
+        /// so it works the type out of the URL: media URLs carry a "mime" query parameter, and
+        /// failing that an extension is sometimes recoverable from the path.
         /// </para>
         /// </summary>
-        private bool IsStandardFormat(string url, bool isAudio)
+        private string? StandardFormatMimeType(string url, bool isAudio)
         {
             var mimeType = GetMimeType(url);
 
-            if (isAudio)
+            if (mimeType != null)
             {
-                // The delivered file is advertised as MP3, so anything else has to be converted.
-                return mimeType is "audio/mpeg" or "audio/mp3"
-                    || GetFileExtension(url).Equals(".mp3", StringComparison.OrdinalIgnoreCase);
+                // "audio/webm; codecs=opus" and friends: the parameters are not ours to forward.
+                var bare = mimeType.Split(';')[0].Trim();
+
+                if (bare.StartsWith(isAudio ? "audio/" : "video/", StringComparison.OrdinalIgnoreCase))
+                    return bare;
             }
 
-            return mimeType == "video/mp4"
-                || GetFileExtension(url).Equals(".mp4", StringComparison.OrdinalIgnoreCase);
+            return MediaFormats.MimeTypeFor(GetFileExtension(url), isAudio);
         }
 
         /// <summary>

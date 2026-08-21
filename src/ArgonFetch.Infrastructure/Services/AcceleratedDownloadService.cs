@@ -1,4 +1,4 @@
-using ArgonFetch.Application.Interfaces;
+﻿using ArgonFetch.Application.Interfaces;
 using ArgonFetch.Application.Services;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
@@ -7,7 +7,7 @@ namespace ArgonFetch.Infrastructure.Services
 {
     public class AcceleratedDownloadService : IAcceleratedDownloadService
     {
-        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IMediaHttpClients _mediaHttpClients;
         private readonly ILogger<AcceleratedDownloadService> _logger;
         private const int MIN_CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks
         // Chunk size is capped so the sliding window below stays bounded. Without a cap it
@@ -17,19 +17,20 @@ namespace ArgonFetch.Infrastructure.Services
         private const int MAX_PARALLEL_CONNECTIONS = 8; // Maximum parallel connections
 
         public AcceleratedDownloadService(
-            IHttpClientFactory httpClientFactory,
+            IMediaHttpClients mediaHttpClients,
             ILogger<AcceleratedDownloadService> logger)
         {
-            _httpClientFactory = httpClientFactory;
+            _mediaHttpClients = mediaHttpClients;
             _logger = logger;
         }
 
         public async Task<Stream> DownloadWithAccelerationAsync(
             string url,
+            string? proxy = null,
             CancellationToken cancellationToken = default)
         {
             var memoryStream = new MemoryStream();
-            await StreamWithAccelerationAsync(url, memoryStream, null, cancellationToken);
+            await StreamWithAccelerationAsync(url, memoryStream, null, proxy, cancellationToken);
             memoryStream.Position = 0;
             return memoryStream;
         }
@@ -40,23 +41,19 @@ namespace ArgonFetch.Infrastructure.Services
         /// </summary>
         public async Task<long?> GetContentLengthAsync(
             string url,
+            string? proxy = null,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                var httpClient = _httpClientFactory.CreateClient(MediaHttpClientDefaults.ClientName);
+                var (contentLength, _) = await ProbeAsync(url, proxy, cancellationToken);
 
-                using var headRequest = new HttpRequestMessage(HttpMethod.Head, url);
-                using var headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
-
-                if (!headResponse.IsSuccessStatusCode)
+                if (contentLength == null)
                 {
-                    _logger.LogWarning("HEAD request returned {StatusCode}; cannot determine content length",
-                        (int)headResponse.StatusCode);
-                    return null;
+                    _logger.LogWarning("Probe did not report a content length for {Url}", url);
                 }
 
-                return headResponse.Content.Headers.ContentLength;
+                return contentLength;
             }
             catch (OperationCanceledException)
             {
@@ -73,6 +70,7 @@ namespace ArgonFetch.Infrastructure.Services
             string url,
             Stream outputStream,
             IProgress<double>? progress = null,
+            string? proxy = null,
             CancellationToken cancellationToken = default)
         {
             // Counts what has already been handed to the caller. Once any byte is written,
@@ -88,22 +86,8 @@ namespace ArgonFetch.Infrastructure.Services
 
             try
             {
-                var httpClient = _httpClientFactory.CreateClient(MediaHttpClientDefaults.ClientName);
-
-                using var headRequest = new HttpRequestMessage(HttpMethod.Head, url);
-                using var headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
-
-                if (headResponse.IsSuccessStatusCode)
-                {
-                    contentLength = headResponse.Content.Headers.ContentLength;
-                    acceptsRanges = headResponse.Headers.AcceptRanges?.Contains("bytes") ?? false;
-                    probeSucceeded = true;
-                }
-                else
-                {
-                    _logger.LogWarning("HEAD request failed with {StatusCode}, falling back to single connection download",
-                        (int)headResponse.StatusCode);
-                }
+                (contentLength, acceptsRanges) = await ProbeAsync(url, proxy, cancellationToken);
+                probeSucceeded = true;
             }
             catch (OperationCanceledException)
             {
@@ -121,7 +105,7 @@ namespace ArgonFetch.Infrastructure.Services
                     _logger.LogInformation("Server doesn't support range requests, using single connection");
                 }
 
-                await DownloadSingleConnectionAsync(url, outputStream, progress, output, cancellationToken);
+                await DownloadSingleConnectionAsync(url, outputStream, progress, output, proxy, cancellationToken);
                 return;
             }
 
@@ -130,7 +114,7 @@ namespace ArgonFetch.Infrastructure.Services
 
             try
             {
-                await DownloadInChunksAsync(url, outputStream, contentLength.Value, progress, output, cancellationToken);
+                await DownloadInChunksAsync(url, outputStream, contentLength.Value, progress, output, proxy, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -141,8 +125,40 @@ namespace ArgonFetch.Infrastructure.Services
             {
                 // Nothing has reached the caller yet, so starting over is safe.
                 _logger.LogWarning(ex, "Accelerated download failed before writing any output, falling back to single connection");
-                await DownloadSingleConnectionAsync(url, outputStream, progress, output, cancellationToken);
+                await DownloadSingleConnectionAsync(url, outputStream, progress, output, proxy, cancellationToken);
             }
+        }
+
+        /// <summary>
+        /// Asks for the first byte to learn the resource's length and whether it serves ranges.
+        /// <para>
+        /// A HEAD request would be the obvious probe, but media hosts answer 403 to both HEAD
+        /// and an unranged GET for signed URLs, so the only shape that reliably works is the
+        /// ranged GET the chunked download uses anyway.
+        /// </para>
+        /// </summary>
+        private async Task<(long? ContentLength, bool AcceptsRanges)> ProbeAsync(
+            string url,
+            string? proxy,
+            CancellationToken cancellationToken)
+        {
+            var httpClient = _mediaHttpClients.For(proxy);
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Range = new RangeHeaderValue(0, 0);
+
+            using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+            response.EnsureSuccessStatusCode();
+
+            // 206 answers with the total after the slash in "bytes 0-0/12345"; a host that
+            // ignored the range answered 200 and reported the whole length instead.
+            if (response.StatusCode == System.Net.HttpStatusCode.PartialContent)
+            {
+                return (response.Content.Headers.ContentRange?.Length, true);
+            }
+
+            return (response.Content.Headers.ContentLength, false);
         }
 
         /// <summary>
@@ -162,6 +178,7 @@ namespace ArgonFetch.Infrastructure.Services
             long contentLength,
             IProgress<double>? progress,
             OutputTracker output,
+            string? proxy,
             CancellationToken cancellationToken)
         {
             var chunkSize = Math.Clamp(contentLength / (MAX_PARALLEL_CONNECTIONS * 2), MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
@@ -193,7 +210,7 @@ namespace ArgonFetch.Infrastructure.Services
                     while (inFlight.Count < MAX_PARALLEL_CONNECTIONS && nextToStart < chunks.Count)
                     {
                         var chunk = chunks[nextToStart++];
-                        inFlight.Enqueue(DownloadChunkAsync(url, chunk.start, chunk.end, cancellationToken));
+                        inFlight.Enqueue(DownloadChunkAsync(url, chunk.start, chunk.end, proxy, cancellationToken));
                     }
 
                     var data = await inFlight.Dequeue();
@@ -230,9 +247,10 @@ namespace ArgonFetch.Infrastructure.Services
             string url,
             long rangeStart,
             long rangeEnd,
+            string? proxy,
             CancellationToken cancellationToken)
         {
-            var httpClient = _httpClientFactory.CreateClient(MediaHttpClientDefaults.ClientName);
+            var httpClient = _mediaHttpClients.For(proxy);
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Range = new RangeHeaderValue(rangeStart, rangeEnd);
@@ -248,11 +266,16 @@ namespace ArgonFetch.Infrastructure.Services
             Stream outputStream,
             IProgress<double>? progress,
             OutputTracker output,
+            string? proxy,
             CancellationToken cancellationToken)
         {
-            var httpClient = _httpClientFactory.CreateClient(MediaHttpClientDefaults.ClientName);
+            var httpClient = _mediaHttpClients.For(proxy);
 
-            using var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            // Ranged from the first byte: an unranged GET is refused for signed media URLs.
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Range = new RangeHeaderValue(0, null);
+
+            using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var contentLength = response.Content.Headers.ContentLength;

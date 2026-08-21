@@ -20,7 +20,7 @@ namespace ArgonFetch.Infrastructure.Services
             _logger = logger;
         }
 
-        public async Task StreamCombinedMediaAsync(string videoUrl, string audioUrl, Stream outputStream, CancellationToken cancellationToken = default)
+        public async Task StreamCombinedMediaAsync(string videoUrl, string audioUrl, Stream outputStream, string? proxy = null, CancellationToken cancellationToken = default)
         {
             var ffmpegPath = GetFfmpegPath();
             if (string.IsNullOrEmpty(ffmpegPath))
@@ -38,10 +38,12 @@ namespace ArgonFetch.Infrastructure.Services
             // Arguments are passed as separate tokens so a URL can never be parsed as an option.
             processStartInfo.ArgumentList.Add("-user_agent");
             processStartInfo.ArgumentList.Add(UserAgent);
+            AddProxy(processStartInfo, proxy);
             processStartInfo.ArgumentList.Add("-i");
             processStartInfo.ArgumentList.Add(videoUrl);
             processStartInfo.ArgumentList.Add("-user_agent");
             processStartInfo.ArgumentList.Add(UserAgent);
+            AddProxy(processStartInfo, proxy);
             processStartInfo.ArgumentList.Add("-i");
             processStartInfo.ArgumentList.Add(audioUrl);
             processStartInfo.ArgumentList.Add("-map");
@@ -124,7 +126,7 @@ namespace ArgonFetch.Infrastructure.Services
             }
         }
 
-        public async Task ConvertAndStreamMediaAsync(string sourceUrl, Stream outputStream, bool isAudio, CancellationToken cancellationToken = default)
+        public async Task ConvertAndStreamMediaAsync(string sourceUrl, Stream outputStream, bool isAudio, string? proxy = null, CancellationToken cancellationToken = default)
         {
             var ffmpegPath = GetFfmpegPath();
             if (string.IsNullOrEmpty(ffmpegPath))
@@ -139,6 +141,7 @@ namespace ArgonFetch.Infrastructure.Services
             // Arguments are passed as separate tokens so a URL can never be parsed as an option.
             processStartInfo.ArgumentList.Add("-user_agent");
             processStartInfo.ArgumentList.Add(UserAgent);
+            AddProxy(processStartInfo, proxy);
             processStartInfo.ArgumentList.Add("-i");
             processStartInfo.ArgumentList.Add(sourceUrl);
 
@@ -272,6 +275,19 @@ namespace ArgonFetch.Infrastructure.Services
         /// <summary>
         /// Renders the argument list for logging only - it is never handed to the process.
         /// </summary>
+        /// <summary>
+        /// Routes the input that follows through the proxy the URL was extracted with. Media
+        /// URLs are signed for the requesting IP, so fetching one from anywhere else is a 403.
+        /// </summary>
+        private static void AddProxy(ProcessStartInfo processStartInfo, string? proxy)
+        {
+            if (string.IsNullOrWhiteSpace(proxy))
+                return;
+
+            processStartInfo.ArgumentList.Add("-http_proxy");
+            processStartInfo.ArgumentList.Add(proxy);
+        }
+
         private static string DescribeArguments(ProcessStartInfo processStartInfo)
         {
             return string.Join(' ', processStartInfo.ArgumentList);

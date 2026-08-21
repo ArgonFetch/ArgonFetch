@@ -13,12 +13,14 @@ namespace ArgonFetch.API.Controllers
         private readonly IMediator _mediator;
         private readonly IRequestCounterService _requestCounter;
         private readonly ILogger<FetchController> _logger;
+        private readonly IMaintenanceState _maintenance;
 
-        public FetchController(IMediator mediator, IRequestCounterService requestCounter, ILogger<FetchController> logger)
+        public FetchController(IMediator mediator, IRequestCounterService requestCounter, ILogger<FetchController> logger, IMaintenanceState maintenance)
         {
             _mediator = mediator;
             _requestCounter = requestCounter;
             _logger = logger;
+            _maintenance = maintenance;
         }
 
         [HttpGet("GetResource", Name = "GetResource")]
@@ -27,8 +29,21 @@ namespace ArgonFetch.API.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status415UnsupportedMediaType)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
         public async Task<ActionResult<ResourceInformationDto>> GetResource(string url)
         {
+            // Refused rather than attempted: the yt-dlp binary is being replaced underneath us,
+            // and the error that produces looks like a broken source rather than a busy server.
+            if (_maintenance.Activity is { } activity)
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new ProblemDetails
+                {
+                    Title = activity,
+                    Detail = "The server is briefly unavailable while it updates itself. Try again in a moment.",
+                    Status = StatusCodes.Status503ServiceUnavailable
+                });
+            }
+
             try
             {
                 var result = await _mediator.Send(new GetMediaQuery(url));

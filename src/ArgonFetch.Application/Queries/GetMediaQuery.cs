@@ -32,6 +32,11 @@ namespace ArgonFetch.Application.Queries
         private readonly ICombinedStreamUrlBuilder _combinedUrlBuilder;
         private readonly IMediaUrlCacheService _cacheService;
         private readonly IProxyUrlBuilder _proxyUrlBuilder;
+        private readonly IProxyPool _proxyPool;
+
+        // The proxy the last extraction went through. Media URLs are signed for the IP that
+        // requested them, so it has to travel with them to the stream endpoint.
+        private string? _fetchProxy;
 
         public GetMediaQueryHandler(
             ISpotifyMetadataService spotifyMetadataService,
@@ -42,7 +47,8 @@ namespace ArgonFetch.Application.Queries
             IHttpContextAccessor httpContextAccessor,
             ICombinedStreamUrlBuilder combinedUrlBuilder,
             IMediaUrlCacheService cacheService,
-            IProxyUrlBuilder proxyUrlBuilder
+            IProxyUrlBuilder proxyUrlBuilder,
+            IProxyPool proxyPool
             )
         {
             _spotifyMetadataService = spotifyMetadataService;
@@ -54,6 +60,7 @@ namespace ArgonFetch.Application.Queries
             _combinedUrlBuilder = combinedUrlBuilder;
             _cacheService = cacheService;
             _proxyUrlBuilder = proxyUrlBuilder;
+            _proxyPool = proxyPool;
         }
 
         public async Task<ResourceInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
@@ -98,11 +105,11 @@ namespace ArgonFetch.Application.Queries
                 {
                     // We have pre-muxed formats! Use them directly (FAST!)
                     // These go through the proxy endpoint, not the combine endpoint
-                    combinedReferences = _proxyUrlBuilder.BuildProxyReferences(combinedFormats, _cacheService);
+                    combinedReferences = _proxyUrlBuilder.BuildProxyReferences(combinedFormats, _cacheService, proxy: _fetchProxy);
 
                     // Still extract audio-only for "Audio Only" option
                     var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
-                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true);
+                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy);
                 }
                 else
                 {
@@ -111,10 +118,10 @@ namespace ArgonFetch.Application.Queries
                     var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
 
                     // Build combined references using the combine endpoint (FFmpeg muxing)
-                    combinedReferences = _combinedUrlBuilder.BuildCombinedReferences(videoUrls, audioUrls, _cacheService);
+                    combinedReferences = _combinedUrlBuilder.BuildCombinedReferences(videoUrls, audioUrls, _cacheService, _fetchProxy);
 
                     // Build proxy references for audio-only option
-                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true);
+                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy);
                 }
 
                 return new ResourceInformationDto
@@ -235,9 +242,20 @@ namespace ArgonFetch.Application.Queries
             };
         }
 
+        /// <summary>
+        /// Opus is worth roughly 20% more than AAC at the same bitrate, so it is weighted that
+        /// way rather than compared on the raw number. YouTube offers the two within a kbps of
+        /// each other, which would otherwise make the pick a coin toss.
+        /// </summary>
+        private static double OpusQualityFactor(string? audioCodec) =>
+            audioCodec?.StartsWith("opus", StringComparison.OrdinalIgnoreCase) == true ? 1.2 : 1.0;
+
         private StreamingUrlDto ExtractThreeAudioQualitiesAndCacheNewUrl(FormatData[] formatData)
         {
-            // First try to get MP3/M4A formats (no conversion needed, faster)
+            // Ranked purely by bitrate. MP3 and M4A used to be preferred because everything
+            // else was re-encoded to MP3 anyway, so the cheaper source won; sources are now
+            // passed through untouched, which makes YouTube's Opus the better pick over the
+            // AAC it also offers at a lower bitrate.
             var audioFormats = formatData
                 .Where(f =>
                     !string.IsNullOrEmpty(f.AudioCodec) &&
@@ -245,28 +263,10 @@ namespace ArgonFetch.Application.Queries
                     !f.Protocol.Contains("mhtml") &&
                     !f.Protocol.Contains("m3u8") &&
                     f.AudioBitrate != null &&
-                    f.AudioBitrate != 0 &&
-                    (f.Extension?.Equals(".mp3", StringComparison.OrdinalIgnoreCase) == true ||
-                     f.Extension?.Equals(".m4a", StringComparison.OrdinalIgnoreCase) == true)
+                    f.AudioBitrate != 0
                 )
-                .OrderByDescending(f => f.Bitrate)
+                .OrderByDescending(f => f.Bitrate * OpusQualityFactor(f.AudioCodec))
                 .ToList();
-
-            // If no MP3/M4A formats, fall back to any audio format
-            if (!audioFormats.Any())
-            {
-                audioFormats = formatData
-                    .Where(f =>
-                        !string.IsNullOrEmpty(f.AudioCodec) &&
-                        f.Format.Contains("audio") &&
-                        !f.Protocol.Contains("mhtml") &&
-                        !f.Protocol.Contains("m3u8") &&
-                        f.AudioBitrate != null &&
-                        f.AudioBitrate != 0
-                    )
-                    .OrderByDescending(f => f.Bitrate)
-                    .ToList();
-            }
 
             var bestAudio = audioFormats.FirstOrDefault();
             var mediumAudio = audioFormats.ElementAtOrDefault(audioFormats.Count() / 2);
@@ -296,16 +296,31 @@ namespace ArgonFetch.Application.Queries
 
             if (!Uri.IsWellFormedUriString(query, UriKind.Absolute))
             {
+                _fetchProxy = _proxyPool.Next();
+
                 var searchOptions = new OptionSet
                 {
                     NoPlaylist = true,
+                    Proxy = _fetchProxy,
                 };
 
                 var searchResult = await _youtubeDL.RunVideoDataFetch($"ytsearch:{query}", overrideOptions: searchOptions);
                 query = searchResult.Data.Entries.First().Url;
             }
 
-            var result = await _youtubeDL.RunVideoDataFetch(query, overrideOptions: options);
+            // A failed fetch is retried through the next proxy, since the usual cause is the
+            // current one being blocked. Capped at 3 so a dead list still fails quickly.
+            var attempts = Math.Min(Math.Max(_proxyPool.Count, 1), 3);
+            RunResult<VideoData> result;
+
+            do
+            {
+                _fetchProxy = _proxyPool.Next();
+                options.Proxy = _fetchProxy;
+                result = await _youtubeDL.RunVideoDataFetch(query, overrideOptions: options);
+            }
+            while (!result.Success && --attempts > 0);
+
             if (!result.Success)
                 throw new ArgumentException($"Failed to fetch data: {string.Join(", ", result.ErrorOutput)}");
 
@@ -357,7 +372,7 @@ namespace ArgonFetch.Application.Queries
 
             // Build proxy references
             // Force audio mode for Spotify tracks
-            var audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true);
+            var audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy);
 
             // Spotify typically only has audio, so combined URLs would be null
 

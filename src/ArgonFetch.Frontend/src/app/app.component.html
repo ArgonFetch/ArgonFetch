@@ -11,6 +11,18 @@
   </div>
 </nav>
 
+@if (maintenance) {
+  <div class="maintenance" role="status" aria-live="polite">
+    <div class="maintenance-card">
+      <fa-icon [icon]="faGear" class="maintenance-icon" animation="spin"></fa-icon>
+      <h1 class="maintenance-title">{{ maintenance }}</h1>
+      <p class="maintenance-message">
+        ArgonFetch is updating itself and will be back in a moment. This page returns on its own.
+      </p>
+    </div>
+  </div>
+}
+
 <router-outlet></router-outlet>
 
 <footer class="footer">
