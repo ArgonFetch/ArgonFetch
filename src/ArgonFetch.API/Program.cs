@@ -52,8 +52,13 @@ builder.Services.AddScoped<TikTokDllFetcherService>();
 // Register In memory caching
 builder.Services.AddMemoryCache();
 
-// Keep yt-dlp current at runtime; the image only downloads it at build time.
-builder.Services.AddHostedService<ArgonFetch.Infrastructure.Services.YtDlpUpdateService>();
+// yt-dlp is fetched when the app boots and kept current from there, so the image ships
+// without it and a restart is enough to pick up an extractor fix.
+builder.Services.AddSingleton<ArgonFetch.Application.Services.IToolPaths>(
+    new ArgonFetch.Application.Services.ToolPaths(builder.Configuration["TOOLS_PATH"]));
+builder.Services.AddSingleton<ArgonFetch.Infrastructure.Services.MediaToolsService>();
+builder.Services.AddHostedService(
+    sp => sp.GetRequiredService<ArgonFetch.Infrastructure.Services.MediaToolsService>());
 
 builder.Services.AddScoped<ArgonFetch.Application.Services.IRequestCounterService,
                            ArgonFetch.Infrastructure.Services.RequestCounterService>();
@@ -90,7 +95,16 @@ builder.Services.AddScoped<ArgonFetch.Application.Services.ISpotifyMetadataServi
 
 // Register YoutubeMusicAPI and YoutubeDL
 builder.Services.AddScoped<YTMusicAPI.SearchClient>();
-builder.Services.AddScoped<YoutubeDL>();
+builder.Services.AddScoped(sp =>
+{
+    var toolPaths = sp.GetRequiredService<ArgonFetch.Application.Services.IToolPaths>();
+
+    return new YoutubeDL
+    {
+        YoutubeDLPath = toolPaths.YtDlpPath,
+        FFmpegPath = toolPaths.FfmpegPath
+    };
+});
 
 // Register FFmpeg and streaming services
 builder.Services.AddHttpClient();

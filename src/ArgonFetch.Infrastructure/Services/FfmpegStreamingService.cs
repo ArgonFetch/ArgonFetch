@@ -13,11 +13,13 @@ namespace ArgonFetch.Infrastructure.Services
 
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<FfmpegStreamingService> _logger;
+        private readonly IToolPaths _toolPaths;
 
-        public FfmpegStreamingService(IHttpClientFactory httpClientFactory, ILogger<FfmpegStreamingService> logger)
+        public FfmpegStreamingService(IHttpClientFactory httpClientFactory, ILogger<FfmpegStreamingService> logger, IToolPaths toolPaths)
         {
             _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _toolPaths = toolPaths;
         }
 
         public async Task StreamCombinedMediaAsync(string videoUrl, string audioUrl, Stream outputStream, string? proxy = null, CancellationToken cancellationToken = default)
@@ -295,6 +297,13 @@ namespace ArgonFetch.Infrastructure.Services
 
         private string? GetFfmpegPath()
         {
+            // The fetched binary wins: in a container it is the only one, and on a developer
+            // machine it is the same build the deployment runs rather than whatever is installed.
+            if (File.Exists(_toolPaths.FfmpegPath))
+            {
+                return _toolPaths.FfmpegPath;
+            }
+
             // Try to find ffmpeg in PATH
             var paths = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? Array.Empty<string>();
 
