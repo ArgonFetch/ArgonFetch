@@ -32,6 +32,7 @@ namespace ArgonFetch.Application.Queries
         private readonly ICombinedStreamUrlBuilder _combinedUrlBuilder;
         private readonly IMediaUrlCacheService _cacheService;
         private readonly IProxyUrlBuilder _proxyUrlBuilder;
+        private readonly IProxyPool _proxyPool;
 
         public GetMediaQueryHandler(
             ISpotifyMetadataService spotifyMetadataService,
@@ -42,7 +43,8 @@ namespace ArgonFetch.Application.Queries
             IHttpContextAccessor httpContextAccessor,
             ICombinedStreamUrlBuilder combinedUrlBuilder,
             IMediaUrlCacheService cacheService,
-            IProxyUrlBuilder proxyUrlBuilder
+            IProxyUrlBuilder proxyUrlBuilder,
+            IProxyPool proxyPool
             )
         {
             _spotifyMetadataService = spotifyMetadataService;
@@ -54,6 +56,7 @@ namespace ArgonFetch.Application.Queries
             _combinedUrlBuilder = combinedUrlBuilder;
             _cacheService = cacheService;
             _proxyUrlBuilder = proxyUrlBuilder;
+            _proxyPool = proxyPool;
         }
 
         public async Task<ResourceInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
@@ -299,13 +302,25 @@ namespace ArgonFetch.Application.Queries
                 var searchOptions = new OptionSet
                 {
                     NoPlaylist = true,
+                    Proxy = _proxyPool.Next(),
                 };
 
                 var searchResult = await _youtubeDL.RunVideoDataFetch($"ytsearch:{query}", overrideOptions: searchOptions);
                 query = searchResult.Data.Entries.First().Url;
             }
 
-            var result = await _youtubeDL.RunVideoDataFetch(query, overrideOptions: options);
+            // A failed fetch is retried through the next proxy, since the usual cause is the
+            // current one being blocked. Capped at 3 so a dead list still fails quickly.
+            var attempts = Math.Min(Math.Max(_proxyPool.Count, 1), 3);
+            RunResult<VideoData> result;
+
+            do
+            {
+                options.Proxy = _proxyPool.Next();
+                result = await _youtubeDL.RunVideoDataFetch(query, overrideOptions: options);
+            }
+            while (!result.Success && --attempts > 0);
+
             if (!result.Success)
                 throw new ArgumentException($"Failed to fetch data: {string.Join(", ", result.ErrorOutput)}");
 

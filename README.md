@@ -107,9 +107,29 @@ Everything is set through environment variables in `.env`.
 | `ConnectionStrings__ArgonFetchDatabase` | yes | Set in `compose.yml` from the values above |
 | `CORS_ALLOWED_ORIGINS` | in production | Comma-separated origins allowed to call the API. Defaults to `http://localhost:4200`, and the app warns at startup if that default is still in use in production |
 | `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables Swagger UI |
+| `PROXY_LIST_PATH` | no | File with one proxy per line, rotated across yt-dlp fetches so they do not all leave from the same IP. See below |
 
 `yt-dlp` updates itself inside the container every 12 hours, so extractor fixes
 land without rebuilding the image.
+
+### Proxy rotation
+
+If the host's IP gets rate limited, point `PROXY_LIST_PATH` at a file listing one
+proxy per line. Each fetch takes the next proxy in the list, and a failed fetch is
+retried through the following one.
+
+```env
+PROXY_LIST_PATH=/config/proxies.txt
+```
+
+```yaml
+    volumes:
+      - ./proxies.txt:/config/proxies.txt:ro
+```
+
+Both `http://user:pass@host:port` and the `host:port:user:pass` export format used
+by providers such as Webshare are accepted; blank lines and `#` comments are
+ignored. Without the variable, fetches go out from the server's own IP as before.
 
 ### Upgrading from a release older than Postgres 18
 

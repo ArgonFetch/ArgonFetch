@@ -1,4 +1,4 @@
-using ArgonFetch.API.IntegrationValidators;
+﻿using ArgonFetch.API.IntegrationValidators;
 using ArgonFetch.Application.Behaviors;
 using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services.DDLFetcherServices;
@@ -106,6 +106,11 @@ builder.Services.AddScoped<ArgonFetch.Application.Interfaces.IAcceleratedDownloa
 builder.Services.AddScoped<ArgonFetch.Application.Services.ICombinedStreamUrlBuilder, ArgonFetch.Application.Services.CombinedStreamUrlBuilder>();
 builder.Services.AddScoped<ArgonFetch.Application.Services.IProxyUrlBuilder, ArgonFetch.Application.Services.ProxyUrlBuilder>();
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IMediaUrlCacheService, ArgonFetch.Application.Services.MediaUrlCacheService>();
+
+// Optional proxy list (one proxy per line) rotated across yt-dlp fetches; no file means direct fetches.
+builder.Services.AddSingleton<ArgonFetch.Application.Services.IProxyPool>(sp =>
+    new ArgonFetch.Application.Services.ProxyPool(
+        ArgonFetch.Application.Services.ProxyPool.ReadList(builder.Configuration["PROXY_LIST_PATH"])));
 #endregion
 
 #region Validation
@@ -160,6 +165,10 @@ if (app.Environment.IsProduction() && corsUsesDevelopmentDefault)
 {
     startupLogger.LogWarning("CORS is using default localhost origin in production. Please set CORS_ALLOWED_ORIGINS environment variable.");
 }
+
+// Logged so a mistyped PROXY_LIST_PATH shows up at startup rather than as silent direct fetches.
+startupLogger.LogInformation("Proxy rotation: {Count} proxies loaded",
+    app.Services.GetRequiredService<ArgonFetch.Application.Services.IProxyPool>().Count);
 
 while (!dbConnected && retryCount < maxRetries)
 {
