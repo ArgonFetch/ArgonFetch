@@ -330,3 +330,41 @@ input:focus {
     font-size: 0.9rem;
     transition: opacity 0.2s;
 }
+/* Maintenance overlay: shown while the server reports it is updating itself. Covers the app
+   rather than sitting beside it, because nothing below it works until the update finishes. */
+.maintenance {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background-color: color-mix(in srgb, var(--background) 92%, transparent);
+    backdrop-filter: blur(6px);
+}
+
+.maintenance-card {
+    max-width: 30rem;
+    padding: 2.5rem 2rem;
+    border-radius: 1rem;
+    text-align: center;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+}
+
+.maintenance-icon {
+    font-size: 2rem;
+    color: var(--primary);
+}
+
+.maintenance-title {
+    margin: 1rem 0 0.5rem;
+    font-size: 1.4rem;
+}
+
+.maintenance-message {
+    margin: 0;
+    opacity: 0.75;
+    line-height: 1.5;
+}

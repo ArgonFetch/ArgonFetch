@@ -1,3 +1,4 @@
+﻿using ArgonFetch.Application.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -23,10 +24,12 @@ namespace ArgonFetch.Infrastructure.Services
         private static readonly TimeSpan UpdateTimeout = TimeSpan.FromMinutes(5);
 
         private readonly ILogger<YtDlpUpdateService> _logger;
+        private readonly IMaintenanceState _maintenance;
 
-        public YtDlpUpdateService(ILogger<YtDlpUpdateService> logger)
+        public YtDlpUpdateService(ILogger<YtDlpUpdateService> logger, IMaintenanceState maintenance)
         {
             _logger = logger;
+            _maintenance = maintenance;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -49,6 +52,11 @@ namespace ArgonFetch.Infrastructure.Services
 
         private async Task TryUpdateAsync(CancellationToken cancellationToken)
         {
+            // Held for the whole attempt, including the check that finds nothing to do: the
+            // binary can be replaced at any point inside it, and a fetch that starts meanwhile
+            // runs against a file that is being written.
+            using var maintenance = _maintenance.Begin("Updating yt-dlp");
+
             try
             {
                 // Bound the attempt so a hung download can't keep the timer from firing again.

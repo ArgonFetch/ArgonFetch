@@ -13,5 +13,6 @@ export interface AppInfoDto {
     version: string | null;
     isHealthy: boolean;
     environment: string | null;
+    maintenance?: string | null;
 }
 

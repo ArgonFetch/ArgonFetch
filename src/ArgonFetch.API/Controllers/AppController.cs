@@ -13,13 +13,15 @@ namespace ArgonFetch.API.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly IApplicationInfoService _applicationInfoService;
         private readonly IRequestCounterService _requestCounter;
+        private readonly IMaintenanceState _maintenance;
 
-        public AppController(IMediator mediator, IWebHostEnvironment environment, IApplicationInfoService applicationInfoService, IRequestCounterService requestCounter)
+        public AppController(IMediator mediator, IWebHostEnvironment environment, IApplicationInfoService applicationInfoService, IRequestCounterService requestCounter, IMaintenanceState maintenance)
         {
             _mediator = mediator;
             _environment = environment;
             _applicationInfoService = applicationInfoService;
             _requestCounter = requestCounter;
+            _maintenance = maintenance;
         }
 
         [HttpGet("", Name = "GetAppInfo")]
@@ -33,7 +35,8 @@ namespace ArgonFetch.API.Controllers
             {
                 Version = !string.IsNullOrEmpty(version) && version != "unknown" ? $"v{version}" : "unknown",
                 IsHealthy = true,
-                Environment = environment
+                Environment = environment,
+                Maintenance = _maintenance.Activity
             };
 
             return Ok(appInfo);

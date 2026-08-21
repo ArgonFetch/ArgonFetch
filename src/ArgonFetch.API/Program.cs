@@ -106,6 +106,10 @@ builder.Services.AddScoped<ArgonFetch.Application.Interfaces.IAcceleratedDownloa
 builder.Services.AddScoped<ArgonFetch.Application.Services.ICombinedStreamUrlBuilder, ArgonFetch.Application.Services.CombinedStreamUrlBuilder>();
 builder.Services.AddScoped<ArgonFetch.Application.Services.IProxyUrlBuilder, ArgonFetch.Application.Services.ProxyUrlBuilder>();
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IMediaUrlCacheService, ArgonFetch.Application.Services.MediaUrlCacheService>();
+builder.Services.AddSingleton<ArgonFetch.Application.Services.IMediaHttpClients, ArgonFetch.Application.Services.MediaHttpClients>();
+
+// Lets the app tell clients it is briefly busy (updating yt-dlp) instead of failing fetches.
+builder.Services.AddSingleton<ArgonFetch.Application.Services.IMaintenanceState, ArgonFetch.Application.Services.MaintenanceState>();
 
 // Optional proxy list (one proxy per line) rotated across yt-dlp fetches; no file means direct fetches.
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IProxyPool>(sp =>
