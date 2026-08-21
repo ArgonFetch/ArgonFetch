@@ -1,30 +1,28 @@
-# Stage 1: Base runtime with dependencies
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+# Stage 1: Base runtime
+# Azure Linux rather than Debian: the image no longer installs anything, so all it has to
+# provide is glibc and CA certificates, and this base is smaller and carries fewer CVEs.
+# Alpine would not work - the static yt-dlp and FFmpeg builds fetched below are glibc.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-azurelinux3.0 AS base
 WORKDIR /app
 USER root
-# Install dependencies and yt-dlp standalone binary
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ffmpeg \
-        python3 \
-        curl \
-        ca-certificates && \
-    # Download yt-dlp standalone binary (still needs Python to run).
-    # It lives in /opt/yt-dlp rather than /usr/local/bin because yt-dlp --update
-    # replaces its own binary in place, which needs the directory and the file to be
-    # writable by the runtime user ($APP_UID), not just by root.
-    mkdir -p /opt/yt-dlp && \
-    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /opt/yt-dlp/yt-dlp && \
-    chmod 0755 /opt/yt-dlp/yt-dlp && \
-    chown -R $APP_UID:0 /opt/yt-dlp && \
-    ln -s /opt/yt-dlp/yt-dlp /usr/local/bin/yt-dlp && \
-    # Verify installations
-    yt-dlp --version && \
-    ffmpeg -version && \
-    # Clean up apt cache and curl
-    apt-get remove -y curl && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# No media tooling is baked in. yt-dlp breaks whenever the sites it extracts from change, so
+# a binary built into the image is stale before it ships; the app fetches both tools on boot
+# and reports itself as under maintenance until they are ready. Written here and replaced in
+# place by yt-dlp's own updater, so the directory has to be writable by the runtime user.
+#
+# Mount a volume over /tools to keep them across restarts - without one, roughly 100MB is
+# re-fetched every time the container starts.
+ENV TOOLS_PATH=/tools
+RUN mkdir -p /tools && chown -R $APP_UID:0 /tools && chmod 0775 /tools
+VOLUME /tools
+
+# The fetched FFmpeg is built against OpenSSL's own default paths, which are Debian's and do
+# not exist here, so every HTTPS input failed certificate verification. Pointing it at this
+# image's bundle fixes that; the CA data itself is already in the base image.
+ENV SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
+ENV SSL_CERT_DIR=/etc/pki/tls/certs
+
 USER $APP_UID
 EXPOSE 8080 8081
 

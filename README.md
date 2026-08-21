@@ -74,12 +74,17 @@ services:
       ConnectionStrings__ArgonFetchDatabase: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
     ports:
       - "8080:8080"
+    volumes:
+      # yt-dlp and FFmpeg are fetched on boot instead of being baked into the image.
+      # Keeping them here means a restart reuses them rather than downloading again.
+      - tools:/tools
     depends_on:
       - postgres
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  tools:
 ```
 
 **2. Create `.env` next to it:**
@@ -113,8 +118,16 @@ Everything is set through environment variables in `.env`.
 | `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables Swagger UI |
 | `PROXY_LIST_PATH` | no | File with one proxy per line, rotated across yt-dlp fetches so they do not all leave from the same IP. See below |
 
-`yt-dlp` updates itself inside the container every 12 hours, so extractor fixes
-land without rebuilding the image.
+### Media tooling
+
+`yt-dlp` and `FFmpeg` are not built into the image. The container fetches both when it
+starts and reports itself as under maintenance until they are ready - the web UI shows a
+maintenance screen and fetches answer `503` for those few seconds. `yt-dlp` then updates
+itself every 12 hours, so extractor fixes land without rebuilding anything, and a restart
+is enough to recover from a broken version.
+
+Mount a volume at `/tools` (the compose file above does) so the binaries survive restarts.
+Without one, roughly 100MB is downloaded again every time the container starts.
 
 ### Proxy rotation
 

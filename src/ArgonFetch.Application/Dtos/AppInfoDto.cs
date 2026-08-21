@@ -11,5 +11,6 @@
         /// as a maintenance screen instead of letting fetches fail in confusing ways.
         /// </summary>
         public string? Maintenance { get; set; }
+
     }
 }

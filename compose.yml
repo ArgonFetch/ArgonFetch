@@ -19,9 +19,14 @@ services:
       ConnectionStrings__ArgonFetchDatabase: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
     ports:
       - "4358:8080"
+    volumes:
+      # yt-dlp and FFmpeg are fetched on boot rather than baked into the image. Keeping them
+      # here means a restart reuses them instead of downloading roughly 100MB again.
+      - tools:/tools
     depends_on:
       - postgres
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  tools:
