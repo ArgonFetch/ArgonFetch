@@ -9,7 +9,8 @@ namespace ArgonFetch.Application.Services
         StreamReferenceDto? BuildProxyReferences(
             StreamingUrlDto? originalUrls,
             IMediaUrlCacheService cacheService,
-            bool forceAudio = false);
+            bool forceAudio = false,
+            string? proxy = null);
     }
 
     public class ProxyUrlBuilder : IProxyUrlBuilder
@@ -17,7 +18,8 @@ namespace ArgonFetch.Application.Services
         public StreamReferenceDto? BuildProxyReferences(
             StreamingUrlDto? originalUrls,
             IMediaUrlCacheService cacheService,
-            bool forceAudio = false)
+            bool forceAudio = false,
+            string? proxy = null)
         {
             if (originalUrls == null)
                 return null;
@@ -40,34 +42,50 @@ namespace ArgonFetch.Application.Services
             // Build proxy reference for best quality
             if (!string.IsNullOrEmpty(originalUrls.BestQuality))
             {
-                var cacheKey = cacheService.CacheSingleUrl(originalUrls.BestQuality, isAudio);
-                proxyReferences.BestQualityKey = cacheKey;
+                var (extension, mimeType) = Describe(originalUrls.BestQualityFileExtension, isAudio);
+                proxyReferences.BestQualityKey = cacheService.CacheSingleUrl(originalUrls.BestQuality, isAudio, mimeType, proxy);
                 proxyReferences.BestQualityDescription = originalUrls.BestQualityDescription;
-                // Standardize file extension to mp3 for audio, mp4 for video
-                proxyReferences.BestQualityFileExtension = isAudio ? ".mp3" : ".mp4";
+                proxyReferences.BestQualityFileExtension = extension;
+                proxyReferences.BestQualityMimeType = mimeType;
             }
 
             // Build proxy reference for medium quality
             if (!string.IsNullOrEmpty(originalUrls.MediumQuality))
             {
-                var cacheKey = cacheService.CacheSingleUrl(originalUrls.MediumQuality, isAudio);
-                proxyReferences.MediumQualityKey = cacheKey;
+                var (extension, mimeType) = Describe(originalUrls.MediumQualityFileExtension, isAudio);
+                proxyReferences.MediumQualityKey = cacheService.CacheSingleUrl(originalUrls.MediumQuality, isAudio, mimeType, proxy);
                 proxyReferences.MediumQualityDescription = originalUrls.MediumQualityDescription;
-                // Standardize file extension to mp3 for audio, mp4 for video
-                proxyReferences.MediumQualityFileExtension = isAudio ? ".mp3" : ".mp4";
+                proxyReferences.MediumQualityFileExtension = extension;
+                proxyReferences.MediumQualityMimeType = mimeType;
             }
 
             // Build proxy reference for worst quality
             if (!string.IsNullOrEmpty(originalUrls.WorstQuality))
             {
-                var cacheKey = cacheService.CacheSingleUrl(originalUrls.WorstQuality, isAudio);
-                proxyReferences.WorstQualityKey = cacheKey;
+                var (extension, mimeType) = Describe(originalUrls.WorstQualityFileExtension, isAudio);
+                proxyReferences.WorstQualityKey = cacheService.CacheSingleUrl(originalUrls.WorstQuality, isAudio, mimeType, proxy);
                 proxyReferences.WorstQualityDescription = originalUrls.WorstQualityDescription;
-                // Standardize file extension to mp3 for audio, mp4 for video
-                proxyReferences.WorstQualityFileExtension = isAudio ? ".mp3" : ".mp4";
+                proxyReferences.WorstQualityFileExtension = extension;
+                proxyReferences.WorstQualityMimeType = mimeType;
             }
 
             return proxyReferences;
+        }
+
+        /// <summary>
+        /// The extension and media type the client will get. A recognised source container is
+        /// reported as-is because those bytes are passed through untouched - claiming ".mp3"
+        /// for Opus in WebM cost a needless FFmpeg pass and every tag the file carried.
+        /// Unknown containers still convert, so they keep advertising the converted format.
+        /// </summary>
+        private static (string Extension, string MimeType) Describe(string? sourceExtension, bool isAudio)
+        {
+            var mimeType = MediaFormats.MimeTypeFor(sourceExtension, isAudio);
+
+            if (mimeType == null)
+                return isAudio ? (".mp3", "audio/mpeg") : (".mp4", "video/mp4");
+
+            return (MediaFormats.NormalizeExtension(sourceExtension)!, mimeType);
         }
 
         private bool IsAudioFormat(string? fileExtension)

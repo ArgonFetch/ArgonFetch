@@ -1,15 +1,17 @@
-namespace ArgonFetch.Application.Interfaces
+﻿namespace ArgonFetch.Application.Interfaces
 {
     public interface IAcceleratedDownloadService
     {
         Task<Stream> DownloadWithAccelerationAsync(
             string url,
+            string? proxy = null,
             CancellationToken cancellationToken = default);
 
         Task StreamWithAccelerationAsync(
             string url,
             Stream outputStream,
             IProgress<double>? progress = null,
+            string? proxy = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -18,6 +20,7 @@ namespace ArgonFetch.Application.Interfaces
         /// </summary>
         Task<long?> GetContentLengthAsync(
             string url,
+            string? proxy = null,
             CancellationToken cancellationToken = default);
     }
 }

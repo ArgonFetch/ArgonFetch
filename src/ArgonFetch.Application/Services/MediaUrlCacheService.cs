@@ -6,12 +6,12 @@ namespace ArgonFetch.Application.Services
 {
     public interface IMediaUrlCacheService
     {
-        string CacheMediaUrls(string videoUrl, string audioUrl, TimeSpan? expiration = null);
-        (string? videoUrl, string? audioUrl) GetCachedUrls(string cacheKey);
+        string CacheMediaUrls(string videoUrl, string audioUrl, string? proxy = null, TimeSpan? expiration = null);
+        (string? videoUrl, string? audioUrl, string? proxy) GetCachedUrls(string cacheKey);
         string CacheSingleUrl(string url, TimeSpan? expiration = null);
-        string CacheSingleUrl(string url, bool isAudio, TimeSpan? expiration = null);
+        string CacheSingleUrl(string url, bool isAudio, string? mimeType = null, string? proxy = null, TimeSpan? expiration = null);
         string? GetCachedSingleUrl(string cacheKey);
-        (string Url, bool IsAudio)? GetCachedUrlWithFormat(string cacheKey);
+        (string Url, bool IsAudio, string? MimeType, string? Proxy)? GetCachedUrlWithFormat(string cacheKey);
         void RemoveFromCache(string cacheKey);
     }
 
@@ -25,7 +25,7 @@ namespace ArgonFetch.Application.Services
             _cache = cache;
         }
 
-        public string CacheMediaUrls(string videoUrl, string audioUrl, TimeSpan? expiration = null)
+        public string CacheMediaUrls(string videoUrl, string audioUrl, string? proxy = null, TimeSpan? expiration = null)
         {
             // Generate a unique cache key
             var cacheKey = GenerateCacheKey(videoUrl, audioUrl);
@@ -40,6 +40,7 @@ namespace ArgonFetch.Application.Services
             {
                 VideoUrl = videoUrl,
                 AudioUrl = audioUrl,
+                Proxy = proxy,
                 CachedAt = DateTime.UtcNow
             };
 
@@ -48,14 +49,14 @@ namespace ArgonFetch.Application.Services
             return cacheKey;
         }
 
-        public (string? videoUrl, string? audioUrl) GetCachedUrls(string cacheKey)
+        public (string? videoUrl, string? audioUrl, string? proxy) GetCachedUrls(string cacheKey)
         {
             if (_cache.TryGetValue(CACHE_PREFIX + cacheKey, out CachedMediaUrls? cachedData) && cachedData != null)
             {
-                return (cachedData.VideoUrl, cachedData.AudioUrl);
+                return (cachedData.VideoUrl, cachedData.AudioUrl, cachedData.Proxy);
             }
 
-            return (null, null);
+            return (null, null, null);
         }
 
         public string CacheSingleUrl(string url, TimeSpan? expiration = null)
@@ -74,7 +75,7 @@ namespace ArgonFetch.Application.Services
             return cacheKey;
         }
 
-        public string CacheSingleUrl(string url, bool isAudio, TimeSpan? expiration = null)
+        public string CacheSingleUrl(string url, bool isAudio, string? mimeType = null, string? proxy = null, TimeSpan? expiration = null)
         {
             // Generate a unique cache key for single URL
             var cacheKey = GenerateSingleUrlCacheKey(url);
@@ -89,6 +90,12 @@ namespace ArgonFetch.Application.Services
             {
                 Url = url,
                 IsAudio = isAudio,
+                // Carried so the stream endpoint serves exactly the format the fetch response
+                // advertised, instead of re-deriving it from a URL that has no extension.
+                MimeType = mimeType,
+                // Media URLs are signed for the IP that requested them, so the download has to
+                // leave through the same proxy the extraction did or the source answers 403.
+                Proxy = proxy,
                 CachedAt = DateTime.UtcNow
             };
 
@@ -116,18 +123,18 @@ namespace ArgonFetch.Application.Services
             return null;
         }
 
-        public (string Url, bool IsAudio)? GetCachedUrlWithFormat(string cacheKey)
+        public (string Url, bool IsAudio, string? MimeType, string? Proxy)? GetCachedUrlWithFormat(string cacheKey)
         {
             if (_cache.TryGetValue(CACHE_PREFIX + cacheKey, out object? cachedData))
             {
                 if (cachedData is CachedSingleUrl singleUrl)
                 {
-                    return (singleUrl.Url, singleUrl.IsAudio);
+                    return (singleUrl.Url, singleUrl.IsAudio, singleUrl.MimeType, singleUrl.Proxy);
                 }
                 else if (cachedData is string url)
                 {
                     // Legacy format - assume video (since we don't know)
-                    return (url, false);
+                    return (url, false, null, null);
                 }
             }
 
@@ -176,6 +183,7 @@ namespace ArgonFetch.Application.Services
         {
             public required string VideoUrl { get; set; }
             public required string AudioUrl { get; set; }
+            public string? Proxy { get; set; }
             public DateTime CachedAt { get; set; }
         }
 
@@ -183,6 +191,8 @@ namespace ArgonFetch.Application.Services
         {
             public required string Url { get; set; }
             public required bool IsAudio { get; set; }
+            public string? MimeType { get; set; }
+            public string? Proxy { get; set; }
             public DateTime CachedAt { get; set; }
         }
     }

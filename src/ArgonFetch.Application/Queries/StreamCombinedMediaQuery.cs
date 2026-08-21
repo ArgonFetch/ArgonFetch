@@ -47,7 +47,7 @@ namespace ArgonFetch.Application.Queries
                 }
 
                 // Get URLs from cache
-                var (actualVideoUrl, actualAudioUrl) = _cacheService.GetCachedUrls(request.Key);
+                var (actualVideoUrl, actualAudioUrl, proxy) = _cacheService.GetCachedUrls(request.Key);
 
                 if (actualVideoUrl == null || actualAudioUrl == null)
                 {
@@ -64,6 +64,7 @@ namespace ArgonFetch.Application.Queries
                     actualVideoUrl,
                     actualAudioUrl,
                     request.Response.Body,
+                    proxy,
                     request.CancellationToken);
 
                 return StreamResult.Success();
