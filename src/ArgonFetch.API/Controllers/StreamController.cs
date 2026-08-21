@@ -34,10 +34,14 @@ namespace ArgonFetch.API.Controllers
             return new EmptyResult();
         }
 
+        /// <param name="format">
+        /// Optional container to convert to, currently only "mp3". Omit it to receive the
+        /// source untouched, which is faster and avoids a re-encode.
+        /// </param>
         [HttpGet("Media/{key}", Name = "Media")]
-        public async Task<IActionResult> StreamMedia([FromRoute] string key, CancellationToken cancellationToken)
+        public async Task<IActionResult> StreamMedia([FromRoute] string key, CancellationToken cancellationToken, [FromQuery] string? format = null)
         {
-            var query = new StreamMediaQuery(key, Response, cancellationToken);
+            var query = new StreamMediaQuery(key, Response, cancellationToken, format);
             var result = await _mediator.Send(query, cancellationToken);
 
             // Handle the result if response hasn't started
