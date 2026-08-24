@@ -10,7 +10,8 @@ namespace ArgonFetch.Application.Services
             StreamingUrlDto? originalUrls,
             IMediaUrlCacheService cacheService,
             bool forceAudio = false,
-            string? proxy = null);
+            string? proxy = null,
+            MediaTags? tags = null);
 
         /// <summary>
         /// Turns candidate formats into streamable renditions, best first. Each one is cached
@@ -20,7 +21,8 @@ namespace ArgonFetch.Application.Services
             IEnumerable<RenditionSource> sources,
             IMediaUrlCacheService cacheService,
             bool isAudio,
-            string? proxy = null);
+            string? proxy = null,
+            MediaTags? tags = null);
     }
 
     public class ProxyUrlBuilder : IProxyUrlBuilder
@@ -29,7 +31,8 @@ namespace ArgonFetch.Application.Services
             StreamingUrlDto? originalUrls,
             IMediaUrlCacheService cacheService,
             bool forceAudio = false,
-            string? proxy = null)
+            string? proxy = null,
+            MediaTags? tags = null)
         {
             if (originalUrls == null)
                 return null;
@@ -53,7 +56,7 @@ namespace ArgonFetch.Application.Services
             if (!string.IsNullOrEmpty(originalUrls.BestQuality))
             {
                 var (extension, mimeType) = Describe(originalUrls.BestQualityFileExtension, isAudio);
-                proxyReferences.BestQualityKey = cacheService.CacheSingleUrl(originalUrls.BestQuality, isAudio, mimeType, proxy);
+                proxyReferences.BestQualityKey = cacheService.CacheSingleUrl(originalUrls.BestQuality, isAudio, mimeType, proxy, tags);
                 proxyReferences.BestQualityDescription = originalUrls.BestQualityDescription;
                 proxyReferences.BestQualityFileExtension = extension;
                 proxyReferences.BestQualityMimeType = mimeType;
@@ -63,7 +66,7 @@ namespace ArgonFetch.Application.Services
             if (!string.IsNullOrEmpty(originalUrls.MediumQuality))
             {
                 var (extension, mimeType) = Describe(originalUrls.MediumQualityFileExtension, isAudio);
-                proxyReferences.MediumQualityKey = cacheService.CacheSingleUrl(originalUrls.MediumQuality, isAudio, mimeType, proxy);
+                proxyReferences.MediumQualityKey = cacheService.CacheSingleUrl(originalUrls.MediumQuality, isAudio, mimeType, proxy, tags);
                 proxyReferences.MediumQualityDescription = originalUrls.MediumQualityDescription;
                 proxyReferences.MediumQualityFileExtension = extension;
                 proxyReferences.MediumQualityMimeType = mimeType;
@@ -73,7 +76,7 @@ namespace ArgonFetch.Application.Services
             if (!string.IsNullOrEmpty(originalUrls.WorstQuality))
             {
                 var (extension, mimeType) = Describe(originalUrls.WorstQualityFileExtension, isAudio);
-                proxyReferences.WorstQualityKey = cacheService.CacheSingleUrl(originalUrls.WorstQuality, isAudio, mimeType, proxy);
+                proxyReferences.WorstQualityKey = cacheService.CacheSingleUrl(originalUrls.WorstQuality, isAudio, mimeType, proxy, tags);
                 proxyReferences.WorstQualityDescription = originalUrls.WorstQualityDescription;
                 proxyReferences.WorstQualityFileExtension = extension;
                 proxyReferences.WorstQualityMimeType = mimeType;
@@ -86,7 +89,8 @@ namespace ArgonFetch.Application.Services
             IEnumerable<RenditionSource> sources,
             IMediaUrlCacheService cacheService,
             bool isAudio,
-            string? proxy = null)
+            string? proxy = null,
+            MediaTags? tags = null)
         {
             var renditions = new List<MediaRenditionDto>();
 
@@ -96,7 +100,7 @@ namespace ArgonFetch.Application.Services
 
                 renditions.Add(new MediaRenditionDto
                 {
-                    Key = cacheService.CacheSingleUrl(source.Url, isAudio, mimeType, proxy),
+                    Key = cacheService.CacheSingleUrl(source.Url, isAudio, mimeType, proxy, tags),
                     Label = RenditionPicker.Label(source, isAudio),
                     Description = source.Description,
                     FileExtension = extension,

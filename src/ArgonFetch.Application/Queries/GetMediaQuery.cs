@@ -110,6 +110,10 @@ namespace ArgonFetch.Application.Queries
                 StreamReferenceDto? combinedReferences = null;
                 StreamReferenceDto? audioReferences = null;
 
+                // Carried into the cache so the stream endpoint can name and tag the file it
+                // serves; by then only a key is left to identify the media by.
+                var tags = new MediaTags(resultData.Title, resultData.Uploader);
+
                 // Offered alongside the three fixed rungs: a source usually has several more
                 // steps than that, and which ones are worth showing is the client's call.
                 var videoRenditions = new List<MediaRenditionDto>();
@@ -117,17 +121,18 @@ namespace ArgonFetch.Application.Queries
                     RenditionPicker.PickAudio(AudioSources(resultData.Formats)),
                     _cacheService,
                     isAudio: true,
-                    proxy: _fetchProxy);
+                    proxy: _fetchProxy,
+                    tags: tags);
 
                 if (HasValidUrls(combinedFormats))
                 {
                     // We have pre-muxed formats! Use them directly (FAST!)
                     // These go through the proxy endpoint, not the combine endpoint
-                    combinedReferences = _proxyUrlBuilder.BuildProxyReferences(combinedFormats, _cacheService, proxy: _fetchProxy);
+                    combinedReferences = _proxyUrlBuilder.BuildProxyReferences(combinedFormats, _cacheService, proxy: _fetchProxy, tags: tags);
 
                     // Still extract audio-only for "Audio Only" option
                     var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
-                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy);
+                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy, tags: tags);
 
                     // Pre-muxed formats are served as they are, so they are renditions of the
                     // pass-through kind rather than something to combine.
@@ -135,7 +140,8 @@ namespace ArgonFetch.Application.Queries
                         RenditionPicker.PickVideo(PreMuxedSources(resultData.Formats), perContainer: true),
                         _cacheService,
                         isAudio: false,
-                        proxy: _fetchProxy);
+                        proxy: _fetchProxy,
+                        tags: tags);
                 }
                 else
                 {
@@ -144,17 +150,18 @@ namespace ArgonFetch.Application.Queries
                     var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
 
                     // Build combined references using the combine endpoint (FFmpeg muxing)
-                    combinedReferences = _combinedUrlBuilder.BuildCombinedReferences(videoUrls, audioUrls, _cacheService, _fetchProxy);
+                    combinedReferences = _combinedUrlBuilder.BuildCombinedReferences(videoUrls, audioUrls, _cacheService, _fetchProxy, tags);
 
                     // Build proxy references for audio-only option
-                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy);
+                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy, tags: tags);
 
                     // Each video step is paired with the best audio for muxing.
                     videoRenditions = _combinedUrlBuilder.BuildCombinedRenditions(
                         RenditionPicker.PickVideo(VideoOnlySources(resultData.Formats)),
                         RenditionPicker.PickAudio(AudioSources(resultData.Formats), count: 1).FirstOrDefault(),
                         _cacheService,
-                        _fetchProxy);
+                        _fetchProxy,
+                        tags);
                 }
 
                 if (combinedReferences != null)
@@ -545,7 +552,11 @@ namespace ArgonFetch.Application.Queries
 
             // Build proxy references
             // Force audio mode for Spotify tracks
-            var audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy);
+            // Spotify's own metadata, not YouTube's: knowing the release better than YouTube
+            // does is the reason the track was matched rather than simply searched for.
+            var spotifyTags = new MediaTags(track.Title, track.Artist);
+
+            var audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy, tags: spotifyTags);
 
             // The audio comes from YouTube Music, so it has the same renditions any other
             // YouTube track does. Without this a Spotify link fell back to "Best" and "Low",
@@ -556,7 +567,8 @@ namespace ArgonFetch.Application.Queries
                     RenditionPicker.PickAudio(AudioSources(result.Formats)),
                     _cacheService,
                     isAudio: true,
-                    proxy: _fetchProxy);
+                    proxy: _fetchProxy,
+                    tags: spotifyTags);
             }
 
             // Spotify typically only has audio, so combined URLs would be null

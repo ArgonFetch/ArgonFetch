@@ -52,6 +52,30 @@
             return MimeTypesByExtension.TryGetValue(extension, out var mimeType) ? mimeType : null;
         }
 
+        /// <summary>
+        /// The extension a media type is normally saved with, or null for one we do not know.
+        /// Used to name a pass-through download, whose bytes are the source's own.
+        /// </summary>
+        public static string? ExtensionFor(string? mimeType)
+        {
+            if (string.IsNullOrWhiteSpace(mimeType))
+                return null;
+
+            var bare = mimeType.Split(';')[0].Trim();
+
+            if (bare.Equals("audio/webm", StringComparison.OrdinalIgnoreCase) ||
+                bare.Equals("video/webm", StringComparison.OrdinalIgnoreCase))
+                return ".webm";
+
+            foreach (var (extension, knownType) in MimeTypesByExtension)
+            {
+                if (bare.Equals(knownType, StringComparison.OrdinalIgnoreCase))
+                    return extension;
+            }
+
+            return null;
+        }
+
         /// <summary>Normalises an extension to a leading dot, e.g. <c>webm</c> to <c>.webm</c>.</summary>
         public static string? NormalizeExtension(string? fileExtension)
         {
