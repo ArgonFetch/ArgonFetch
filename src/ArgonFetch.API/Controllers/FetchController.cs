@@ -3,6 +3,7 @@ using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace ArgonFetch.API.Controllers
 {
@@ -30,7 +31,10 @@ namespace ArgonFetch.API.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status415UnsupportedMediaType)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
-        public async Task<ActionResult<ResourceInformationDto>> GetResource(string url)
+        // Marked required rather than merely being non-nullable: binding already refused a
+        // call without it, but the generated schema said the parameter was optional, so every
+        // client built from it offered a request the API will only ever answer with a 400.
+        public async Task<ActionResult<ResourceInformationDto>> GetResource([FromQuery][Required] string url)
         {
             // Refused rather than attempted: the yt-dlp binary is being replaced underneath us,
             // and the error that produces looks like a broken source rather than a busy server.

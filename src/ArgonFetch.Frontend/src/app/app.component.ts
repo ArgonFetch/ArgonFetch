@@ -1,9 +1,9 @@
+import { Sun, Moon, Settings } from 'lucide';
+import { GithubMark } from './icon/brand-icons';
+import { IconComponent } from './/icon/icon.component';
 import { Component, ChangeDetectionStrategy, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faSun, faMoon, faGear } from '@fortawesome/free-solid-svg-icons';
-import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { ThemeService } from './services/theme.service';
 import { AppService } from '../app/api';
 import { catchError, firstValueFrom, of } from 'rxjs';
@@ -17,13 +17,13 @@ import { NotificationService } from './notifications/notification.service';
   styleUrls: ['./app.component.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [RouterModule, CommonModule, FontAwesomeModule]
+  imports: [RouterModule, CommonModule, IconComponent]
 })
 export class AppComponent {
-  faSun = faSun;
-  faMoon = faMoon;
-  faGithub = faGithub;
-  faGear = faGear;
+  sunIcon = Sun;
+  moonIcon = Moon;
+  githubIcon = GithubMark;
+  gearIcon = Settings;
   isDarkTheme$;
 
   // Signals rather than plain fields: these are written from a promise and a timer, and

@@ -1,23 +1,22 @@
-<main class="main-content">
-  @if (mediaType() || resourceInformation() || isLoading()) {
-    <div class="when-content-arrives-spacing"></div>
-  }
+<main class="main-content" [class.showing-result]="showsCollection()">
   <div class="hero">
-    <h1>ArgonFetch</h1>
-    <p class="subtitle">Universal Media Downloader</p>
+    @if (!showsCollection()) {
+      <h1>ArgonFetch</h1>
+      <p class="subtitle">Universal Media Downloader</p>
+    }
 
     <form class="download-box" (ngSubmit)="download()">
       <div class="url-input-wrapper">
-        <fa-icon [icon]="faLink" class="url-icon"></fa-icon>
+        <app-icon [name]="linkIcon" [size]="16" class="url-icon" />
         <input type="text" name="url" placeholder="Enter URL to download..." [(ngModel)]="url">
         @if (url) {
           <button type="button" class="clear-btn" (click)="url = ''" aria-label="Clear input">
-            <fa-icon [icon]="faTimes"></fa-icon>
+            <app-icon [name]="clearIcon" [size]="16" />
           </button>
         }
       </div>
       <button type="submit" class="search-btn" [disabled]="isLoading()">
-        <fa-icon [icon]="faSearch"></fa-icon>
+        <app-icon [name]="searchIcon" [size]="16" />
         {{ isLoading() ? 'Searching...' : 'Search' }}
       </button>
     </form>
@@ -40,7 +39,7 @@
     </div>
 
     <div class="disclaimer-content">
-      <fa-icon [icon]="faWarning"></fa-icon>
+      <app-icon [name]="warningIcon" [size]="20" />
       <p>Please ensure you have the right to download and use the content. Respect copyright laws and platform terms of
       service.</p>
     </div>

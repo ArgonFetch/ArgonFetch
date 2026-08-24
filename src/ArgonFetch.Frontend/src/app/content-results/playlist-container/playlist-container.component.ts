@@ -1,18 +1,19 @@
+import { Download, LoaderCircle, FileArchive } from 'lucide';
+import { IconComponent } from '../../icon/icon.component';
 import { Component, Input, ChangeDetectionStrategy, inject, signal } from '@angular/core';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faDownload, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { firstValueFrom } from 'rxjs';
 
 import { FetchService, MediaInformationDto, ResourceInformationDto } from '../../api';
 import { MediaDownloadService } from '../../services/media-download.service';
 import { NotificationService } from '../../notifications/notification.service';
 import { ResourceUrlService } from '../../services/resource-url.service';
+import { ArchiveDownloadService } from '../../services/archive-download.service';
 import { DownloadProgressComponent } from '../../download-progress/download-progress.component';
 
 @Component({
   selector: 'app-playlist-container',
   standalone: true,
-  imports: [FontAwesomeModule, DownloadProgressComponent],
+  imports: [IconComponent, DownloadProgressComponent],
   templateUrl: './playlist-container.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './playlist-container.component.scss'
@@ -20,23 +21,72 @@ import { DownloadProgressComponent } from '../../download-progress/download-prog
 export class PlaylistContainerComponent {
   @Input() resourceInformation!: ResourceInformationDto;
 
-  faDownload = faDownload;
-  faSpinner = faSpinner;
+  downloadIcon = Download;
+  spinnerIcon = LoaderCircle;
+  archiveIcon = FileArchive;
 
   private readonly downloads = inject(MediaDownloadService);
   private readonly fetchService = inject(FetchService);
   private readonly notifications = inject(NotificationService);
   private readonly resourceUrls = inject(ResourceUrlService);
+  readonly archive = inject(ArchiveDownloadService);
 
   // Which row is currently being resolved. A playlist entry only carries a title and the
   // link it came from - the streams behind it are looked up when someone asks for them,
   // because resolving two thousand of them up front would take the better part of an hour.
-  private readonly resolving = signal<string | null>(null);
+  readonly resolving = signal<string | null>(null);
+
+  // Mirrors the cap the archive endpoint enforces, so the button can say what it
+  // will actually deliver rather than promising the whole list.
+  private static readonly MaxArchiveTracks = 100;
 
   // The button still needs to know: a second transfer while one is running would
   // have nowhere to report itself.
   readonly isDownloading = this.downloads.isDownloading;
 
+
+  /** Where the whole collection can be had as one zip, or null if we cannot address it. */
+  archiveUrl(): string | null {
+    return this.resourceUrls.buildArchiveUrl(this.resourceInformation.requestedUrl);
+  }
+
+  /**
+   * What the zip button promises, which is not always the whole list: an archive carries a
+   * fixed number of tracks, and a long playlist runs past it.
+   */
+  archiveHint(): string {
+    const total = this.resourceInformation.mediaItems?.length ?? 0;
+
+    return total > PlaylistContainerComponent.MaxArchiveTracks
+      ? `Download the first ${PlaylistContainerComponent.MaxArchiveTracks} of ${total} tracks as a zip`
+      : 'Download all tracks as a zip';
+  }
+
+  /**
+   * Starts the archive and follows it.
+   * <p>
+   * The bytes go to the browser's own download manager, so this page is free to be left while
+   * it runs; what is shown here is the server's account of how far it has got, which it can
+   * give in tracks rather than in bytes it cannot total.
+   */
+  onDownloadArchive() {
+    if (this.archive.isBuilding() || this.resolving()) {
+      return;
+    }
+
+    const total = this.resourceInformation.mediaItems?.length ?? 0;
+    const taking = Math.min(total, PlaylistContainerComponent.MaxArchiveTracks);
+
+    if (taking < total) {
+      this.notifications.show({
+        title: 'Archiving the first ' + taking,
+        message: `This collection has ${total} tracks and an archive carries ${taking}. Open the rest from the list to download them individually.`,
+        tone: 'info'
+      });
+    }
+
+    this.archive.start(this.resourceInformation.requestedUrl);
+  }
 
   /** Whether this row is the one being worked on, so its button can show the wait. */
   isBusy(song: MediaInformationDto): boolean {

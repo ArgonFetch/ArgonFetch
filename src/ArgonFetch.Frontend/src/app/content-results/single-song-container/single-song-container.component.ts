@@ -1,8 +1,8 @@
+import { Download, ChevronRight, LoaderCircle } from 'lucide';
+import { IconComponent } from '../../icon/icon.component';
 import { Component, Input, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
-import { faDownload, faChevronRight, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { MediaRenditionDto, ResourceInformationDto } from '../../api';
 import { HttpClientModule } from '@angular/common/http';
 import { MediaDownloadService } from '../../services/media-download.service';
@@ -12,7 +12,7 @@ import { DownloadProgressComponent } from '../../download-progress/download-prog
 @Component({
   selector: 'app-single-song-container',
   standalone: true,
-  imports: [FontAwesomeModule, HttpClientModule, CdkMenu, CdkMenuItem, CdkMenuTrigger, DownloadProgressComponent],
+  imports: [IconComponent, HttpClientModule, CdkMenu, CdkMenuItem, CdkMenuTrigger, DownloadProgressComponent],
   templateUrl: './single-song-container.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './single-song-container.component.scss'
@@ -20,9 +20,9 @@ import { DownloadProgressComponent } from '../../download-progress/download-prog
 export class SingleSongContainerComponent {
   @Input() resourceInformation!: ResourceInformationDto;
 
-  faDownload = faDownload;
-  faChevronRight = faChevronRight;
-  faSpinner = faSpinner;
+  downloadIcon = Download;
+  chevronIcon = ChevronRight;
+  spinnerIcon = LoaderCircle;
 
   // The transfer lives in the shared service: a playlist row starts downloads too.
   private readonly downloads = inject(MediaDownloadService);

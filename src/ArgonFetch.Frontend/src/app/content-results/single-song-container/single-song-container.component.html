@@ -21,9 +21,9 @@
         [cdkMenuTriggerFor]="isDownloading() ? null : mainMenu"
         aria-label="Download">
         @if (!isDownloading()) {
-          <fa-icon [icon]="faDownload"></fa-icon>
+          <app-icon [name]="downloadIcon" [size]="18" />
         } @else {
-          <fa-icon [icon]="faSpinner" class="fa-spin"></fa-icon>
+          <app-icon [name]="spinnerIcon" [size]="18" class="spinning" />
         }
       </button>
     </div>
@@ -33,13 +33,13 @@
         @if (hasCombinedUrls()) {
           <button type="button" class="menu-item" cdkMenuItem [cdkMenuTriggerFor]="videoMenu">
             <span>Video</span>
-            <fa-icon [icon]="faChevronRight" class="submenu-arrow"></fa-icon>
+            <app-icon [name]="chevronIcon" [size]="14" class="submenu-arrow" />
           </button>
         }
         @if (hasAudioUrls()) {
           <button type="button" class="menu-item" cdkMenuItem [cdkMenuTriggerFor]="audioMenu">
             <span>Audio</span>
-            <fa-icon [icon]="faChevronRight" class="submenu-arrow"></fa-icon>
+            <app-icon [name]="chevronIcon" [size]="14" class="submenu-arrow" />
           </button>
         }
       </div>

@@ -13,6 +13,7 @@ import { MediaType } from './mediaType';
 
 export interface ResourceInformationDto { 
     type: MediaType;
+    requestedUrl?: string | null;
     title?: string | null;
     author?: string | null;
     coverUrl?: string | null;

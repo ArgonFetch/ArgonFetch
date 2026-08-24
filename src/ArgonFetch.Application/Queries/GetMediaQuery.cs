@@ -87,6 +87,17 @@ namespace ArgonFetch.Application.Queries
 
         public async Task<ResourceInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
         {
+            var resolved = await Resolve(request, cancellationToken);
+
+            // Stamped in one place rather than at each of the half-dozen points that build
+            // a result, so a new source cannot forget it.
+            resolved.RequestedUrl = request.Query;
+
+            return resolved;
+        }
+
+        private async Task<ResourceInformationDto> Resolve(GetMediaQuery request, CancellationToken cancellationToken)
+        {
             var platform = PlatformIdentifierService.IdentifyPlatform(request.Query);
 
             if (platform == Platform.Spotify)
@@ -100,6 +111,11 @@ namespace ArgonFetch.Application.Queries
 
             else if (platform == Platform.TikTok)
                 return await HandleTikTok(request.Query, cancellationToken);
+
+            // Asked before fetching rather than after: a playlist read the ordinary way extracts
+            // every entry in full, which is seconds apiece and minutes for a list of any size.
+            if (await IsCollection(request.Query, platform))
+                return await HandleCollection(request.Query);
 
             var resultData = await YT_DLP_Fetch(request.Query);
 
@@ -212,6 +228,112 @@ namespace ArgonFetch.Application.Queries
             }
             else
                 throw new NotSupportedException("This isn't implemented yet");
+        }
+
+        /// <summary>
+        /// Whether the link names a collection rather than one recording. A source that has no
+        /// notion of playlists, or a link that is simply not one, answers no rather than failing:
+        /// an unreadable link is the fetch's problem to report, not this one's.
+        /// </summary>
+        private static async Task<bool> IsCollection(string query, Platform platform)
+        {
+            try
+            {
+                return await MediaContentIdentifierService.IdentifyContent(query, platform) == ContentType.Playlist;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// A playlist from any source yt-dlp can read - a YouTube list, a SoundCloud set.
+        /// <para>
+        /// Listed flat, so each entry costs a line of the index rather than its own extraction.
+        /// The entries are deliberately left unresolved for the same reason the Spotify listing
+        /// leaves them: resolving several hundred before showing anything would take minutes and
+        /// throw nearly all of it away. Picking one fetches that entry through the path its own
+        /// link already takes.
+        /// </para>
+        /// </summary>
+        private async Task<ResourceInformationDto> HandleCollection(string query)
+        {
+            var listing = await YT_DLP_Fetch(query, new OptionSet
+            {
+                DumpSingleJson = true,
+                FlatPlaylist = true,
+            });
+
+            var entries = listing.Entries ?? [];
+
+            _logger.LogInformation("Listed {Count} entries for {Url}", entries.Length, query);
+
+            return new ResourceInformationDto
+            {
+                Type = MediaType.PlayList,
+                Title = listing.Title,
+                Author = listing.Uploader ?? listing.Channel,
+                CoverUrl = LargestThumbnail(listing),
+                MediaItems = entries
+                    // A flat listing still carries rows for entries that have been deleted or made
+                    // private, and those have no link to fetch anything by.
+                    .Where(entry => !string.IsNullOrWhiteSpace(entry.Url) || !string.IsNullOrWhiteSpace(entry.WebpageUrl))
+                    .Select(entry => new MediaInformationDto
+                    {
+                        RequestedUrl = entry.WebpageUrl ?? entry.Url,
+                        Title = entry.Title ?? NameFromUrl(entry.WebpageUrl ?? entry.Url) ?? "Unknown",
+                        Author = entry.Uploader ?? entry.Channel ?? listing.Uploader ?? string.Empty,
+                        // Falls back to the list's own picture, which is what a source that
+                        // reports no per-entry artwork leaves us with.
+                        CoverUrl = LargestThumbnail(entry) ?? LargestThumbnail(listing),
+                    })
+                    .ToList()
+            };
+        }
+
+        /// <summary>
+        /// A readable name recovered from a link's last segment, for a listing that names nothing.
+        /// <para>
+        /// SoundCloud sets are listed as bare links - no title, no credit, no artwork - and every
+        /// row otherwise reads "Unknown", which is unusable for picking a track. The slug is a
+        /// close enough rendering of the name to choose by, and the real title arrives once the
+        /// entry is opened. Naming every row after its own link is worth more than being tidy
+        /// about the apostrophe that a slug has lost.
+        /// </para>
+        /// </summary>
+        internal static string? NameFromUrl(string? url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                return null;
+
+            var slug = uri.AbsolutePath.Trim('/').Split('/').LastOrDefault();
+
+            if (string.IsNullOrWhiteSpace(slug))
+                return null;
+
+            var words = slug
+                .Replace('-', ' ')
+                .Replace('_', ' ')
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(word => char.ToUpperInvariant(word[0]) + word[1..]);
+
+            var name = string.Join(" ", words);
+
+            return string.IsNullOrWhiteSpace(name) ? null : name;
+        }
+
+        /// <summary>
+        /// The biggest picture a result carries, or null when it carries none.
+        /// </summary>
+        private static string? LargestThumbnail(VideoData data)
+        {
+            var largest = data.Thumbnails?
+                .Where(thumbnail => !string.IsNullOrWhiteSpace(thumbnail.Url))
+                .OrderByDescending(thumbnail => (long)(thumbnail.Width ?? 0) * (thumbnail.Height ?? 0))
+                .FirstOrDefault();
+
+            return largest?.Url ?? (string.IsNullOrWhiteSpace(data.Thumbnail) ? null : data.Thumbnail);
         }
 
         private StreamingUrlDto ExtractCombinedFormatsAndCacheNewUrl(FormatData[] formatData)
