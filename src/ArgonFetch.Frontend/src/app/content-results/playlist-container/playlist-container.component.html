@@ -13,18 +13,44 @@
 
         <app-download-progress />
 
+        <!-- The archive's own progress, counted in tracks. The zip is written as it is sent
+             and declares no length, so there are no bytes to total - but the server knows how
+             many tracks it is putting in before it starts. -->
+        @if (archive.isBuilding()) {
+          <div class="download-progress-container">
+            <div class="download-info">
+              <span class="download-filename">{{ archive.current() || 'Preparing the archive...' }}</span>
+              <div class="download-stats">
+                @if (archive.total()) {
+                  <span class="download-speed">{{ archive.completed() }} / {{ archive.total() }}</span>
+                  <span class="download-percentage">{{ archive.percent() }}%</span>
+                }
+              </div>
+            </div>
+            <div class="progress-bar-wrapper">
+              @if (archive.total()) {
+                <div class="progress-bar" [style.width.%]="archive.percent()"></div>
+              } @else {
+                <div class="progress-bar progress-bar--indeterminate"></div>
+              }
+            </div>
+          </div>
+        }
+
       </div>
 
-      @if (archiveUrl(); as archive) {
-        <!-- A plain link, not a fetch: the browser's own download manager takes it, so the
-             archive keeps arriving after this page is navigated away from or closed, and
-             none of it is held in the tab's memory. -->
-        <a class="action-button archive-button" [href]="archive" download
-          (click)="onArchiveRequested()"
+      @if (archiveUrl()) {
+        <button type="button" class="action-button archive-button"
+          [disabled]="archive.isBuilding() || !!resolving()"
+          (click)="onDownloadArchive()"
           [attr.aria-label]="'Download all of ' + resourceInformation.title + ' as a zip'"
           [title]="archiveHint()">
-          <app-icon [name]="archiveIcon" [size]="18" />
-        </a>
+          @if (archive.isBuilding()) {
+            <app-icon [name]="spinnerIcon" [size]="18" class="spinning" />
+          } @else {
+            <app-icon [name]="archiveIcon" [size]="18" />
+          }
+        </button>
       }
     </div>
   </div>

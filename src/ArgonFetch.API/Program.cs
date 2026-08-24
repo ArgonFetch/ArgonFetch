@@ -133,6 +133,8 @@ builder.Services.AddSingleton<ArgonFetch.Application.Services.IMediaHttpClients,
 
 // Lets the app tell clients it is briefly busy (updating yt-dlp) instead of failing fetches.
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IMaintenanceState, ArgonFetch.Application.Services.MaintenanceState>();
+// Singleton so an archive being built by one request can be read by the request watching it.
+builder.Services.AddSingleton<ArgonFetch.Application.Services.IArchiveProgressTracker, ArgonFetch.Application.Services.ArchiveProgressTracker>();
 
 // Optional proxy list (one proxy per line) rotated across yt-dlp fetches; no file means direct fetches.
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IProxyPool>(sp =>

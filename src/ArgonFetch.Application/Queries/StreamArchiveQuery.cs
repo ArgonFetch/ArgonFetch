@@ -15,14 +15,21 @@ namespace ArgonFetch.Application.Queries
     /// </summary>
     public class StreamArchiveQuery : IRequest<StreamResult>
     {
-        public StreamArchiveQuery(string url, HttpResponse response, CancellationToken cancellationToken)
+        public StreamArchiveQuery(string url, string? jobId, HttpResponse response, CancellationToken cancellationToken)
         {
             Url = url;
+            JobId = jobId;
             Response = response;
             CancellationToken = cancellationToken;
         }
 
         public string Url { get; }
+
+        /// <summary>
+        /// Where to publish progress, chosen by the caller. Null when nobody is watching, which
+        /// is what a plain curl of this endpoint looks like.
+        /// </summary>
+        public string? JobId { get; }
         public HttpResponse Response { get; }
         public CancellationToken CancellationToken { get; }
     }
@@ -58,17 +65,20 @@ namespace ArgonFetch.Application.Queries
         private readonly IMediator _mediator;
         private readonly IMediaUrlCacheService _cacheService;
         private readonly IAcceleratedDownloadService _downloadService;
+        private readonly IArchiveProgressTracker _progress;
         private readonly ILogger<StreamArchiveQueryHandler> _logger;
 
         public StreamArchiveQueryHandler(
             IMediator mediator,
             IMediaUrlCacheService cacheService,
             IAcceleratedDownloadService downloadService,
+            IArchiveProgressTracker progress,
             ILogger<StreamArchiveQueryHandler> logger)
         {
             _mediator = mediator;
             _cacheService = cacheService;
             _downloadService = downloadService;
+            _progress = progress;
             _logger = logger;
         }
 
@@ -83,18 +93,25 @@ namespace ArgonFetch.Application.Queries
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Could not read {Url} as a collection", request.Url);
+                FailBeforeStarting(request.JobId);
                 return StreamResult.NotFound("That link could not be read as a playlist or album.");
             }
 
             if (listing.Type != MediaType.PlayList)
+            {
+                FailBeforeStarting(request.JobId);
                 return StreamResult.BadRequest("That link is a single track, not a collection.");
+            }
 
             var entries = listing.MediaItems?.ToList() ?? [];
             var wanted = entries.Take(MaxTracks).ToList();
             var omitted = entries.Count - wanted.Count;
 
             if (wanted.Count == 0)
+            {
+                FailBeforeStarting(request.JobId);
                 return StreamResult.NotFound("That collection lists no tracks.");
+            }
 
             var archiveName = MediaFileName.For(new MediaTags(listing.Title, listing.Author), ".zip", "playlist");
 
@@ -111,6 +128,10 @@ namespace ArgonFetch.Application.Queries
                 wanted.Count, entries.Count, request.Url, archiveName);
 
             var failures = new List<string>();
+            var jobId = request.JobId;
+
+            if (jobId is not null)
+                _progress.Start(jobId, wanted.Count);
 
             try
             {
@@ -133,6 +154,9 @@ namespace ArgonFetch.Application.Queries
 
                 for (var index = 0; index < resolving.Count; index++)
                 {
+                    if (jobId is not null)
+                        _progress.Report(jobId, index, wanted[index].Title, failures.Count);
+
                     var track = await resolving[index];
 
                     if (track is null)
@@ -172,10 +196,17 @@ namespace ArgonFetch.Application.Queries
 
                 if (failures.Count > 0 || omitted > 0)
                     await WriteManifestAsync(archive, listing, entries.Count, wanted.Count, omitted, failures);
+
+                if (jobId is not null)
+                    _progress.Report(jobId, wanted.Count, null, failures.Count);
             }
             catch (OperationCanceledException)
             {
                 _logger.LogInformation("Client disconnected while the archive was being written");
+
+                if (jobId is not null)
+                    _progress.Finish(jobId, ArchiveProgress.Failed);
+
                 return StreamResult.ClientDisconnected();
             }
             catch (Exception ex)
@@ -184,12 +215,31 @@ namespace ArgonFetch.Application.Queries
                 // so the archive simply ends early and the client sees a truncated download.
                 _logger.LogError(ex, "Failed while writing the archive for {Url}", request.Url);
 
+                if (jobId is not null)
+                    _progress.Finish(jobId, ArchiveProgress.Failed);
+
                 return request.Response.HasStarted
                     ? StreamResult.Success()
                     : StreamResult.ServerError("The archive could not be built.");
             }
 
+            if (jobId is not null)
+                _progress.Finish(jobId, ArchiveProgress.Done);
+
             return StreamResult.Success();
+        }
+
+        /// <summary>
+        /// Marks a job failed that never got as far as having a track count, so a page watching
+        /// it is told rather than left waiting on something that will never report.
+        /// </summary>
+        private void FailBeforeStarting(string? jobId)
+        {
+            if (jobId is null)
+                return;
+
+            _progress.Start(jobId, 0);
+            _progress.Finish(jobId, ArchiveProgress.Failed);
         }
 
         /// <summary>

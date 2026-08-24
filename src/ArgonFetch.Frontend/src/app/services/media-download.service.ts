@@ -25,6 +25,21 @@ export class MediaDownloadService {
   private lastTime = 0;
   private lastBytes = 0;
 
+  constructor() {
+    // A transfer lives in this page, so leaving takes it with you - reload included, which is
+    // the easy one to do by accident. The browser will not let a page word its own warning, so
+    // this only asks it to put its standard one up.
+    window.addEventListener('beforeunload', event => {
+      if (!this.isDownloading()) {
+        return;
+      }
+
+      event.preventDefault();
+      // Ignored by anything current, still required by older browsers to raise the prompt.
+      event.returnValue = '';
+    });
+  }
+
   /** Whether a download is already running, which both callers refuse to interrupt. */
   get busy(): boolean {
     return this.isDownloading();

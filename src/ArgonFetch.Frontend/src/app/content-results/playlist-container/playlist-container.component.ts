@@ -7,6 +7,7 @@ import { FetchService, MediaInformationDto, ResourceInformationDto } from '../..
 import { MediaDownloadService } from '../../services/media-download.service';
 import { NotificationService } from '../../notifications/notification.service';
 import { ResourceUrlService } from '../../services/resource-url.service';
+import { ArchiveDownloadService } from '../../services/archive-download.service';
 import { DownloadProgressComponent } from '../../download-progress/download-progress.component';
 
 @Component({
@@ -28,11 +29,12 @@ export class PlaylistContainerComponent {
   private readonly fetchService = inject(FetchService);
   private readonly notifications = inject(NotificationService);
   private readonly resourceUrls = inject(ResourceUrlService);
+  readonly archive = inject(ArchiveDownloadService);
 
   // Which row is currently being resolved. A playlist entry only carries a title and the
   // link it came from - the streams behind it are looked up when someone asks for them,
   // because resolving two thousand of them up front would take the better part of an hour.
-  private readonly resolving = signal<string | null>(null);
+  readonly resolving = signal<string | null>(null);
 
   // Mirrors the cap the archive endpoint enforces, so the button can say what it
   // will actually deliver rather than promising the whole list.
@@ -61,23 +63,29 @@ export class PlaylistContainerComponent {
   }
 
   /**
-   * Says what the zip button just started.
+   * Starts the archive and follows it.
    * <p>
-   * The link hands the transfer to the browser, which is what lets it outlive this page - but
-   * it also means the page itself shows nothing, and the server spends a while resolving
-   * tracks before the first byte goes out. Without a word here the button looks broken.
+   * The bytes go to the browser's own download manager, so this page is free to be left while
+   * it runs; what is shown here is the server's account of how far it has got, which it can
+   * give in tracks rather than in bytes it cannot total.
    */
-  onArchiveRequested() {
+  onDownloadArchive() {
+    if (this.archive.isBuilding() || this.resolving()) {
+      return;
+    }
+
     const total = this.resourceInformation.mediaItems?.length ?? 0;
     const taking = Math.min(total, PlaylistContainerComponent.MaxArchiveTracks);
 
-    this.notifications.show({
-      title: 'Building your archive',
-      message: taking < total
-        ? `Zipping the first ${taking} of ${total} tracks. This takes a while - it will appear in your browser's downloads, and you can leave this page.`
-        : `Zipping ${taking} tracks. This takes a while - it will appear in your browser's downloads, and you can leave this page.`,
-      tone: 'info'
-    });
+    if (taking < total) {
+      this.notifications.show({
+        title: 'Archiving the first ' + taking,
+        message: `This collection has ${total} tracks and an archive carries ${taking}. Open the rest from the list to download them individually.`,
+        tone: 'info'
+      });
+    }
+
+    this.archive.start(this.resourceInformation.requestedUrl);
   }
 
   /** Whether this row is the one being worked on, so its button can show the wait. */
