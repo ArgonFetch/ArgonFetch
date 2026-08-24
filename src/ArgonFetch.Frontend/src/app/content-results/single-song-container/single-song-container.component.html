@@ -8,36 +8,7 @@
       <h3 class="song-title">{{ resourceInformation.mediaItems?.[0]?.title }}</h3>
       <p class="song-artist">{{ resourceInformation.mediaItems?.[0]?.author }}</p>
 
-      <!-- Download Progress Bar -->
-      @if (isDownloading()) {
-        <div class="download-progress-container">
-          <div class="download-info">
-            <span class="download-filename">{{ currentDownloadName() }}</span>
-            <div class="download-stats">
-              @if (downloadSpeed()) {
-                <span class="download-speed">{{ downloadSpeed() }}</span>
-              }
-              @if (downloadedMB()) {
-                <span class="download-size">
-                  {{ downloadedMB() }}@if (hasKnownTotal()) { / {{ totalMB() }}} MB
-                </span>
-              }
-              @if (hasKnownTotal()) {
-                <span class="download-percentage">{{ downloadProgress() }}%</span>
-              }
-            </div>
-          </div>
-          <div class="progress-bar-wrapper">
-            @if (hasKnownTotal()) {
-              <div class="progress-bar" [style.width.%]="downloadProgress()" [style.max-width]="'100%'"></div>
-            } @else {
-              <!-- The server cannot declare a length for muxed streams, so show motion
-                   rather than a number that would be invented. -->
-              <div class="progress-bar progress-bar--indeterminate"></div>
-            }
-          </div>
-        </div>
-      }
+      <app-download-progress />
     </div>
 
     <!-- Download Button with Dropdown Menu -->

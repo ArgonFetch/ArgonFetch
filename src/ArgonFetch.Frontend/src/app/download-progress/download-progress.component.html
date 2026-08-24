@@ -1,0 +1,29 @@
+@if (isDownloading()) {
+  <div class="download-progress-container">
+    <div class="download-info">
+      <span class="download-filename">{{ fileName() }}</span>
+      <div class="download-stats">
+        @if (speed()) {
+          <span class="download-speed">{{ speed() }}</span>
+        }
+        @if (downloadedMB()) {
+          <span class="download-size">
+            {{ downloadedMB() }}@if (hasKnownTotal()) { / {{ totalMB() }}} MB
+          </span>
+        }
+        @if (hasKnownTotal()) {
+          <span class="download-percentage">{{ progress() }}%</span>
+        }
+      </div>
+    </div>
+    <div class="progress-bar-wrapper">
+      @if (hasKnownTotal()) {
+        <div class="progress-bar" [style.width.%]="progress()" [style.max-width]="'100%'"></div>
+      } @else {
+        <!-- The server cannot declare a length for muxed streams, so show motion
+             rather than a number that would be invented. -->
+        <div class="progress-bar progress-bar--indeterminate"></div>
+      }
+    </div>
+  </div>
+}

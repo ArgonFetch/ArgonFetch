@@ -94,6 +94,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddScoped<ArgonFetch.Application.Services.ISpotifyMetadataService,
                            ArgonFetch.Application.Services.SpotifyMetadataService>();
 
+// Reads long playlists through the web player's own API. Singleton so the anonymous session
+// it mints is held across requests rather than re-minted for each one.
+builder.Services.AddSingleton<ArgonFetch.Application.Services.ISpotifyWebPlayerClient,
+                              ArgonFetch.Application.Services.SpotifyWebPlayerClient>();
+
 // Register YoutubeMusicAPI and YoutubeDL
 // Search and metadata only. Its streaming endpoints need a PoToken and answer 403 to IPs
 // that look like VPNs, which is exactly what a rotated proxy looks like; yt-dlp fetches the
