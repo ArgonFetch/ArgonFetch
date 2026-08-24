@@ -123,7 +123,7 @@ namespace ArgonFetch.Application.Queries
                     // Pre-muxed formats are served as they are, so they are renditions of the
                     // pass-through kind rather than something to combine.
                     videoRenditions = _proxyUrlBuilder.BuildRenditions(
-                        RenditionPicker.PickVideo(PreMuxedSources(resultData.Formats)),
+                        RenditionPicker.PickVideo(PreMuxedSources(resultData.Formats), perContainer: true),
                         _cacheService,
                         isAudio: false,
                         proxy: _fetchProxy);

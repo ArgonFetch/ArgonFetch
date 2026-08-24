@@ -23,15 +23,32 @@ namespace ArgonFetch.Application.Services
         public const int DefaultCount = 4;
 
         /// <summary>
-        /// Video renditions, one per resolution per container, best first. Two encodes of the
-        /// same resolution in the same container are one choice, so only the better survives.
+        /// Video renditions, best first.
         /// </summary>
-        public static List<RenditionSource> PickVideo(IEnumerable<RenditionSource> candidates, int count = DefaultCount)
+        /// <param name="perContainer">
+        /// Whether the source container reaches the caller. It does for formats served as they
+        /// are, and there WebM beside MP4 at one resolution is a real choice. Muxed video is
+        /// always delivered as MP4, so distinguishing sources there would offer the same
+        /// resolution twice under the same label.
+        /// </param>
+        public static List<RenditionSource> PickVideo(
+            IEnumerable<RenditionSource> candidates,
+            int count = DefaultCount,
+            bool perContainer = false)
         {
-            var byResolution = candidates
-                .Where(c => !string.IsNullOrEmpty(c.Url))
-                .GroupBy(c => (c.Height ?? 0, Container(c)))
-                .Select(group => group.OrderByDescending(c => c.Bitrate ?? 0).First())
+            var streamable = candidates.Where(c => !string.IsNullOrEmpty(c.Url));
+
+            var groups = perContainer
+                ? streamable.GroupBy(c => (c.Height ?? 0, Container(c)))
+                : streamable.GroupBy(c => (c.Height ?? 0, string.Empty));
+
+            var byResolution = groups
+                // MP4 sources win a tie: their codecs are the ones an MP4 is expected to carry,
+                // and muxing VP9 into one produces a file some players refuse.
+                .Select(group => group
+                    .OrderByDescending(c => Container(c) == ".mp4")
+                    .ThenByDescending(c => c.Bitrate ?? 0)
+                    .First())
                 .OrderByDescending(c => c.Height ?? 0)
                 .ThenByDescending(c => c.Bitrate ?? 0)
                 .ToList();
