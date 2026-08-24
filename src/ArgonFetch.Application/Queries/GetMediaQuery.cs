@@ -402,7 +402,16 @@ namespace ArgonFetch.Application.Queries
             while (!result.Success && --attempts > 0);
 
             if (!result.Success)
-                throw new ArgumentException($"Failed to fetch data: {string.Join(", ", result.ErrorOutput)}");
+            {
+                var errors = string.Join(", ", result.ErrorOutput);
+
+                // Separated from a plain failure because the two mean different things to
+                // whoever pasted the link: DRM is a refusal, not a bad address.
+                if (YtDlpErrors.IsDrmProtected(result.ErrorOutput))
+                    throw new NotSupportedException("This media is DRM protected and cannot be downloaded.");
+
+                throw new ArgumentException($"Failed to fetch data: {errors}");
+            }
 
             return result.Data;
         }
