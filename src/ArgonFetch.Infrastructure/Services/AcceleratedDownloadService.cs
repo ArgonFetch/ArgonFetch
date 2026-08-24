@@ -24,17 +24,6 @@ namespace ArgonFetch.Infrastructure.Services
             _logger = logger;
         }
 
-        public async Task<Stream> DownloadWithAccelerationAsync(
-            string url,
-            string? proxy = null,
-            CancellationToken cancellationToken = default)
-        {
-            var memoryStream = new MemoryStream();
-            await StreamWithAccelerationAsync(url, memoryStream, null, proxy, cancellationToken: cancellationToken);
-            memoryStream.Position = 0;
-            return memoryStream;
-        }
-
         /// <summary>
         /// Length the upstream reports, or null when it does not report one. A failure here is
         /// not fatal - the caller simply cannot declare Content-Length and the response is chunked.
