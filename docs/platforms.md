@@ -1,0 +1,42 @@
+# Supported platforms
+
+Extraction runs on [`yt-dlp`](https://github.com/yt-dlp/yt-dlp), so a link from almost any site
+yt-dlp knows will resolve. The table below is the shorter list that ArgonFetch tests and supports
+directly - anything outside it is worth trying, but is not something we chase when it breaks.
+
+| Platform | Status | Notes |
+|---|---|---|
+| YouTube | ✅ Video and audio | Muxes separate video/audio streams when no pre-muxed format exists |
+| Spotify | ✅ Single tracks | Metadata is read from the public track page; audio comes from the matching YouTube Music result |
+| TikTok | ✅ | |
+| Spotify playlists / albums | ❌ Not supported | [#171](https://github.com/ArgonFetch/ArgonFetch/issues/171) |
+| Playlists generally | ❌ Not supported | [#76](https://github.com/ArgonFetch/ArgonFetch/issues/76) |
+| SoundCloud | ⚠️ Unreliable | [#58](https://github.com/ArgonFetch/ArgonFetch/issues/58) |
+| Instagram Reels | ⚠️ Preview issues | [#58](https://github.com/ArgonFetch/ArgonFetch/issues/58) |
+
+## Spotify without an API key
+
+Spotify links do not need credentials. ArgonFetch reads the title, artist and cover from the
+public track page, then finds the matching result on YouTube Music and streams the audio from
+there. There is no developer app to register and no secret to rotate.
+
+This is also why only single tracks work: playlists and albums need the Spotify API proper.
+
+## Roadmap
+
+- [x] Spotify tracks
+- [x] YouTube media
+- [x] TikTok
+- [ ] Spotify playlists and albums
+- [ ] SoundCloud
+- [ ] Playlist support
+
+Further out: wider social media support (X, Instagram, …). The current state is tracked in the
+[issue tracker](https://github.com/ArgonFetch/ArgonFetch/issues).
+
+## When a platform stops working
+
+Extraction is `yt-dlp`'s job, and sites change. `yt-dlp` updates itself every 12 hours inside the
+container, so most breakage fixes itself; restarting the container pulls the current version
+immediately. If a platform stays broken after that,
+[open an issue](https://github.com/ArgonFetch/ArgonFetch/issues).

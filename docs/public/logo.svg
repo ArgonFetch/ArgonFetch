@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 200 200"
+   version="1.1"
+   id="svg14"
+   sodipodi:docname="logo-simple.svg"
+   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview14"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="4.1542523"
+     inkscape:cx="68.122969"
+     inkscape:cy="126.85797"
+     inkscape:window-width="1440"
+     inkscape:window-height="830"
+     inkscape:window-x="-6"
+     inkscape:window-y="-6"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg14" />
+  <!-- Improved Background Gradient -->
+  <defs
+     id="defs6">
+    <linearGradient
+       id="bgGradient"
+       x1="0%"
+       y1="0%"
+       x2="100%"
+       y2="100%">
+      <stop
+         offset="0"
+         stop-color="#141316"
+         id="stop1" />
+      <stop
+         offset="0.5"
+         stop-color="#1a1820"
+         id="stop2" />
+      <stop
+         offset="1"
+         stop-color="#161419"
+         id="stop3" />
+    </linearGradient>
+    <!-- Glow Effects -->
+    <filter
+       id="glow"
+       x="-0.36"
+       y="-0.24"
+       width="1.72"
+       height="1.48">
+      <feGaussianBlur
+         stdDeviation="3"
+         result="blur"
+         id="feGaussianBlur3" />
+      <feComposite
+         in="SourceGraphic"
+         in2="blur"
+         operator="over"
+         id="feComposite3" />
+    </filter>
+    <!-- Enhanced Gradient for Elements -->
+    <linearGradient
+       id="purpleGradient"
+       x1="0%"
+       y1="0%"
+       x2="100%"
+       y2="100%">
+      <stop
+         offset="0"
+         stop-color="#8a2be2"
+         id="stop4" />
+      <stop
+         offset="0.5"
+         stop-color="#9644ff"
+         id="stop5" />
+      <stop
+         offset="1"
+         stop-color="#a855f7"
+         id="stop6" />
+    </linearGradient>
+    <!-- Subtle Pattern Overlay -->
+    <pattern
+       id="pattern"
+       width="10"
+       height="10"
+       patternUnits="userSpaceOnUse"
+       patternTransform="scale(0.5) rotate(45)">
+      <rect
+         width="2"
+         height="2"
+         fill="#ffffff"
+         fill-opacity="0.03"
+         id="rect6" />
+    </pattern>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#purpleGradient"
+       id="linearGradient14"
+       x1="275.27799"
+       y1="1.6852204"
+       x2="360.60335"
+       y2="87.010575"
+       gradientTransform="scale(0.44347897,2.2548984)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#purpleGradient"
+       id="linearGradient15"
+       x1="94.886122"
+       y1="1.6852204"
+       x2="180.21148"
+       y2="87.010575"
+       gradientTransform="scale(0.44347897,2.2548984)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#purpleGradient"
+       id="linearGradient16"
+       x1="154.91412"
+       y1="65.049873"
+       x2="204.34869"
+       y2="114.48444"
+       gradientTransform="scale(0.69586941,1.4370512)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#purpleGradient"
+       id="linearGradient17"
+       x1="83.061561"
+       y1="65.049873"
+       x2="132.49612"
+       y2="114.48444"
+       gradientTransform="scale(0.69586941,1.4370512)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#purpleGradient"
+       id="linearGradient18"
+       x1="71.346374"
+       y1="33.272048"
+       x2="110.42783"
+       y2="72.353502"
+       gradientTransform="scale(0.88021292,1.1360888)"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <!-- Background with Rounded Corners -->
+  <rect
+     x="0"
+     y="0"
+     width="200"
+     height="200"
+     rx="20"
+     ry="20"
+     fill="url(#bgGradient)"
+     id="rect7" />
+  <!-- Main Elements with Improved Styling -->
+  <!-- Left Bar -->
+  <rect
+     width="22"
+     height="130"
+     x="50"
+     y="35"
+     rx="4"
+     ry="4"
+     fill="url(#purpleGradient)"
+     transform="rotate(-10,104.97508,-165.56004)"
+     filter="url(#glow)"
+     id="rect9"
+     style="fill:url(#linearGradient15)" />
+  <!-- Right Bar with Transparency -->
+  <rect
+     width="22"
+     height="130"
+     x="130"
+     y="35"
+     rx="4"
+     ry="4"
+     fill="url(#purpleGradient)"
+     fill-opacity="0.25"
+     transform="rotate(10,76.148361,-365.59358)"
+     filter="url(#glow)"
+     id="rect10"
+     style="fill:url(#linearGradient14)" />
+  <!-- Top Horizontal Bar -->
+  <rect
+     width="20"
+     height="30"
+     x="70"
+     y="45"
+     rx="3"
+     ry="3"
+     fill="url(#purpleGradient)"
+     transform="rotate(80,54.931827,79.514654)"
+     filter="url(#glow)"
+     id="rect11"
+     style="fill:url(#linearGradient18)" />
+  <!-- Bottom Left Horizontal Bar -->
+  <rect
+     width="20"
+     height="48"
+     x="65"
+     y="105"
+     rx="3"
+     ry="3"
+     fill="url(#purpleGradient)"
+     transform="rotate(80,155.84464,122.4721)"
+     filter="url(#glow)"
+     id="rect12"
+     style="fill:url(#linearGradient17)" />
+  <!-- Bottom Right Horizontal Bar -->
+  <rect
+     width="20"
+     height="48"
+     x="115"
+     y="105"
+     rx="3"
+     ry="3"
+     fill="url(#purpleGradient)"
+     transform="rotate(80,158.53775,119.649)"
+     filter="url(#glow)"
+     id="rect13"
+     style="fill:url(#linearGradient16)" />
+  <!-- Decorative Elements -->
+  <!-- Subtle Light Reflections -->
+</svg>

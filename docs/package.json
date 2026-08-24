@@ -1,0 +1,15 @@
+{
+  "name": "argonfetch-docs",
+  "private": true,
+  "type": "module",
+  "description": "ArgonFetch documentation site (VitePress). Self-contained so a static host can build just this folder.",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.3",
+    "vitepress-openapi": "^0.2.4"
+  }
+}

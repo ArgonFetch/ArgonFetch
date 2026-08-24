@@ -9,8 +9,9 @@
 <p align="center">
   <a href="https://github.com/ArgonFetch/ArgonFetch"><img src="https://badgetrack.pianonic.ch/badge?tag=argon-fetch&label=visits&color=9f54e5&style=flat" alt="visits" /></a>
   <a href="https://www.argonfetch.dev/"><img src="https://img.shields.io/badge/Cloud%20Version-argonfetch.dev-9f54e5.svg"/></a>
-  <a href="https://github.com/ArgonFetch/ArgonFetch?tab=readme-ov-file#quick-start"><img src="https://img.shields.io/badge/Selfhost-Instructions-9f54e5.svg"/></a>
-  <a href="https://github.com/ArgonFetch/ArgonFetch/blob/main/devenv.md"><img src="https://img.shields.io/badge/Development-Setup-9f54e5.svg"/></a>
+  <a href="https://docs.argonfetch.dev/self-host"><img src="https://img.shields.io/badge/Selfhost-Instructions-9f54e5.svg"/></a>
+  <a href="https://docs.argonfetch.dev"><img src="https://img.shields.io/badge/Documentation-docs.argonfetch.dev-9f54e5.svg"/></a>
+  <a href="https://docs.argonfetch.dev/dev-setup"><img src="https://img.shields.io/badge/Development-Setup-9f54e5.svg"/></a>
 </p>
 
 ---
@@ -163,12 +164,12 @@ restore it into the new one, or run `pg_upgrade`.
 
 API docs are at `http://localhost:8080/swagger` when running in `Development`.
 
-The schema is also checked in at [`docs/openapi.json`](docs/openapi.json) for generating
+The schema is also checked in at [`docs/public/openapi.json`](docs/public/openapi.json) for generating
 clients elsewhere without running the app. Refresh it from a running instance after changing
 any endpoint or DTO:
 
 ```bash
-curl -s http://localhost:5114/swagger/v1/swagger.json -o docs/openapi.json
+curl -s http://localhost:5114/swagger/v1/swagger.json -o docs/public/openapi.json
 ```
 
 ## Roadmap
@@ -185,7 +186,7 @@ curl -s http://localhost:5114/swagger/v1/swagger.json -o docs/openapi.json
 
 ## Development
 
-See the [Development Guide](devenv.md).
+See the [Development Guide](https://docs.argonfetch.dev/dev-setup) (source: [`docs/dev-setup.md`](docs/dev-setup.md)).
 
 ## License
 

@@ -1,0 +1,21 @@
+/* ArgonFetch brand purple, the same gradient the logo bars use (#8a2be2 -> #a855f7).
+   Light mode takes the deeper end for contrast on white; dark mode the brighter one. */
+:root {
+  --vp-c-brand-1: #7c2fd0;
+  --vp-c-brand-2: #9644ff;
+  --vp-c-brand-3: #7c2fd0;
+  --vp-c-brand-soft: rgba(150, 68, 255, 0.14);
+}
+
+.dark {
+  --vp-c-brand-1: #b57cff;
+  --vp-c-brand-2: #9f54e5;
+  --vp-c-brand-3: #8a2be2;
+  --vp-c-brand-soft: rgba(181, 124, 255, 0.24);
+}
+
+/* Hero title in the brand purple. */
+:root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #8a2be2, #a855f7);
+}
