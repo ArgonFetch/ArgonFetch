@@ -2,8 +2,8 @@
 
 ## The web interface
 
-1. Open your instance at `http://localhost:8080` - or use the hosted version at
-   [app.argonfetch.dev](https://app.argonfetch.dev).
+1. Open [app.argonfetch.dev](https://app.argonfetch.dev) - or your own instance, at
+   `http://localhost:8080` unless you moved it.
 2. Paste a media URL and press Enter.
 3. ArgonFetch resolves the link and shows the title, author and cover, with the qualities the
    source actually offers.
@@ -16,10 +16,13 @@ Nothing is queued and nothing is kept - the stream is proxied through as it is f
 The API is a handful of `GET` endpoints, so `curl` is enough. Resolve first, then stream the
 rendition you want.
 
+The examples below run against the hosted instance, so they work as they stand. Swap the host for
+your own - `http://localhost:8080` by default - if you are self-hosting.
+
 **Resolve a link:**
 
 ```bash
-curl -s "http://localhost:8080/api/Fetch/GetResource?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+curl -s "https://app.argonfetch.dev/api/Fetch/GetResource?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
 The response carries a `key` for each available rendition (see [the API
@@ -28,20 +31,20 @@ reference](/operations/GetResource) for the full shape).
 **Download that rendition:**
 
 ```bash
-curl -L "http://localhost:8080/api/Stream/Media/<key>" -o track.webm
+curl -L "https://app.argonfetch.dev/api/Stream/Media/<key>" -o track.webm
 ```
 
 **Ask for MP3 instead of the source container:**
 
 ```bash
-curl -L "http://localhost:8080/api/Stream/Media/<key>?format=mp3" -o track.mp3
+curl -L "https://app.argonfetch.dev/api/Stream/Media/<key>?format=mp3" -o track.mp3
 ```
 
 **When video and audio are separate streams**, the rendition's `urlType` is `Combined` and the
 muxing endpoint is the one to call:
 
 ```bash
-curl -L "http://localhost:8080/api/Stream/Combined/<key>" -o video.mp4
+curl -L "https://app.argonfetch.dev/api/Stream/Combined/<key>" -o video.mp4
 ```
 
 ## Formats
@@ -58,11 +61,13 @@ states its `mimeType` and `fileExtension`, so you always know what you are getti
 
 Sources in a container ArgonFetch does not recognise are converted to MP3 automatically.
 
-## Swagger
+## Trying the API without curl
 
-With `ASPNETCORE_ENVIRONMENT=Development`, interactive API docs are served at
-`http://localhost:8080/swagger`. The schema is also checked in at
-[`openapi.json`](/openapi.json) so you can generate clients without running the app.
+Every endpoint has a page under [API](/api) with a playground that sends the request for you,
+against the hosted instance or your own. Swagger UI is also served at `/swagger`, though only when
+the instance runs with `ASPNETCORE_ENVIRONMENT=Development` - so on a local build, not on
+app.argonfetch.dev. The schema is checked in at [`openapi.json`](/openapi.json) either way, for
+generating clients without running anything.
 
 ## A note on what you download
 

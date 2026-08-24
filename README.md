@@ -172,18 +172,6 @@ any endpoint or DTO:
 curl -s http://localhost:5114/swagger/v1/swagger.json -o docs/public/openapi.json
 ```
 
-## Roadmap
-
-- [x] Spotify tracks
-- [x] YouTube media
-- [x] TikTok
-- [ ] Spotify playlists and albums
-- [ ] SoundCloud
-- [ ] Playlist support
-
-### Future plans
-- [ ] Wider social media support (X, Instagram, ...)
-
 ## Development
 
 See the [Development Guide](https://docs.argonfetch.dev/dev-setup) (source: [`docs/dev-setup.md`](docs/dev-setup.md)).

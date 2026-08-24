@@ -23,14 +23,9 @@ point it at your own instance instead - and make sure that instance lists `docs.
 | [`GET /api/Fetch/GetResource`](/operations/GetResource) | Resolves a media URL into metadata and available renditions |
 | [`GET /api/Stream/Media/{key}`](/operations/Media) | Streams one rendition; `?format=mp3` re-encodes audio |
 | [`GET /api/Stream/Combined/{key}`](/operations/Combined) | Muxes separate video and audio into MP4 |
-| [`GET /api/Proxy/Url`](/operations/ProxyUrl) | Resolves a source URL through the server |
-| [`GET /api/Proxy/Head`](/operations/ProxyHead) | `HEAD` against a source URL, headers returned as JSON |
-| [`GET /api/Proxy/Range`](/operations/ProxyRange) | Fetches a byte range of a source URL |
 
-`Fetch` and `Stream` are the two you want as an API consumer: resolve a URL, then stream the
-`key` you picked out of the response. [Usage](/usage#from-the-command-line) walks through both
-with `curl`. The `Proxy` endpoints exist for the web UI, which cannot fetch CORS-blocked covers
-and previews directly.
+`Fetch` and `Stream` are the pair you want: resolve a URL, then stream the `key` you picked out of
+the response. [Usage](/usage#from-the-command-line) walks through both with `curl`.
 
 ## Errors
 

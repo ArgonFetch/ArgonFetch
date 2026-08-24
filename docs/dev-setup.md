@@ -97,7 +97,6 @@ That builds the API image from source and serves everything on `http://localhost
 | `ArgonFetch.Application` | Use cases, DTOs, media resolution |
 | `ArgonFetch.Domain` | Entities and domain types |
 | `ArgonFetch.Infrastructure` | EF Core context, migrations, external services |
-| `ArgonFetch.Proxy` | The proxy used for source URLs the browser cannot reach |
 | `ArgonFetch.Frontend` | Angular 22 SPA |
 | `ArgonFetch.Tests` | Test suite |
 

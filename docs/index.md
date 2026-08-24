@@ -13,6 +13,9 @@ hero:
       text: Self-host ArgonFetch
       link: /self-host
     - theme: alt
+      text: Open the live app
+      link: https://app.argonfetch.dev
+    - theme: alt
       text: What is ArgonFetch?
       link: /intro
     - theme: alt

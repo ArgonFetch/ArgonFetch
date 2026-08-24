@@ -1,8 +1,12 @@
 # Supported platforms
 
-Extraction runs on [`yt-dlp`](https://github.com/yt-dlp/yt-dlp), so a link from almost any site
-yt-dlp knows will resolve. The table below is the shorter list that ArgonFetch tests and supports
-directly - anything outside it is worth trying, but is not something we chase when it breaks.
+Extraction runs on [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) plus ArgonFetch's own extractors
+on top of it, so a link from almost any site yt-dlp knows will resolve, and the sites it does not
+handle well get their own handling here - Spotify is the clearest case, resolved from the public
+track page rather than by yt-dlp at all.
+
+The table below is the shorter list that ArgonFetch tests and supports directly. Anything outside
+it is worth trying, but is not something we chase when it breaks.
 
 | Platform | Status | Notes |
 |---|---|---|
@@ -21,18 +25,6 @@ public track page, then finds the matching result on YouTube Music and streams t
 there. There is no developer app to register and no secret to rotate.
 
 This is also why only single tracks work: playlists and albums need the Spotify API proper.
-
-## Roadmap
-
-- [x] Spotify tracks
-- [x] YouTube media
-- [x] TikTok
-- [ ] Spotify playlists and albums
-- [ ] SoundCloud
-- [ ] Playlist support
-
-Further out: wider social media support (X, Instagram, …). The current state is tracked in the
-[issue tracker](https://github.com/ArgonFetch/ArgonFetch/issues).
 
 ## When a platform stops working
 
