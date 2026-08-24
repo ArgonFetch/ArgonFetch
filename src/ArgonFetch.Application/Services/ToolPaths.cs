@@ -10,6 +10,13 @@
 
         /// <summary>Full path of the FFmpeg binary, whether or not it exists yet.</summary>
         string FfmpegPath { get; }
+
+        /// <summary>
+        /// A Netscape-format cookies file to extract with, or null when none is configured or
+        /// the configured one is not there. Sources that serve media only to a signed-in
+        /// session - Instagram serves nothing without one - need it; everything else ignores it.
+        /// </summary>
+        string? CookiesPath { get; }
     }
 
     /// <summary>
@@ -20,8 +27,15 @@
     /// </summary>
     public class ToolPaths : IToolPaths
     {
-        public ToolPaths(string? toolsDirectory)
+        public ToolPaths(string? toolsDirectory, string? cookiesPath = null)
         {
+            // Checked once here rather than on every fetch: a path pointing at nothing is a
+            // configuration mistake, and passing it to yt-dlp fails every extraction with an
+            // error about cookies rather than about the media.
+            CookiesPath = !string.IsNullOrWhiteSpace(cookiesPath) && File.Exists(cookiesPath)
+                ? cookiesPath
+                : null;
+
             ToolsDirectory = string.IsNullOrWhiteSpace(toolsDirectory)
                 ? Path.Combine(AppContext.BaseDirectory, "tools")
                 : toolsDirectory;
@@ -37,5 +51,7 @@
         public string YtDlpPath { get; }
 
         public string FfmpegPath { get; }
+
+        public string? CookiesPath { get; }
     }
 }
