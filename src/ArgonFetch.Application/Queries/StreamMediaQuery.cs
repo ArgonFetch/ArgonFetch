@@ -77,7 +77,7 @@ namespace ArgonFetch.Application.Queries
                     return StreamResult.NotFound("Cache key expired or not found");
                 }
 
-                var (mediaUrl, isAudio, advertisedMimeType, proxy) = cacheData.Value;
+                var (mediaUrl, isAudio, advertisedMimeType, proxy, tags) = cacheData.Value;
 
                 // The fetch response already committed to a media type for this key. When it
                 // knows one, those bytes go out untouched: re-encoding Opus into MP3 cost a
@@ -97,13 +97,18 @@ namespace ArgonFetch.Application.Queries
                     // Set response headers for converted format
                     request.Response.ContentType = isAudio ? "audio/mpeg" : "video/mp4";
                     request.Response.Headers.Append("Cache-Control", "public, max-age=3600");
+                    request.Response.Headers.ContentDisposition =
+                        MediaFileName.ContentDisposition(tags, isAudio ? ".mp3" : ".mp4");
 
-                    // Stream and convert using FFmpeg
+                    // Stream and convert using FFmpeg. The conversion re-encodes anyway, so it
+                    // is the one path that can write the title, artist and cover art into the
+                    // file rather than only into its name.
                     await _ffmpegStreamingService.ConvertAndStreamMediaAsync(
                         mediaUrl,
                         request.Response.Body,
                         isAudio,
                         proxy,
+                        tags,
                         request.CancellationToken);
                 }
                 else
@@ -116,6 +121,13 @@ namespace ArgonFetch.Application.Queries
 
                     // Add cache headers
                     request.Response.Headers.Append("Cache-Control", "public, max-age=3600");
+
+                    // Named, but not touched: writing tags into these bytes would mean remuxing
+                    // them, which costs the exact length the response has already promised and
+                    // the byte ranges a client may be asking for.
+                    request.Response.Headers.ContentDisposition = MediaFileName.ContentDisposition(
+                        tags,
+                        MediaFormats.ExtensionFor(passThroughMimeType) ?? (isAudio ? ".mp3" : ".mp4"));
 
                     // This path copies the upstream bytes through unchanged, so the upstream
                     // length is the response length and can be declared. Without it the client

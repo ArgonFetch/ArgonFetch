@@ -47,7 +47,7 @@ namespace ArgonFetch.Application.Queries
                 }
 
                 // Get URLs from cache
-                var (actualVideoUrl, actualAudioUrl, proxy) = _cacheService.GetCachedUrls(request.Key);
+                var (actualVideoUrl, actualAudioUrl, proxy, tags) = _cacheService.GetCachedUrls(request.Key);
 
                 if (actualVideoUrl == null || actualAudioUrl == null)
                 {
@@ -56,7 +56,7 @@ namespace ArgonFetch.Application.Queries
 
                 // Set response headers before starting stream
                 request.Response.ContentType = "video/mp4";
-                request.Response.Headers.Append("Content-Disposition", "inline; filename=\"video.mp4\"");
+                request.Response.Headers.ContentDisposition = MediaFileName.ContentDisposition(tags, ".mp4");
                 request.Response.Headers.Append("Cache-Control", "no-cache");
 
                 // Start streaming - once this starts, we cannot change headers
@@ -65,6 +65,7 @@ namespace ArgonFetch.Application.Queries
                     actualAudioUrl,
                     request.Response.Body,
                     proxy,
+                    tags,
                     request.CancellationToken);
 
                 return StreamResult.Success();

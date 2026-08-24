@@ -22,7 +22,7 @@ namespace ArgonFetch.Infrastructure.Services
             _toolPaths = toolPaths;
         }
 
-        public async Task StreamCombinedMediaAsync(string videoUrl, string audioUrl, Stream outputStream, string? proxy = null, CancellationToken cancellationToken = default)
+        public async Task StreamCombinedMediaAsync(string videoUrl, string audioUrl, Stream outputStream, string? proxy = null, MediaTags? tags = null, CancellationToken cancellationToken = default)
         {
             var ffmpegPath = GetFfmpegPath();
             if (string.IsNullOrEmpty(ffmpegPath))
@@ -56,6 +56,7 @@ namespace ArgonFetch.Infrastructure.Services
             processStartInfo.ArgumentList.Add("copy");
             processStartInfo.ArgumentList.Add("-c:a");
             processStartInfo.ArgumentList.Add("copy");
+            AddTags(processStartInfo, tags);
             processStartInfo.ArgumentList.Add("-movflags");
             processStartInfo.ArgumentList.Add("frag_keyframe+empty_moov+faststart");
             processStartInfo.ArgumentList.Add("-f");
@@ -128,7 +129,7 @@ namespace ArgonFetch.Infrastructure.Services
             }
         }
 
-        public async Task ConvertAndStreamMediaAsync(string sourceUrl, Stream outputStream, bool isAudio, string? proxy = null, CancellationToken cancellationToken = default)
+        public async Task ConvertAndStreamMediaAsync(string sourceUrl, Stream outputStream, bool isAudio, string? proxy = null, MediaTags? tags = null, CancellationToken cancellationToken = default)
         {
             var ffmpegPath = GetFfmpegPath();
             if (string.IsNullOrEmpty(ffmpegPath))
@@ -151,6 +152,10 @@ namespace ArgonFetch.Infrastructure.Services
             {
                 // Convert any audio format to MP3
                 processStartInfo.ArgumentList.Add("-vn");        // Disable video
+                // ID3v2.3 rather than the default 2.4: a fair number of players and Windows
+                // Explorer read tags only from the older revision.
+                processStartInfo.ArgumentList.Add("-id3v2_version");
+                processStartInfo.ArgumentList.Add("3");
                 processStartInfo.ArgumentList.Add("-c:a");
                 processStartInfo.ArgumentList.Add("mp3");        // Convert audio to MP3
                 processStartInfo.ArgumentList.Add("-b:a");
@@ -158,6 +163,7 @@ namespace ArgonFetch.Infrastructure.Services
                 processStartInfo.ArgumentList.Add($"{MediaFormats.Mp3BitrateKbps}k");
                 processStartInfo.ArgumentList.Add("-f");
                 processStartInfo.ArgumentList.Add("mp3");        // Force MP3 format
+                AddTags(processStartInfo, tags);
             }
             else
             {
@@ -278,6 +284,36 @@ namespace ArgonFetch.Infrastructure.Services
         /// <summary>
         /// Renders the argument list for logging only - it is never handed to the process.
         /// </summary>
+        /// <summary>
+        /// Writes what the media is into the file itself.
+        /// <para>
+        /// Text only, no cover art. Embedding a picture needs a seekable output, and this writes
+        /// to a pipe: given both, FFmpeg silently drops the picture and every tag with it, exit
+        /// code zero and nothing on stderr. Artwork would mean converting to a file first and
+        /// sending it afterwards, which costs the whole conversion before the first byte moves.
+        /// </para>
+        /// </summary>
+        private static void AddTags(ProcessStartInfo processStartInfo, MediaTags? tags)
+        {
+            if (tags is null || !tags.HasAny)
+                return;
+
+            if (!string.IsNullOrWhiteSpace(tags.Title))
+            {
+                processStartInfo.ArgumentList.Add("-metadata");
+                processStartInfo.ArgumentList.Add($"title={tags.Title}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(tags.Artist))
+            {
+                processStartInfo.ArgumentList.Add("-metadata");
+                processStartInfo.ArgumentList.Add($"artist={tags.Artist}");
+                // Written to both: players disagree on which one names the performer.
+                processStartInfo.ArgumentList.Add("-metadata");
+                processStartInfo.ArgumentList.Add($"album_artist={tags.Artist}");
+            }
+        }
+
         /// <summary>
         /// Routes the input that follows through the proxy the URL was extracted with. Media
         /// URLs are signed for the requesting IP, so fetching one from anywhere else is a 403.

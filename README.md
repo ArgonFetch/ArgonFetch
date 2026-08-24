@@ -44,6 +44,11 @@ streams and serves them back as a normal file download.
 | Spotify playlists / albums | ❌ Not supported | [#171](https://github.com/ArgonFetch/ArgonFetch/issues/171) |
 | Playlists generally | ❌ Not supported | [#76](https://github.com/ArgonFetch/ArgonFetch/issues/76) |
 
+Downloads carry the title and artist: in the filename always, and written into the file
+itself when it is converted to MP3. A pass-through download is served byte for byte, so it
+carries whatever tags the source shipped with - usually none - and only its name identifies
+it.
+
 Audio is delivered in whatever container the source uses - Opus in WebM for YouTube -
 because passing the original bytes through is both faster and better than re-encoding
 them to MP3. Every response states its `mimeType`. MP3 is still available on request:
