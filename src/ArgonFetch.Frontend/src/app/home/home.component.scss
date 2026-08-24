@@ -1,13 +1,21 @@
 .main-content {
   width: 100%;
-  min-height: calc(100vh - 48px);
+  // Exactly the window, never more. The navbar and the footer are both fixed, so the space
+  // between them is all there is to lay out in - and a result that grew past it used to push
+  // the search box off the top and slide the last rows under the footer.
+  height: 100vh;
+  box-sizing: border-box;
+  padding-top: 70px;    // clears the fixed navbar
+  padding-bottom: 56px; // clears the fixed footer
   margin: 0;
-  padding-top: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  // Centred while this is a landing page; pinned to the top once there is a result, where
+  // every pixel the listing can have is worth more than the symmetry.
   justify-content: center;
   background-color: var(--background);
+  overflow: hidden;
 }
 
 .hero {
@@ -19,10 +27,20 @@
   align-items: center;
   justify-content: center;
   flex: 1;
-  padding-bottom: 60px;
+  // Without this a flex child will not shrink below its content, so the result would force
+  // the page taller instead of scrolling inside its own card.
+  min-height: 0;
+}
+
+.showing-result .hero {
+  justify-content: flex-start;
+  // Clear of the navbar rather than tucked under it: with the title gone the search box is
+  // the first thing on the page, and it should not sit against the chrome.
+  padding-top: 40px;
 }
 
 h1 {
+  flex-shrink: 0;
   font-size: 3.5rem;
   color: var(--primary);
   margin: 0;
@@ -32,6 +50,7 @@ h1 {
 }
 
 .subtitle {
+  flex-shrink: 0;
   font-size: 1.25rem;
   color: var(--text);
   opacity: 0.7;
@@ -39,6 +58,7 @@ h1 {
 }
 
 .download-box {
+  flex-shrink: 0;
   display: flex;
   gap: 12px;
   width: 100%;
@@ -119,6 +139,7 @@ input:focus {
 }
 
 .disclaimer-content {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -130,10 +151,9 @@ input:focus {
   border-radius: 8px;
 }
 
-.disclaimer-content fa-icon {
+.disclaimer-content app-icon {
   color: var(--warning);
   flex-shrink: 0;
-  font-size: 20px;
 }
 
 .disclaimer-content p {
@@ -147,6 +167,12 @@ input:focus {
 .content-container {
   margin-top: 16px;
   width: 100%;
+  // Shrinks but never grows, so a short result still hugs its content while a long one is
+  // squeezed rather than pushing the page past the window.
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .search-clear {
@@ -156,8 +182,4 @@ input:focus {
   &:hover {
     opacity: 1;
   }
-}
-
-.when-content-arrives-spacing {
-  margin-top: 60px;
 }

@@ -8,22 +8,24 @@
       <div class="playlist-info">
         <div class="title-row">
           <h3 class="playlist-title">{{ resourceInformation.title }}</h3>
-          @if (archiveUrl(); as archive) {
-            <!-- A plain link, not a fetch: the browser's own download manager takes it, so the
-                 archive keeps arriving after this page is navigated away from or closed, and
-                 none of it is held in the tab's memory. -->
-            <a class="action-button archive-button" [href]="archive" download
-              [attr.aria-label]="'Download all of ' + resourceInformation.title + ' as a zip'"
-              [title]="archiveHint()">
-              <fa-icon [icon]="faFileZipper"></fa-icon>
-            </a>
-          }
         </div>
         <p class="playlist-author">By {{ resourceInformation.author }}</p>
 
         <app-download-progress />
 
       </div>
+
+      @if (archiveUrl(); as archive) {
+        <!-- A plain link, not a fetch: the browser's own download manager takes it, so the
+             archive keeps arriving after this page is navigated away from or closed, and
+             none of it is held in the tab's memory. -->
+        <a class="action-button archive-button" [href]="archive" download
+          (click)="onArchiveRequested()"
+          [attr.aria-label]="'Download all of ' + resourceInformation.title + ' as a zip'"
+          [title]="archiveHint()">
+          <app-icon [name]="archiveIcon" [size]="18" />
+        </a>
+      }
     </div>
   </div>
 
@@ -41,9 +43,9 @@
             (click)="onDownloadSong(song)"
             [attr.aria-label]="'Download ' + song.title">
             @if (isBusy(song)) {
-              <fa-icon [icon]="faSpinner" class="fa-spin"></fa-icon>
+              <app-icon [name]="spinnerIcon" [size]="18" class="spinning" />
             } @else {
-              <fa-icon [icon]="faDownload"></fa-icon>
+              <app-icon [name]="downloadIcon" [size]="18" />
             }
           </button>
         </li>

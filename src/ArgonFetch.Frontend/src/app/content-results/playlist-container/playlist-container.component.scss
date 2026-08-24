@@ -1,3 +1,14 @@
+// The element the page actually lays out is this component's own host, not the card inside
+// it. Left as the default inline box it passed none of the height the page allowed through,
+// so the card sized itself to its content and ran on under the footer no matter what the
+// page had reserved.
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+}
+
 .playlist-container {
     background: var(--surface);
     padding: 16px;
@@ -12,10 +23,11 @@
     // buried the footer under the last rows.
     display: flex;
     flex-direction: column;
-    // What is left between the fixed navbar and the fixed footer, once the search above it
-    // has had its share.
-    max-height: calc(100vh - 320px);
-    min-height: 260px;
+    // Shrinks to whatever the page has left, and no percentage of a parent whose own height
+    // is not settled yet - which resolves to no limit at all and was why the list still ran
+    // off the bottom.
+    flex: 0 1 auto;
+    min-height: 0;
 }
 
 .playlist-header {
@@ -59,22 +71,9 @@
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    gap: 8px;
     width: 100%;
 }
 
-// Sits beside the title rather than where a single result puts its download button, because
-// the two mean different things: this one takes the whole collection.
-.archive-button {
-    flex-shrink: 0;
-    color: var(--primary);
-    text-decoration: none;
-
-    &:hover {
-        background: var(--primary);
-        color: var(--surface);
-    }
-}
 
 .playlist-title {
     margin: 0;
@@ -111,17 +110,28 @@
         background: rgba(255, 255, 255, 0.1);
     }
     
-    &.download-button {
+    &.download-button,
+    // The archive sits where a single result puts its download button: hard right of the
+    // header, lined up with the per-track buttons below it. That is what the padding on
+    // .playlist-info reserves room for.
+    &.archive-button {
         position: absolute;
         right: 0;
         top: 50%;
         transform: translateY(-50%);
         color: var(--primary);
-        
+
         &:hover {
             background: var(--primary);
             color: var(--surface);
         }
+    }
+
+    // An anchor rather than a button, so it carries an underline and a visited colour that a
+    // button never had.
+    &.archive-button {
+        text-decoration: none;
+        font-size: 1.1rem;
     }
 }
 
@@ -248,8 +258,8 @@
     font-weight: 500;
 }
 
-.download-link fa-icon {
-    font-size: 1.2rem;
+.download-link app-icon {
+    flex-shrink: 0;
 }
 
 .download-link:hover {

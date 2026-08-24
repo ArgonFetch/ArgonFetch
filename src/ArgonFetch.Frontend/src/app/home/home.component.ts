@@ -1,10 +1,9 @@
+import { Link, Search, X, TriangleAlert } from 'lucide';
+import { IconComponent } from '../icon/icon.component';
 import { Component, DestroyRef, ChangeDetectionStrategy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { faLink, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { PlaylistContainerComponent } from '../content-results/playlist-container/playlist-container.component';
 import { NotificationService } from '../notifications/notification.service';
 import { ContentSkeletonLoaderComponent } from "../content-skeleton-loader/content-skeleton-loader.component";
@@ -19,20 +18,20 @@ import { MediaType, ResourceInformationDto, FetchService } from '../api';
   changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
-    FontAwesomeModule,
+    IconComponent,
     PlaylistContainerComponent,
     SingleSongContainerComponent,
     ContentSkeletonLoaderComponent
 ]
 })
 export class HomeComponent {
-  faLink = faLink;
-  faSearch = faSearch;
-  faTimes = faTimes;
+  linkIcon = Link;
+  searchIcon = Search;
+  clearIcon = X;
   mediaTypeEnum = MediaType;
 
   url: string = '';
-  faWarning = faTriangleExclamation;
+  warningIcon = TriangleAlert;
 
   // Signals: every one of these is written from an HTTP subscribe, which schedules no
   // change detection of its own now that the app runs without zone.js.
@@ -41,6 +40,16 @@ export class HomeComponent {
 
   resourceInformation = signal<ResourceInformationDto | undefined>(undefined);
   mediaType = signal<MediaType | undefined>(undefined);
+
+  /**
+   * Whether the page is showing a result, or about to.
+   * <p>
+   * Until it is, this is a landing page and the name belongs in the middle of it. Once a
+   * result arrives the name has been read, and the room it takes is room the listing wants.
+   */
+  hasResult(): boolean {
+    return this.isLoading() || !!this.resourceInformation();
+  }
 
   constructor(
     private fetchService: FetchService,

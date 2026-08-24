@@ -1,13 +1,13 @@
+import { CircleAlert, Info, X } from 'lucide';
+import { IconComponent } from '../icon/icon.component';
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faCircleExclamation, faCircleInfo, faXmark } from '@fortawesome/free-solid-svg-icons';
 
 export type NotificationTone = 'error' | 'info';
 
 @Component({
   selector: 'app-notification',
   standalone: true,
-  imports: [FontAwesomeModule],
+  imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './notification.component.html',
   styleUrl: './notification.component.scss'
@@ -20,9 +20,9 @@ export class NotificationComponent {
   /** Raised by the close button; the stack that owns this notification removes it. */
   @Output() dismissed = new EventEmitter<void>();
 
-  faXmark = faXmark;
+  closeIcon = X;
 
   get icon() {
-    return this.tone === 'error' ? faCircleExclamation : faCircleInfo;
+    return this.tone === 'error' ? CircleAlert : Info;
   }
 }

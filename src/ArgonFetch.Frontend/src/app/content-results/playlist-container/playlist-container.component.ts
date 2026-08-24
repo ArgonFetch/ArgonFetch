@@ -1,6 +1,6 @@
+import { Download, LoaderCircle, FileArchive } from 'lucide';
+import { IconComponent } from '../../icon/icon.component';
 import { Component, Input, ChangeDetectionStrategy, inject, signal } from '@angular/core';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faDownload, faSpinner, faFileZipper } from '@fortawesome/free-solid-svg-icons';
 import { firstValueFrom } from 'rxjs';
 
 import { FetchService, MediaInformationDto, ResourceInformationDto } from '../../api';
@@ -12,7 +12,7 @@ import { DownloadProgressComponent } from '../../download-progress/download-prog
 @Component({
   selector: 'app-playlist-container',
   standalone: true,
-  imports: [FontAwesomeModule, DownloadProgressComponent],
+  imports: [IconComponent, DownloadProgressComponent],
   templateUrl: './playlist-container.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './playlist-container.component.scss'
@@ -20,9 +20,9 @@ import { DownloadProgressComponent } from '../../download-progress/download-prog
 export class PlaylistContainerComponent {
   @Input() resourceInformation!: ResourceInformationDto;
 
-  faDownload = faDownload;
-  faSpinner = faSpinner;
-  faFileZipper = faFileZipper;
+  downloadIcon = Download;
+  spinnerIcon = LoaderCircle;
+  archiveIcon = FileArchive;
 
   private readonly downloads = inject(MediaDownloadService);
   private readonly fetchService = inject(FetchService);
@@ -58,6 +58,26 @@ export class PlaylistContainerComponent {
     return total > PlaylistContainerComponent.MaxArchiveTracks
       ? `Download the first ${PlaylistContainerComponent.MaxArchiveTracks} of ${total} tracks as a zip`
       : 'Download all tracks as a zip';
+  }
+
+  /**
+   * Says what the zip button just started.
+   * <p>
+   * The link hands the transfer to the browser, which is what lets it outlive this page - but
+   * it also means the page itself shows nothing, and the server spends a while resolving
+   * tracks before the first byte goes out. Without a word here the button looks broken.
+   */
+  onArchiveRequested() {
+    const total = this.resourceInformation.mediaItems?.length ?? 0;
+    const taking = Math.min(total, PlaylistContainerComponent.MaxArchiveTracks);
+
+    this.notifications.show({
+      title: 'Building your archive',
+      message: taking < total
+        ? `Zipping the first ${taking} of ${total} tracks. This takes a while - it will appear in your browser's downloads, and you can leave this page.`
+        : `Zipping ${taking} tracks. This takes a while - it will appear in your browser's downloads, and you can leave this page.`,
+      tone: 'info'
+    });
   }
 
   /** Whether this row is the one being worked on, so its button can show the wait. */

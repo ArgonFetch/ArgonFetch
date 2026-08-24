@@ -56,8 +56,19 @@ h1, h2, h3, h4, h5, h6,
 p,
 a,
 svg,
-fa-icon {
+app-icon {
   transition: var(--theme-transition);
+}
+
+// Icons are drawn rather than lettered now, so anything that used to spin as a glyph spins
+// as an element instead.
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 // Base styles

@@ -165,15 +165,7 @@
   }
 }
 
-/* Spinning animation for loading icon */
-.fa-spin {
-  animation: fa-spin 1s infinite linear;
-}
-
-@keyframes fa-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
+/* The spin itself is global now - every icon that turns uses the same rule. */
 
 /* Responsive Design */
 @media (max-width: 480px) {

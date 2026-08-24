@@ -5,7 +5,7 @@
     </div>
     <div class="nav-right">
       <button class="theme-toggle" (click)="toggleTheme()">
-        <fa-icon [icon]="(isDarkTheme$ | async) ? faSun : faMoon"></fa-icon>
+        <app-icon [name]="(isDarkTheme$ | async) ? sunIcon : moonIcon" [size]="18" />
       </button>
     </div>
   </div>
@@ -14,7 +14,7 @@
 @if (maintenance(); as maintenance) {
   <div class="maintenance" role="status" aria-live="polite">
     <div class="maintenance-card">
-      <fa-icon [icon]="faGear" class="maintenance-icon" animation="spin"></fa-icon>
+      <app-icon [name]="gearIcon" [size]="48" class="maintenance-icon spinning" />
       <h1 class="maintenance-title">{{ maintenance }}</h1>
       <p class="maintenance-message">
         ArgonFetch is updating itself and will be back in a moment. This page returns on its own.
@@ -30,7 +30,7 @@
     <a href="https://www.argonfetch.dev" class="footer-link">ArgonFetch</a>
     <span class="footer-separator">•</span>
     <a href="https://github.com/ArgonFetch/ArgonFetch" class="footer-link" target="_blank">
-      GitHub <fa-icon [icon]="faGithub" class="footer-github-icon"></fa-icon>
+      GitHub <app-icon [name]="gitIcon" [size]="14" class="footer-github-icon" />
     </a>
     <span class="footer-separator">•</span>
     <span class="footer-environment">{{ environment() }}</span>

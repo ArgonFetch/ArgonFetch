@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace ArgonFetch.API.Controllers
 {
@@ -47,7 +48,7 @@ namespace ArgonFetch.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> StreamArchive([FromQuery] string url, CancellationToken cancellationToken)
+        public async Task<IActionResult> StreamArchive([FromQuery][Required] string url, CancellationToken cancellationToken)
         {
             // Closing a zip entry writes its data descriptor, and closing the archive writes the
             // central directory - both synchronously, with no async path offered for either, so

@@ -1,5 +1,5 @@
 <div class="notification" [class.notification--error]="tone === 'error'" role="status" aria-live="polite">
-  <fa-icon [icon]="icon" class="notification__icon"></fa-icon>
+  <app-icon [name]="icon" [size]="18" class="notification__icon" />
   <div class="notification__body">
     @if (title) {
       <p class="notification__title">{{ title }}</p>
@@ -7,6 +7,6 @@
     <p class="notification__message">{{ message }}</p>
   </div>
   <button type="button" class="notification__close" (click)="dismissed.emit()" aria-label="Dismiss notification">
-    <fa-icon [icon]="faXmark"></fa-icon>
+    <app-icon [name]="closeIcon" [size]="16" />
   </button>
 </div>
