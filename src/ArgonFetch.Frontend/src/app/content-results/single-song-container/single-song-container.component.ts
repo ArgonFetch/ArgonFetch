@@ -1,4 +1,4 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
@@ -22,17 +22,19 @@ export class SingleSongContainerComponent {
   faChevronRight = faChevronRight;
   faSpinner = faSpinner;
 
-  // Download progress tracking
-  isDownloading = false;
-  downloadProgress = 0;
-  currentDownloadName = '';
-  downloadSpeed = '';
-  lastDownloadTime = 0;
-  lastDownloadBytes = 0;
-  totalBytes = 0;
-  totalMB = '';
-  hasKnownTotal = false;
-  downloadedMB = '';
+  // Download progress, all of it written from HTTP progress events. Those schedule no
+  // change detection without zone.js, so the view reads signals instead of fields.
+  isDownloading = signal(false);
+  downloadProgress = signal(0);
+  currentDownloadName = signal('');
+  downloadSpeed = signal('');
+  totalMB = signal('');
+  hasKnownTotal = signal(false);
+  downloadedMB = signal('');
+
+  // Not rendered - only used to work out the speed between two events.
+  private lastDownloadTime = 0;
+  private lastDownloadBytes = 0;
 
   constructor(
     private http: HttpClient,
@@ -63,7 +65,7 @@ export class SingleSongContainerComponent {
 
   /** Downloads one rendition, converted or passed through as the server described it. */
   async onDownloadRendition(rendition: MediaRenditionDto) {
-    if (this.isDownloading) {
+    if (this.isDownloading()) {
       return;
     }
 
@@ -80,7 +82,7 @@ export class SingleSongContainerComponent {
   }
 
   async onDownload(quality: 'best' | 'medium' | 'worst', type: 'combined' | 'audio') {
-    if (this.isDownloading) {
+    if (this.isDownloading()) {
       return; // Prevent multiple downloads at once
     }
 
@@ -121,21 +123,20 @@ export class SingleSongContainerComponent {
       return;
     }
 
-    this.currentDownloadName = `${filename}${extension}`;
-    await this.downloadFile(url, this.currentDownloadName);
+    this.currentDownloadName.set(`${filename}${extension}`);
+    await this.downloadFile(url, this.currentDownloadName());
   }
 
   private async downloadFile(url: string, filename: string) {
-    this.isDownloading = true;
-    this.downloadProgress = 0;
-    this.downloadSpeed = '';
+    this.isDownloading.set(true);
+    this.downloadProgress.set(0);
+    this.downloadSpeed.set('');
     this.lastDownloadTime = Date.now();
     this.lastDownloadBytes = 0;
-    this.currentDownloadName = filename;
-    this.totalBytes = 0;
-    this.totalMB = '';
-    this.hasKnownTotal = false;
-    this.downloadedMB = '0';
+    this.currentDownloadName.set(filename);
+    this.totalMB.set('');
+    this.hasKnownTotal.set(false);
+    this.downloadedMB.set('0');
 
     // Use HttpClient to download with progress tracking.
     // Errors arrive on the error callback, not as a thrown exception - subscribe()
@@ -147,28 +148,25 @@ export class SingleSongContainerComponent {
     }).subscribe({
         next: (event) => {
           if (event.type === HttpEventType.DownloadProgress) {
-            // Store total bytes if available
-            this.totalBytes = event.total || 0;
-
             // Only report a percentage when the real transfer size is known. The size used
             // to be guessed from hardcoded per-quality figures, which produced a bar that
             // bore no relation to the transfer and then sat at 95% until it finished.
             // The combined endpoint muxes on the fly, so it genuinely cannot send a length;
             // there the bar runs indeterminate and the byte counter carries the information.
-            this.hasKnownTotal = !!event.total;
+            this.hasKnownTotal.set(!!event.total);
 
             if (event.total) {
               const progress = Math.round((event.loaded / event.total) * 100);
-              this.downloadProgress = Math.min(100, Math.max(0, progress));
-              this.totalMB = (event.total / 1024 / 1024).toFixed(1);
+              this.downloadProgress.set(Math.min(100, Math.max(0, progress)));
+              this.totalMB.set((event.total / 1024 / 1024).toFixed(1));
             } else {
-              this.downloadProgress = 0;
-              this.totalMB = '';
+              this.downloadProgress.set(0);
+              this.totalMB.set('');
             }
 
             // Always truthful, known on every event, and the only figure available when
             // the server cannot declare a length.
-            this.downloadedMB = (event.loaded / 1024 / 1024).toFixed(1);
+            this.downloadedMB.set((event.loaded / 1024 / 1024).toFixed(1));
 
             // Calculate download speed
             const currentTime = Date.now();
@@ -177,7 +175,7 @@ export class SingleSongContainerComponent {
             if (timeDiff > 0.5) { // Update speed every 0.5 seconds
               const bytesDiff = event.loaded - this.lastDownloadBytes;
               const speed = bytesDiff / timeDiff; // bytes per second
-              this.downloadSpeed = this.formatSpeed(speed);
+              this.downloadSpeed.set(this.formatSpeed(speed));
 
               this.lastDownloadTime = currentTime;
               this.lastDownloadBytes = event.loaded;
@@ -199,14 +197,13 @@ export class SingleSongContainerComponent {
   }
 
   private resetDownloadState() {
-    this.isDownloading = false;
-    this.downloadProgress = 0;
-    this.totalMB = '';
-    this.hasKnownTotal = false;
-    this.currentDownloadName = '';
-    this.downloadSpeed = '';
-    this.totalBytes = 0;
-    this.downloadedMB = '';
+    this.isDownloading.set(false);
+    this.downloadProgress.set(0);
+    this.totalMB.set('');
+    this.hasKnownTotal.set(false);
+    this.currentDownloadName.set('');
+    this.downloadSpeed.set('');
+    this.downloadedMB.set('');
   }
 
   private saveBlob(blob: Blob, filename: string) {
