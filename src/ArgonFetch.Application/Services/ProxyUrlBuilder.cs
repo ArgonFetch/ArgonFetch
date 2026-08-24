@@ -112,7 +112,11 @@ namespace ArgonFetch.Application.Services
             // generation of quality, so it belongs in the list beside the sources it is made
             // from - and stating its bitrate stops "MP3" from being the one option whose
             // quality nobody can see.
-            if (isAudio && renditions.Count > 0)
+            //
+            // Not offered when the source is already MP3, as SoundCloud's is: re-encoding it at
+            // a higher bitrate produces a larger file that sounds worse, which is not a choice
+            // worth putting in front of anyone.
+            if (isAudio && renditions.Count > 0 && !IsMp3(renditions[0]))
             {
                 renditions.Add(new MediaRenditionDto
                 {
@@ -131,6 +135,9 @@ namespace ArgonFetch.Application.Services
 
             return renditions;
         }
+
+        private static bool IsMp3(MediaRenditionDto rendition) =>
+            rendition.MimeType.Equals("audio/mpeg", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// The extension and media type the client will get. A recognised source container is

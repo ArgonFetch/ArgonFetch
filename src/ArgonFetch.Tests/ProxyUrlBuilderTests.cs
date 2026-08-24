@@ -49,6 +49,47 @@ namespace ArgonFetch.Tests
             cache.Verify(c => c.CacheSingleUrl(It.IsAny<string>(), true, "audio/webm", null), Times.Once);
         }
 
+        [Fact]
+        public void BuildRenditions_OffersAnMp3Conversion_ForSourcesThatAreNotAlreadyMp3()
+        {
+            var renditions = new ProxyUrlBuilder().BuildRenditions(
+                [new RenditionSource("https://example.test/opus", "251 - audio only", ".webm", null, 129, 3_400_000)],
+                CacheStub(),
+                isAudio: true);
+
+            var converted = Assert.Single(renditions, r => r.ConvertTo == "mp3");
+
+            Assert.Equal(".mp3", converted.FileExtension);
+            Assert.Equal("192 kbps", converted.Label);
+
+            // The conversion streams from the same cached source it is made from.
+            Assert.Equal(renditions[0].Key, converted.Key);
+        }
+
+        [Fact]
+        public void BuildRenditions_SkipsTheMp3Conversion_WhenTheSourceIsAlreadyMp3()
+        {
+            // SoundCloud serves MP3 directly. Re-encoding it at a higher bitrate produces a
+            // bigger file that sounds worse, so there is nothing to offer.
+            var renditions = new ProxyUrlBuilder().BuildRenditions(
+                [new RenditionSource("https://example.test/mp3", "128 kbps", ".mp3", null, 128, 2_200_000)],
+                CacheStub(),
+                isAudio: true);
+
+            Assert.DoesNotContain(renditions, r => r.ConvertTo != null);
+        }
+
+        [Fact]
+        public void BuildRenditions_OffersNoConversionForVideo()
+        {
+            var renditions = new ProxyUrlBuilder().BuildRenditions(
+                [new RenditionSource("https://example.test/mp4", "1080p", ".mp4", 1080, 4000, 80_000_000)],
+                CacheStub(),
+                isAudio: false);
+
+            Assert.DoesNotContain(renditions, r => r.ConvertTo != null);
+        }
+
         [Theory]
         [InlineData(".webm", true, "audio/webm")]
         [InlineData(".webm", false, "video/webm")]
