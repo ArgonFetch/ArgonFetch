@@ -217,9 +217,8 @@ namespace ArgonFetch.Application.Services
                 : artist ?? string.Empty;
 
         /// <summary>
-        /// Like Words but keeps bracketed text. Titles score with brackets dropped, so
-        /// "Song (feat. X)" still matches "Song" - but that also erased the one thing marking a
-        /// rework, and "(Instrumental)" became indistinguishable from the real recording: same
+        /// Like Words but keeps bracketed text - which is where a release says what it is.
+        /// Dropping it made "(Instrumental)" indistinguishable from the real recording: same
         /// title, same artist, same length.
         /// </summary>
         private static HashSet<string> MarkerWords(string s) =>
@@ -260,12 +259,23 @@ namespace ArgonFetch.Application.Services
         private static bool HasLatin(IEnumerable<string> words) =>
             words.Any(word => word.Any(c => c >= 'a' && c <= 'z'));
 
-        /// <summary>Share of the wanted title's words the candidate carries.</summary>
+        /// <summary>
+        /// Share of the wanted title's words the candidate carries.
+        /// <para>
+        /// Counted with the candidate's brackets kept. The two sides write a version qualifier
+        /// differently - Spotify hyphenates it into the name, "World is Mine - Kaguya&amp;Yachiyo
+        /// Runami ver. - CPK! Remix", where YouTube Music brackets it - so dropping the brackets
+        /// erased the half of the candidate that the request was mostly made of, and an exact
+        /// match scored a third. Keeping them cannot cost a match either way: the score measures
+        /// how much of the wanted title the candidate carries, so words the candidate has and
+        /// nobody asked for were never counted against it.
+        /// </para>
+        /// </summary>
         internal static double TitleScore(string candidateTitle, ISet<string> want)
         {
             if (want.Count == 0) return 0.0;
 
-            var have = Words(candidateTitle);
+            var have = MarkerWords(candidateTitle);
             return want.Count(w => have.Any(h => NearlyEqual(h, w))) / (double)want.Count;
         }
 
