@@ -35,6 +35,7 @@ namespace ArgonFetch.Application.Queries
         private readonly IMediaUrlCacheService _cacheService;
         private readonly IProxyUrlBuilder _proxyUrlBuilder;
         private readonly IProxyPool _proxyPool;
+        private readonly IToolPaths _toolPaths;
 
         // Enough to hold the album version when search leads with a radio edit and a remaster,
         // and few enough that a mistyped query does not drag twenty rows through matching.
@@ -63,7 +64,8 @@ namespace ArgonFetch.Application.Queries
             ICombinedStreamUrlBuilder combinedUrlBuilder,
             IMediaUrlCacheService cacheService,
             IProxyUrlBuilder proxyUrlBuilder,
-            IProxyPool proxyPool
+            IProxyPool proxyPool,
+            IToolPaths toolPaths
             )
         {
             _spotifyMetadataService = spotifyMetadataService;
@@ -76,6 +78,7 @@ namespace ArgonFetch.Application.Queries
             _cacheService = cacheService;
             _proxyUrlBuilder = proxyUrlBuilder;
             _proxyPool = proxyPool;
+            _toolPaths = toolPaths;
         }
 
         public async Task<ResourceInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
@@ -465,6 +468,10 @@ namespace ArgonFetch.Application.Queries
         {
             options ??= new OptionSet { DumpSingleJson = true };
 
+            // Not only for Instagram: an age-gated YouTube video needs a session too, and a
+            // source that does not care simply ignores them.
+            options.Cookies = _toolPaths.CookiesPath;
+
             if (!Uri.IsWellFormedUriString(query, UriKind.Absolute))
             {
                 _fetchProxy = _proxyPool.Next();
@@ -473,6 +480,7 @@ namespace ArgonFetch.Application.Queries
                 {
                     NoPlaylist = true,
                     Proxy = _fetchProxy,
+                    Cookies = _toolPaths.CookiesPath,
                 };
 
                 var searchResult = await _youtubeDL.RunVideoDataFetch($"ytsearch:{query}", overrideOptions: searchOptions);
@@ -500,6 +508,14 @@ namespace ArgonFetch.Application.Queries
                 // whoever pasted the link: DRM is a refusal, not a bad address.
                 if (YtDlpErrors.IsDrmProtected(result.ErrorOutput))
                     throw new NotSupportedException("This media is DRM protected and cannot be downloaded.");
+
+                // Told apart from a missing page for the same reason as DRM: the link is right
+                // and the fix is a cookies file, which the reader can actually act on.
+                if (YtDlpErrors.NeedsSignedInSession(result.ErrorOutput))
+                    throw new NotSupportedException(
+                        _toolPaths.CookiesPath is null
+                            ? "This source serves media only to a signed-in session. Set COOKIES_PATH to a Netscape-format cookies file exported from a logged-in browser."
+                            : "This source rejected the configured session. The cookies file may have expired.");
 
                 throw new ArgumentException($"Failed to fetch data: {errors}");
             }

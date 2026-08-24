@@ -23,6 +23,9 @@ services:
       # yt-dlp and FFmpeg are fetched on boot rather than baked into the image. Keeping them
       # here means a restart reuses them instead of downloading roughly 100MB again.
       - tools:/tools
+      # Uncomment for sources that need a signed-in session, e.g. Instagram, and set
+      # COOKIES_PATH=/config/cookies.txt in .env. Treat the file as a credential.
+      # - ./cookies.txt:/config/cookies.txt:ro
     depends_on:
       - postgres
     restart: unless-stopped

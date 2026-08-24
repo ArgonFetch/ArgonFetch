@@ -40,7 +40,7 @@ streams and serves them back as a normal file download.
 | Spotify | ✅ Single tracks | Metadata is read from the public track page; audio comes from the matching YouTube Music result |
 | TikTok | ✅ | |
 | SoundCloud | ✅ | Except the licensed catalogue, which is DRM protected and refused |
-| Instagram | ❌ Needs a signed-in session | Instagram serves media only to logged-in accounts, and ArgonFetch has no way to supply credentials |
+| Instagram | ⚠️ Needs `COOKIES_PATH` | Instagram serves media only to a signed-in session; supply one and it works |
 | Spotify playlists / albums | ❌ Not supported | [#171](https://github.com/ArgonFetch/ArgonFetch/issues/171) |
 | Playlists generally | ❌ Not supported | [#76](https://github.com/ArgonFetch/ArgonFetch/issues/76) |
 
@@ -123,6 +123,7 @@ Everything is set through environment variables in `.env`.
 | `CORS_ALLOWED_ORIGINS` | in production | Comma-separated origins allowed to call the API. Defaults to `http://localhost:4200`, and the app warns at startup if that default is still in use in production |
 | `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables Swagger UI |
 | `PROXY_LIST_PATH` | no | File with one proxy per line, rotated across yt-dlp fetches so they do not all leave from the same IP. See below |
+| `COOKIES_PATH` | no | Netscape-format cookies file, for sources that serve media only to a signed-in session. See below |
 
 ### Media tooling
 
@@ -134,6 +135,28 @@ is enough to recover from a broken version.
 
 Mount a volume at `/tools` (the compose file above does) so the binaries survive restarts.
 Without one, roughly 100MB is downloaded again every time the container starts.
+
+### Signed-in sources
+
+Some sources serve nothing to a signed-out request. Instagram is the clearest case - it
+requires a session for practically everything - and an age-gated YouTube video wants one
+too. Point `COOKIES_PATH` at a Netscape-format cookies file exported from a browser that is
+logged in, and every extraction offers it:
+
+```env
+COOKIES_PATH=/config/cookies.txt
+```
+
+```yaml
+    volumes:
+      - ./cookies.txt:/config/cookies.txt:ro
+```
+
+Without it those sources answer `415` saying a session is needed, rather than pretending the
+link is wrong. A path pointing at a file that is not there is ignored, so a mistake in the
+setting does not break every other fetch.
+
+Treat the file as a credential: anyone holding it is signed in as you.
 
 ### Proxy rotation
 
