@@ -410,3 +410,8 @@ FodyWeavers.xsd
 # VitePress docs build
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+
+# Screenshots dropped at the repo root by browser-driven checks. Working notes for whoever
+# took them, not part of the project - a stray `git add -A` swept a megabyte of them into
+# the history once already. (.playwright-mcp/ above covers the ones that land in its folder.)
+/*.png
