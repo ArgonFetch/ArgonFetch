@@ -15,7 +15,7 @@ it is worth trying, but is not something we chase when it breaks.
 | TikTok | ✅ | |
 | Spotify playlists / albums | ❌ Not supported | [#171](https://github.com/ArgonFetch/ArgonFetch/issues/171) |
 | Playlists generally | ❌ Not supported | [#76](https://github.com/ArgonFetch/ArgonFetch/issues/76) |
-| SoundCloud | ⚠️ Unreliable | [#58](https://github.com/ArgonFetch/ArgonFetch/issues/58) |
+| SoundCloud | ⚠️ Unreliable | Licensed tracks are DRM protected and refused - see [below](#drm-protected-tracks). [#58](https://github.com/ArgonFetch/ArgonFetch/issues/58) |
 | Instagram Reels | ⚠️ Preview issues | [#58](https://github.com/ArgonFetch/ArgonFetch/issues/58) |
 
 ## Spotify without an API key
@@ -25,6 +25,15 @@ public track page, then finds the matching result on YouTube Music and streams t
 there. There is no developer app to register and no secret to rotate.
 
 This is also why only single tracks work: playlists and albums need the Spotify API proper.
+
+## DRM protected tracks
+
+Some sources hand back media that is DRM protected and cannot be decoded - SoundCloud does this
+for its licensed catalogue. The link is correct and the track is really there; the source simply
+refuses to serve it in a usable form, and there is nothing ArgonFetch can do about that.
+
+These answer `415 Unsupported Media Type` with the reason in `detail`, rather than the `404` that
+would send you looking for a typo. See [Errors](/api#errors).
 
 ## When a platform stops working
 

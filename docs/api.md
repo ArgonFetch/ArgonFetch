@@ -27,6 +27,19 @@ point it at your own instance instead - and make sure that instance lists `docs.
 `Fetch` and `Stream` are the pair you want: resolve a URL, then stream the `key` you picked out of
 the response. [Usage](/usage#from-the-command-line) walks through both with `curl`.
 
+## Range requests
+
+`GET /api/Stream/Media/{key}` honours the `Range` header, so a download can be resumed and a
+player can seek without pulling the whole file first. A ranged request answers `206 Partial
+Content`, and a range the media cannot satisfy answers `416`.
+
+```bash
+curl -r 0-1048575 "https://app.argonfetch.dev/api/Stream/Media/<key>" -o part.webm
+```
+
+`GET /api/Stream/Combined/{key}` does not: it muxes video and audio as it sends them, so there is
+no known length to seek within. It answers `200` and streams from the start.
+
 ## Errors
 
 Failures come back as [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807) `ProblemDetails`:
@@ -34,14 +47,30 @@ Failures come back as [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807) 
 ```json
 {
   "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
-  "title": "Bad Request",
-  "status": 400,
-  "detail": "The url parameter is required."
+  "title": "Unsupported Media Type",
+  "status": 415,
+  "detail": "This media is DRM protected and cannot be downloaded."
 }
 ```
 
-A `503` from `GetResource` usually means the container is still fetching `yt-dlp` and `FFmpeg` -
-[`GET /api/App`](/operations/GetAppInfo) says so in its `maintenance` field.
+What `GetResource` answers, and what each one means:
+
+| Status | Title | Means |
+|---|---|---|
+| `400` | Bad Request | The `url` parameter is missing or malformed |
+| `404` | Resource Not Found | The link did not resolve to anything |
+| `415` | Unsupported Media Type | The source refused, or the link shape is not handled. `detail` says which |
+| `502` | Fetch Failed | Extraction failed for some other reason |
+| `503` | *the current activity* | The instance is updating `yt-dlp` and `FFmpeg` and is briefly unavailable |
+
+`415` is the one worth handling separately. It is not a broken link: it means the media was found
+and cannot be delivered - most often DRM, which SoundCloud applies to its licensed catalogue and
+`yt-dlp` refuses. The `detail` field carries the reason, so a caller can tell DRM apart from a link
+ArgonFetch does not handle yet. Only `415` and `503` fill `detail` in; the rest carry `title` alone.
+
+A `503` means the container is still fetching its media tooling - [`GET
+/api/App`](/operations/GetAppInfo) says so in its `maintenance` field, and it clears itself within
+seconds of a start.
 
 ## The schema
 
