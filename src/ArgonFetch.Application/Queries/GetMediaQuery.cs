@@ -8,6 +8,8 @@ using Microsoft.Extensions.Caching.Memory;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Metadata;
 using YoutubeDLSharp.Options;
+using YouTubeMusicAPI.Client;
+using YouTubeMusicAPI.Models.Search;
 
 namespace ArgonFetch.Application.Queries
 {
@@ -25,7 +27,7 @@ namespace ArgonFetch.Application.Queries
     {
         private readonly YoutubeDL _youtubeDL;
         private readonly ISpotifyMetadataService _spotifyMetadataService;
-        private readonly YTMusicAPI.SearchClient _ytmSearchClient;
+        private readonly YouTubeMusicClient _ytmClient;
         private readonly TikTokDllFetcherService _tikTokDllFetcherService;
         private readonly IMemoryCache _memoryCache;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -33,6 +35,10 @@ namespace ArgonFetch.Application.Queries
         private readonly IMediaUrlCacheService _cacheService;
         private readonly IProxyUrlBuilder _proxyUrlBuilder;
         private readonly IProxyPool _proxyPool;
+
+        // Enough to hold the album version when search leads with a radio edit and a remaster,
+        // and few enough that a mistyped query does not drag twenty rows through matching.
+        private const int SearchResultsToConsider = 20;
 
         // Wrong-recording candidates come in runs - a radio edit, a remaster and a twelve-inch
         // mix all sit above the album version - so checking a couple past the leader is worth a
@@ -49,7 +55,7 @@ namespace ArgonFetch.Application.Queries
 
         public GetMediaQueryHandler(
             ISpotifyMetadataService spotifyMetadataService,
-            YTMusicAPI.SearchClient ytmSearchClient,
+            YouTubeMusicClient ytmClient,
             YoutubeDL youtubeDL,
             TikTokDllFetcherService tikTokDllFetcherService,
             IMemoryCache memoryCache,
@@ -61,7 +67,7 @@ namespace ArgonFetch.Application.Queries
             )
         {
             _spotifyMetadataService = spotifyMetadataService;
-            _ytmSearchClient = ytmSearchClient;
+            _ytmClient = ytmClient;
             _youtubeDL = youtubeDL;
             _tikTokDllFetcherService = tikTokDllFetcherService;
             _memoryCache = memoryCache;
@@ -339,6 +345,11 @@ namespace ArgonFetch.Application.Queries
             (long?)(format.FileSize ?? format.ApproximateFileSize));
 
         /// <summary>
+        /// The watch page for a song id, which is what yt-dlp is given to fetch.
+        /// </summary>
+        private static string WatchUrl(string id) => $"https://music.youtube.com/watch?v={id}";
+
+        /// <summary>
         /// Fetches candidates in order until one turns out to be the requested recording.
         /// </summary>
         /// <param name="requireDuration">
@@ -349,7 +360,7 @@ namespace ArgonFetch.Application.Queries
         private async Task<VideoData?> FetchVerifiedAgainstSpotify(
             IReadOnlyList<MatchCandidate> ranked,
             List<MatchCandidate> candidates,
-            List<YTMusicAPI.Model.Domain.Track> results,
+            List<SongSearchResult> results,
             SpotifyTrackMetadata track,
             CancellationToken cancellationToken,
             bool requireDuration = false)
@@ -364,7 +375,7 @@ namespace ArgonFetch.Application.Queries
 
                 // Reference equality, not IndexOf: MatchCandidate is a record, so two results with
                 // the same title, artist and length would compare equal and resolve to the wrong URL.
-                var url = results[candidates.FindIndex(c => ReferenceEquals(c, candidate))].Url;
+                var url = WatchUrl(results[candidates.FindIndex(c => ReferenceEquals(c, candidate))].Id);
 
                 VideoData fetched;
 
@@ -504,21 +515,23 @@ namespace ArgonFetch.Application.Queries
             // YouTube Music result.
             var searchQuery = YouTubeMusicMatcher.SearchQuery(track.Artist, track.Title);
 
-            var response = await _ytmSearchClient.SearchTracksAsync(new YTMusicAPI.Model.QueryRequest
-            {
-                Query = searchQuery
-            }, cancellationToken);
-
-            var results = response.Result.ToList();
+            var results = (await _ytmClient
+                    .SearchAsync(searchQuery, SearchCategory.Songs)
+                    .FetchItemsAsync(0, SearchResultsToConsider, cancellationToken))
+                .OfType<SongSearchResult>()
+                .ToList();
 
             // Taking the first hit matches covers, karaoke versions and instrumentals as readily as
             // the real recording, so score the candidates instead.
             var candidates = results
                 .Select(r => new MatchCandidate(
-                    r.Title ?? string.Empty,
-                    r.Author,
-                    (long)(r.Duration?.TotalSeconds ?? 0),
-                    r.Author ?? string.Empty))
+                    r.Name,
+                    string.Join(", ", r.Artists.Select(artist => artist.Name)),
+                    (long)r.Duration.TotalSeconds,
+                    // The release, which is where an instrumental or a solo cut declares itself.
+                    // The previous client offered no album at all, so this carried the artist
+                    // again and the check that reads it never had anything to find.
+                    r.Album?.Name ?? string.Empty))
                 .ToList();
 
             var ranked = YouTubeMusicMatcher.RankMatches(
@@ -528,10 +541,10 @@ namespace ArgonFetch.Application.Queries
                 track.DurationMs,
                 officialShelf: true);
 
-            // Search never reports a duration - YTMusicAPI returns null for every row - so the
-            // one signal that separates an album version from its radio edit is missing while
-            // ranking. Fetching a candidate does report it, so the pick is checked rather than
-            // trusted, and the next candidate tried when it does not fit.
+            // A safety net rather than the mechanism: search reports durations now, so ranking
+            // usually settles which recording this is and the first candidate is the answer.
+            // Fetching still confirms it, because a length search got wrong would otherwise be
+            // discovered by whoever opened the file.
             var result = await FetchVerifiedAgainstSpotify(ranked, candidates, results, track, cancellationToken);
 
             if (result is null)
@@ -540,7 +553,7 @@ namespace ArgonFetch.Application.Queries
                 // says the Japanese original - and then no candidate shares a single word with
                 // what was asked for. The credit still matches, and the duration decides, so
                 // this pass drops the title requirement and leans on the check instead.
-                var byCredit = YouTubeMusicMatcher.RankByCreditOnly(candidates, track.Artist);
+                var byCredit = YouTubeMusicMatcher.RankByCreditOnly(candidates, track.Artist, track.DurationMs);
 
                 result = await FetchVerifiedAgainstSpotify(byCredit, candidates, results, track, cancellationToken, requireDuration: true);
             }

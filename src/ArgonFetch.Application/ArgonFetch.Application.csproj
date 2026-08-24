@@ -29,7 +29,7 @@
     <PackageReference Include="FluentValidation" Version="11.11.0" />
     <PackageReference Include="MediatR" Version="12.4.1" />
     <PackageReference Include="YoutubeDLSharp" Version="1.2.0" />
-    <PackageReference Include="YTMusicAPI" Version="1.0.7" />
+    <PackageReference Include="YouTubeMusicAPI" Version="3.0.10" />
   </ItemGroup>
 
 </Project>

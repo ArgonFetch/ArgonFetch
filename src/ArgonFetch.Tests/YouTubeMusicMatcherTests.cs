@@ -149,7 +149,7 @@ namespace ArgonFetch.Tests
         [Fact]
         public void BestMatch_IgnoresLengthWhenTheSourceReportsNone()
         {
-            // YTMusicAPI returns no duration at all for some rows. Filtering on it then discards
+            // Not every search backend reports a duration. Filtering on it then discards
             // every candidate and the track resolves to nothing.
             var noDuration = Candidate("Never Gonna Give You Up", durationSec: 0);
 
@@ -189,8 +189,8 @@ namespace ArgonFetch.Tests
         [Fact]
         public void BestMatch_PrefersThePlainestTitleWhenNothingElseSeparatesCandidates()
         {
-            // Search returns the radio edit above the album version, and YTMusicAPI reports no
-            // duration for either, so without this the edit wins on search order alone.
+            // Search returns the radio edit above the album version. Where neither carries a
+            // duration, without this the edit wins on search order alone.
             var radioEdit = Candidate("One More Time (Radio Edit)", artist: "Daft Punk", durationSec: 0);
             var albumVersion = Candidate("One More Time", artist: "Daft Punk", durationSec: 0);
 
@@ -235,6 +235,22 @@ namespace ArgonFetch.Tests
             var someoneElse = new MatchCandidate("Bのリベンジ", "歌っちゃ王", 0, "歌っちゃ王");
 
             Assert.Empty(YouTubeMusicMatcher.RankByCreditOnly([instrumental, someoneElse], wanted));
+        }
+
+        [Fact]
+        public void RankByCreditOnly_TakesTheClosestLengthRatherThanTheFirstThatFits()
+        {
+            // The artist's other tracks are in the same search, and one of them landing a few
+            // seconds from the right length is not a reason to prefer it to an exact match.
+            const string artist = "B小町 ルビー（CV：伊駒ゆりえ）";
+
+            var nearby = new MatchCandidate("深海52Hz", artist, 175, artist);
+            var exact = new MatchCandidate("Bのリベンジ", artist, 182, artist);
+
+            var ranked = YouTubeMusicMatcher.RankByCreditOnly([nearby, exact], artist, durationMs: 182_000);
+
+            Assert.Equal(exact, ranked.First());
+            Assert.DoesNotContain(nearby, ranked);
         }
 
         [Fact]

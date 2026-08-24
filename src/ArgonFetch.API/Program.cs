@@ -93,7 +93,10 @@ builder.Services.AddScoped<ArgonFetch.Application.Services.ISpotifyMetadataServi
                            ArgonFetch.Application.Services.SpotifyMetadataService>();
 
 // Register YoutubeMusicAPI and YoutubeDL
-builder.Services.AddScoped<YTMusicAPI.SearchClient>();
+// Search and metadata only. Its streaming endpoints need a PoToken and answer 403 to IPs
+// that look like VPNs, which is exactly what a rotated proxy looks like; yt-dlp fetches the
+// media instead, as it always has.
+builder.Services.AddSingleton<YouTubeMusicAPI.Client.YouTubeMusicClient>();
 builder.Services.AddScoped(sp =>
 {
     var toolPaths = sp.GetRequiredService<ArgonFetch.Application.Services.IToolPaths>();

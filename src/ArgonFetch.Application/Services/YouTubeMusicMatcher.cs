@@ -22,6 +22,11 @@ namespace ArgonFetch.Application.Services
     public static class YouTubeMusicMatcher
     {
         internal const long DurationToleranceSec = 30L;
+
+        // Tighter than the tolerance used when a title matched. Nothing but the length is
+        // identifying the track on that path, and another track by the same artist is often
+        // within a few seconds of the one that was asked for.
+        internal const long CreditOnlyToleranceSec = 4L;
         internal const long DurationBucketSec = 5L;
         internal const double MinTitleScore = 0.8;
         internal const string UnknownPlaceholder = "Unknown";
@@ -102,9 +107,9 @@ namespace ArgonFetch.Application.Services
 
             var ordered = viable.Select((candidate, index) => (candidate, index));
 
-            // Duration is a tiebreaker, not a requirement. Some search backends do not report it
-            // at all - YTMusicAPI returns null for every row - and filtering on it then discards
-            // every candidate and resolves nothing.
+            // Duration is a tiebreaker, not a requirement. Not every search backend reports it,
+            // and filtering on it when it is missing discards every candidate and resolves
+            // nothing.
             var timed = viable.Where(c => c.DurationSec > 0).ToList();
 
             if (durationMs <= 0L || timed.Count == 0)
@@ -144,7 +149,8 @@ namespace ArgonFetch.Application.Services
         /// </summary>
         public static IReadOnlyList<MatchCandidate> RankByCreditOnly(
             IReadOnlyList<MatchCandidate> candidates,
-            string wantArtist)
+            string wantArtist,
+            long durationMs = 0L)
         {
             var wantArtistWords = Words(RealArtist(wantArtist));
 
@@ -153,9 +159,24 @@ namespace ArgonFetch.Application.Services
 
             var asked = new HashSet<string>(MarkerWords(wantArtist), StringComparer.Ordinal);
 
-            return candidates
+            var viable = candidates
                 .Where(c => ArtistMatches(c.Artist, wantArtistWords, allowScriptMismatch: false) &&
                             !AddsRework($"{c.Title} {BracketedIn(c.Details)}", asked))
+                .ToList();
+
+            var timed = viable.Where(c => c.DurationSec > 0).ToList();
+
+            if (durationMs <= 0L || timed.Count == 0)
+                return viable;
+
+            var wantSec = durationMs / 1000;
+
+            // Closest first rather than search order: the artist's other tracks are in this list
+            // too, and one of them being a few seconds from the right length is not a reason to
+            // prefer it to an exact match.
+            return timed
+                .Where(c => Math.Abs(c.DurationSec - wantSec) <= CreditOnlyToleranceSec)
+                .OrderBy(c => Math.Abs(c.DurationSec - wantSec))
                 .ToList();
         }
 
@@ -164,9 +185,8 @@ namespace ArgonFetch.Application.Services
         /// <para>
         /// Search returns the radio edit, the remaster and the twelve-inch mix alongside the
         /// album version, all with the right title and the right credit. Where no duration is
-        /// available to separate them - and YTMusicAPI never provides one - the plainest title
-        /// is the one that was asked for. Counted with brackets kept, because that is where the
-        /// qualifier lives.
+        /// available to separate them, the plainest title is the one that was asked for.
+        /// Counted with brackets kept, because that is where the qualifier lives.
         /// </para>
         /// </summary>
         internal static int ExtraWords(string candidateTitle, ISet<string> asked) =>
