@@ -50,16 +50,46 @@ curl -L "https://app.argonfetch.dev/api/Stream/Combined/<key>" -o video.mp4
 ## Formats
 
 Audio is delivered in whatever container the source uses - Opus in WebM for YouTube - because
-passing the original bytes through is both faster and better than re-encoding. Every rendition
-states its `mimeType` and `fileExtension`, so you always know what you are getting.
+passing the original bytes through is faster and lossless. Every rendition states its `mimeType`
+and `fileExtension`, so you always know what you are getting.
 
-| You want | Do this |
-|---|---|
-| The best audio, fastest | Take the audio rendition as-is |
-| MP3 specifically | Add `?format=mp3` to the stream URL |
-| Video | Take a video rendition; ArgonFetch delivers MP4 |
+The one thing pass-through cannot do is carry tags, which makes this a real choice rather than a
+formality:
 
-Sources in a container ArgonFetch does not recognise are converted to MP3 automatically.
+| You want | Do this | You get |
+|---|---|---|
+| The audio exactly as the source has it | Take the audio rendition as-is | Byte-identical, no re-encode, **no tags inside the file** |
+| A tagged file your music player will file correctly | Add `?format=mp3` to the stream URL | Re-encoded to MP3 with the title and artist written in |
+| Video | Take a video rendition | MP4, tagged while it is muxed |
+
+Sources in a container ArgonFetch does not recognise are converted to MP3 automatically, so those
+arrive tagged either way.
+
+## Filenames and tags
+
+Every download names itself. Both stream endpoints send a `Content-Disposition` built from the
+media, so the file lands as `Artist - Title.ext` rather than a cache key - in a browser, in `curl
+-OJ`, and in anything else that reads the header:
+
+```
+Content-Disposition: attachment; filename="Rammstein - Sonne.webm"; filename*=UTF-8''Rammstein%20-%20Sonne.webm
+```
+
+The name is written twice on purpose. The quoted form stays ASCII so clients that read only that
+still get something sensible, and `filename*` carries the real name for everything else - which is
+what makes a title in Japanese or Cyrillic survive the trip.
+
+Tags inside the file are a separate matter, and only anything ArgonFetch converts gets them:
+
+- **Converted output** - MP3, and the muxed MP4 - carries the title and artist internally, written
+  while the file is being built.
+- **Pass-through** carries whatever the source shipped with, which is usually nothing. Tagging it
+  would mean remuxing, and that would cost the exact byte length the response already promised and
+  the [range requests](/api#range-requests) a client may be making against it. The filename carries
+  the information instead.
+
+There is no cover art in either case. Embedding a picture needs a seekable output, and these
+responses are pipes.
 
 ## Trying the API without curl
 

@@ -335,7 +335,6 @@
       "MediaInformationDto": {
         "required": [
           "author",
-          "coverUrl",
           "requestedUrl",
           "title"
         ],
@@ -453,7 +452,7 @@
             "nullable": true
           }
         },
-        "additionalProperties": {}
+        "additionalProperties": { }
       },
       "ResourceInformationDto": {
         "required": [

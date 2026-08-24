@@ -27,6 +27,29 @@ point it at your own instance instead - and make sure that instance lists `docs.
 `Fetch` and `Stream` are the pair you want: resolve a URL, then stream the `key` you picked out of
 the response. [Usage](/usage#from-the-command-line) walks through both with `curl`.
 
+## Filenames
+
+Both stream endpoints send a `Content-Disposition` built from the media, so a client that respects
+it saves `Artist - Title.ext` rather than a cache key:
+
+```
+Content-Disposition: attachment; filename="Rammstein - Sonne.webm"; filename*=UTF-8''Rammstein%20-%20Sonne.webm
+```
+
+The name appears twice: the quoted form is ASCII-only for clients that read nothing else, and
+`filename*` ([RFC 5987](https://datatracker.ietf.org/doc/html/rfc5987)) carries the real name, so
+titles outside ASCII survive. Read the second one if you can.
+
+The header is listed in `Access-Control-Expose-Headers`, so browser callers can read it too - by
+default a cross-origin response hides it, which is why a `fetch` that ignores this ends up naming
+files itself.
+
+`curl` does not use it unless you ask: `-OJ` takes the server's name, plain `-O` uses the URL,
+which here is the key.
+
+Files ArgonFetch converts - MP3, and the muxed MP4 - also carry the title and artist as tags
+inside the file. Pass-through responses do not; see [Formats](/usage#formats).
+
 ## Range requests
 
 `GET /api/Stream/Media/{key}` honours the `Range` header, so a download can be resumed and a

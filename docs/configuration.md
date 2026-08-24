@@ -11,6 +11,7 @@ Everything is set through environment variables, normally in the `.env` file nex
 | `ConnectionStrings__ArgonFetchDatabase` | yes | The app's connection string. Set in `compose.yml` from the values above |
 | `CORS_ALLOWED_ORIGINS` | in production | Comma-separated origins allowed to call the API. Defaults to `http://localhost:4200`, and the app warns at startup if that default is still in use in production |
 | `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables the Swagger UI |
+| `TOOLS_PATH` | no | Where `yt-dlp` and `FFmpeg` are downloaded to. `/tools` in the image, which is the path the compose file mounts a volume on. Must be writable by the runtime user |
 | `PROXY_LIST_PATH` | no | File with one proxy per line, rotated across `yt-dlp` fetches so they do not all leave from the same IP. See [below](#proxy-rotation) |
 
 A complete `.env` for a public deployment:
@@ -63,6 +64,10 @@ the image, and `yt-dlp` updates itself every 12 hours. Two consequences worth kn
 
 - **Mount a volume at `/tools`.** Otherwise roughly 100MB is downloaded again on every start.
 - **A restart fixes a broken `yt-dlp`.** Extractor fixes land without rebuilding the image.
+
+`/tools` is the image's default; `TOOLS_PATH` moves it, which is what you want if the container
+runs with a read-only root filesystem or your volume layout puts writable storage elsewhere. Move
+the mount with it - wherever it points has to be writable by the runtime user.
 
 While the binaries are being fetched the app reports itself as under maintenance: the web UI
 shows a maintenance screen and fetch requests answer `503`. `GET /api/App` reports the same
