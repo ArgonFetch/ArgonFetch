@@ -1,5 +1,5 @@
 <main class="main-content">
-  @if (mediaType || resourceInformation || isLoading) {
+  @if (mediaType() || resourceInformation() || isLoading()) {
     <div class="when-content-arrives-spacing"></div>
   }
   <div class="hero">
@@ -16,24 +16,26 @@
           </button>
         }
       </div>
-      <button type="submit" class="search-btn" [disabled]="isLoading">
+      <button type="submit" class="search-btn" [disabled]="isLoading()">
         <fa-icon [icon]="faSearch"></fa-icon>
-        {{ isLoading ? 'Searching...' : 'Search' }}
+        {{ isLoading() ? 'Searching...' : 'Search' }}
       </button>
     </form>
 
     <!-- Skeleton Loader -->
-    @if (isLoading) {
-      <app-content-skeleton-loader [type]="loaderType" [animate]="true" class="content-container" />
+    @if (isLoading()) {
+      <app-content-skeleton-loader [type]="loaderType()" [animate]="true" class="content-container" />
     }
 
     <!-- Actual Content -->
     <div class="content-container">
-      @if (resourceInformation?.type === mediaTypeEnum.Media && resourceInformation) {
-        <app-single-song-container [resourceInformation]="resourceInformation" />
-      }
-      @if (resourceInformation?.type === mediaTypeEnum.PlayList && resourceInformation) {
-        <app-playlist-container [resourceInformation]="resourceInformation" />
+      @if (resourceInformation(); as resource) {
+        @if (resource.type === mediaTypeEnum.Media) {
+          <app-single-song-container [resourceInformation]="resource" />
+        }
+        @if (resource.type === mediaTypeEnum.PlayList) {
+          <app-playlist-container [resourceInformation]="resource" />
+        }
       }
     </div>
 

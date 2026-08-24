@@ -1,4 +1,4 @@
-import { Component, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, DestroyRef, ChangeDetectionStrategy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -34,11 +34,13 @@ export class HomeComponent {
   url: string = '';
   faWarning = faTriangleExclamation;
 
-  isLoading: boolean = false;
-  loaderType: 'single-song' | 'playlist' | 'unknown' = 'unknown';
+  // Signals: every one of these is written from an HTTP subscribe, which schedules no
+  // change detection of its own now that the app runs without zone.js.
+  isLoading = signal(false);
+  loaderType = signal<'single-song' | 'playlist' | 'unknown'>('unknown');
 
-  resourceInformation: ResourceInformationDto | undefined;
-  mediaType: MediaType | undefined;
+  resourceInformation = signal<ResourceInformationDto | undefined>(undefined);
+  mediaType = signal<MediaType | undefined>(undefined);
 
   constructor(
     private fetchService: FetchService,
@@ -49,7 +51,7 @@ export class HomeComponent {
   async download() {
     // Enter can fire while a fetch is already running; the Search button is disabled
     // for the same reason.
-    if (this.isLoading) {
+    if (this.isLoading()) {
       return;
     }
 
@@ -63,11 +65,11 @@ export class HomeComponent {
     }
 
     // Reset previous content
-    this.resourceInformation = undefined;
+    this.resourceInformation.set(undefined);
 
     // Show loader
-    this.isLoading = true;
-    this.loaderType = 'single-song'; // Default to single-song loader
+    this.isLoading.set(true);
+    this.loaderType.set('single-song'); // Default to single-song loader
 
     this.fetchResource();
   }
@@ -78,17 +80,13 @@ export class HomeComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (resourceInformation: ResourceInformationDto) => {
-          this.resourceInformation = resourceInformation;
-          this.mediaType = resourceInformation.type;
+          this.resourceInformation.set(resourceInformation);
+          this.mediaType.set(resourceInformation.type);
 
           // Update loader type based on actual media type
-          if (resourceInformation.type === MediaType.PlayList) {
-            this.loaderType = 'playlist';
-          } else {
-            this.loaderType = 'single-song';
-          }
+          this.loaderType.set(resourceInformation.type === MediaType.PlayList ? 'playlist' : 'single-song');
 
-          this.isLoading = false;
+          this.isLoading.set(false);
         },
         error: (error: any) => {
           if (error.status === 404) {
@@ -105,7 +103,7 @@ export class HomeComponent {
   }
 
   private handleError(title: string, confirmationText: string) {
-    this.isLoading = false;
+    this.isLoading.set(false);
     this.notifications.show({ title, message: confirmationText, tone: 'error' });
   }
 }

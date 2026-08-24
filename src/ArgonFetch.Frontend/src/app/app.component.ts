@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -25,9 +25,12 @@ export class AppComponent {
   faGithub = faGithub;
   faGear = faGear;
   isDarkTheme$;
-  version = 'unknown';
-  environment = 'unknown';
-  maintenance: string | null = null;
+
+  // Signals rather than plain fields: these are written from a promise and a timer, and
+  // without zone.js nothing else would tell the view they changed.
+  version = signal('unknown');
+  environment = signal('unknown');
+  maintenance = signal<string | null>(null);
 
   // Polled rather than pushed: the only maintenance is a yt-dlp update that lasts seconds, so
   // one small request a minute is cheaper than any kind of live connection. While it is running
@@ -64,9 +67,9 @@ export class AppComponent {
       )
     );
 
-    this.version = appInfo.version!;
-    this.environment = appInfo.environment!;
-    this.maintenance = appInfo.maintenance ?? null;
+    this.version.set(appInfo.version!);
+    this.environment.set(appInfo.environment!);
+    this.maintenance.set(appInfo.maintenance ?? null);
     this.scheduleMaintenanceCheck();
   }
 
@@ -75,7 +78,7 @@ export class AppComponent {
 
     this.pollTimer = setTimeout(
       () => this.checkMaintenance(),
-      this.maintenance ? AppComponent.MAINTENANCE_POLL_MS : AppComponent.IDLE_POLL_MS
+      this.maintenance() ? AppComponent.MAINTENANCE_POLL_MS : AppComponent.IDLE_POLL_MS
     );
   }
 
@@ -87,7 +90,7 @@ export class AppComponent {
     );
 
     if (appInfo) {
-      this.maintenance = appInfo.maintenance ?? null;
+      this.maintenance.set(appInfo.maintenance ?? null);
     }
 
     this.scheduleMaintenanceCheck();

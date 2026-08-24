@@ -9,27 +9,27 @@
       <p class="song-artist">{{ resourceInformation.mediaItems?.[0]?.author }}</p>
 
       <!-- Download Progress Bar -->
-      @if (isDownloading) {
+      @if (isDownloading()) {
         <div class="download-progress-container">
           <div class="download-info">
-            <span class="download-filename">{{ currentDownloadName }}</span>
+            <span class="download-filename">{{ currentDownloadName() }}</span>
             <div class="download-stats">
-              @if (downloadSpeed) {
-                <span class="download-speed">{{ downloadSpeed }}</span>
+              @if (downloadSpeed()) {
+                <span class="download-speed">{{ downloadSpeed() }}</span>
               }
-              @if (downloadedMB) {
+              @if (downloadedMB()) {
                 <span class="download-size">
-                  {{ downloadedMB }}@if (hasKnownTotal) { / {{ totalMB }}} MB
+                  {{ downloadedMB() }}@if (hasKnownTotal()) { / {{ totalMB() }}} MB
                 </span>
               }
-              @if (hasKnownTotal) {
-                <span class="download-percentage">{{ downloadProgress }}%</span>
+              @if (hasKnownTotal()) {
+                <span class="download-percentage">{{ downloadProgress() }}%</span>
               }
             </div>
           </div>
           <div class="progress-bar-wrapper">
-            @if (hasKnownTotal) {
-              <div class="progress-bar" [style.width.%]="downloadProgress" [style.max-width]="'100%'"></div>
+            @if (hasKnownTotal()) {
+              <div class="progress-bar" [style.width.%]="downloadProgress()" [style.max-width]="'100%'"></div>
             } @else {
               <!-- The server cannot declare a length for muxed streams, so show motion
                    rather than a number that would be invented. -->
@@ -46,10 +46,10 @@
          hover-and-boolean version had. -->
     <div class="download-button-container">
       <button type="button" class="action-button download-button"
-        [disabled]="isDownloading"
-        [cdkMenuTriggerFor]="isDownloading ? null : mainMenu"
+        [disabled]="isDownloading()"
+        [cdkMenuTriggerFor]="isDownloading() ? null : mainMenu"
         aria-label="Download">
-        @if (!isDownloading) {
+        @if (!isDownloading()) {
           <fa-icon [icon]="faDownload"></fa-icon>
         } @else {
           <fa-icon [icon]="faSpinner" class="fa-spin"></fa-icon>

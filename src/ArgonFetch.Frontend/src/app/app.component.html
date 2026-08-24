@@ -11,7 +11,7 @@
   </div>
 </nav>
 
-@if (maintenance) {
+@if (maintenance(); as maintenance) {
   <div class="maintenance" role="status" aria-live="polite">
     <div class="maintenance-card">
       <fa-icon [icon]="faGear" class="maintenance-icon" animation="spin"></fa-icon>
@@ -33,8 +33,8 @@
       GitHub <fa-icon [icon]="faGithub" class="footer-github-icon"></fa-icon>
     </a>
     <span class="footer-separator">•</span>
-    <span class="footer-environment">{{ environment }}</span>
+    <span class="footer-environment">{{ environment() }}</span>
     <span class="footer-separator">•</span>
-    <a href="https://github.com/ArgonFetch/ArgonFetch/releases/tag/{{ version }}" class="footer-link footer-version" target="_blank">{{ version }}</a>
+    <a href="https://github.com/ArgonFetch/ArgonFetch/releases/tag/{{ version() }}" class="footer-link footer-version" target="_blank">{{ version() }}</a>
   </div>
 </footer>
