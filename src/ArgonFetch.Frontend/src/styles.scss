@@ -64,6 +64,13 @@ app-icon {
 // as an element instead.
 .spinning {
   animation: spin 1s linear infinite;
+  transform-origin: 50% 50%;
+  // Drawn once and turned, rather than redrawn at every angle. An icon this small has a
+  // stroke about a pixel and a half wide, and re-rasterising it each frame snapped that
+  // stroke to a different set of pixels every time - which read as a circle wobbling like
+  // an egg rather than turning evenly.
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 @keyframes spin {
