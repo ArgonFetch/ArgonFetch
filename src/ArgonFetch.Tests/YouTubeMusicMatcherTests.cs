@@ -264,6 +264,40 @@ namespace ArgonFetch.Tests
             Assert.Empty(YouTubeMusicMatcher.RankByCreditOnly([candidate], ""));
         }
 
+        [Fact]
+        public void RankMatches_FindsATrackWhoseVersionSpotifyHyphenatesAndYouTubeBrackets()
+        {
+            // Real rows from a YouTube Music search, and the Spotify track that failed to
+            // resolve against them. Spotify writes the version into the name after a hyphen;
+            // YouTube Music brackets it and puts the romanisation after the Japanese original.
+            const string wantTitle = "World is Mine - Kaguya&Yachiyo Runami ver. - CPK! Remix";
+            const string wantArtist = "ryo (supercell), Kaguya(cv.Yuko Natsuyoshi), Yachiyo Runami(cv.Saori Hayami)";
+
+            var asked = new MatchCandidate(
+                "\u30EF\u30FC\u30EB\u30C9\u30A4\u30BA\u30DE\u30A4\u30F3 (\u304B\u3050\u3084&\u6708\u898B\u30E4\u30C1\u30E8 ver.) [CPK! Remix] - World Is Mine (Kaguya&Yachiyo Runami Ver.) [CPK! Remix]",
+                "ryo (supercell), Kaguya(cv.Yuko Natsuyoshi), Yachiyo Runami(cv.Saori Hayami)",
+                100);
+
+            // The same remix sung by someone else, which is not what was asked for.
+            var otherVersion = new MatchCandidate(
+                "\u30EF\u30FC\u30EB\u30C9\u30A4\u30BA\u30DE\u30A4\u30F3 (Anime ver.) [CPK! Remix] - World Is Mine (Anime Ver.) [CPK! Remix] (feat. ChoKaguyaHime)",
+                "supercell und Yachiyo Runami(cv.Saori Hayami)",
+                100);
+
+            var ranked = YouTubeMusicMatcher.RankMatches([otherVersion, asked], wantTitle, wantArtist, durationMs: 0);
+
+            Assert.Equal(asked, ranked.FirstOrDefault());
+        }
+
+        [Fact]
+        public void TitleScore_ReadsAQualifierTheCandidateKeepsInBrackets()
+        {
+            var want = YouTubeMusicMatcher.TitleWords("Sonne - Live Version");
+
+            // Bracketed on the candidate, hyphenated on the request: the same words either way.
+            Assert.Equal(1.0, YouTubeMusicMatcher.TitleScore("Sonne (Live Version)", want));
+        }
+
         [Theory]
         // A leading hyphen is a search operator - it tells YouTube to drop every result
         // containing the word, so the shelf came back empty for tracks named this way.
