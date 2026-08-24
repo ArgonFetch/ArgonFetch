@@ -154,7 +154,8 @@ namespace ArgonFetch.Infrastructure.Services
                 processStartInfo.ArgumentList.Add("-c:a");
                 processStartInfo.ArgumentList.Add("mp3");        // Convert audio to MP3
                 processStartInfo.ArgumentList.Add("-b:a");
-                processStartInfo.ArgumentList.Add("192k");       // Set bitrate to 192k
+                // The rendition list advertises this same number, so it comes from one place.
+                processStartInfo.ArgumentList.Add($"{MediaFormats.Mp3BitrateKbps}k");
                 processStartInfo.ArgumentList.Add("-f");
                 processStartInfo.ArgumentList.Add("mp3");        // Force MP3 format
             }

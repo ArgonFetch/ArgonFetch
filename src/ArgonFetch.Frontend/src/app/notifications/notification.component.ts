@@ -1,4 +1,4 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faCircleExclamation, faCircleInfo, faXmark } from '@fortawesome/free-solid-svg-icons';
 
@@ -17,8 +17,8 @@ export class NotificationComponent {
   @Input() message = '';
   @Input() tone: NotificationTone = 'info';
 
-  /** Set by the service so the close button can dismiss the overlay. */
-  @Input() dismiss: () => void = () => { };
+  /** Raised by the close button; the stack that owns this notification removes it. */
+  @Output() dismissed = new EventEmitter<void>();
 
   faXmark = faXmark;
 

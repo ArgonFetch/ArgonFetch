@@ -106,7 +106,6 @@
 
 /* Dropdown Menu Styles */
 .dropdown-menu {
-  position: absolute;
   background: var(--surface);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
@@ -114,17 +113,6 @@
   z-index: 1000;
   min-width: 150px;
   padding: 4px 0;
-
-  &.main-menu {
-    right: 0;
-    top: calc(100% + 5px);
-  }
-
-  &.submenu {
-    left: 100%;
-    top: -4px;
-    margin-left: -2px; // Reduced gap to make hovering easier
-  }
 }
 
 .menu-item-wrapper {
@@ -132,6 +120,13 @@
 }
 
 .menu-item {
+  // Menu items are buttons for the sake of keyboard and screen reader support, so the
+  // browser's own button styling has to be undone.
+  width: 100%;
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
   padding: 8px 16px;
   cursor: pointer;
   color: var(--text);
@@ -142,9 +137,14 @@
   position: relative;
   transition: all 0.2s ease;
 
-  &:hover {
+  &:hover,
+  // The CDK moves focus as the user arrows through a menu; without this the keyboard
+  // position would be invisible.
+  &:focus-visible,
+  &[aria-expanded='true'] {
     background: rgba(255, 255, 255, 0.05);
     color: var(--primary);
+    outline: none;
   }
 
   .submenu-arrow {
@@ -327,4 +327,68 @@
 @keyframes progress-indeterminate {
   0%   { margin-left: -35%; }
   100% { margin-left: 100%; }
+}
+
+/* Renditions carry a size next to the label: it is what tells someone how long the
+   download will take, which the resolution alone does not. */
+.menu-item-size {
+  margin-left: 16px;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+/* MP3 is a conversion rather than one of the source's own renditions, so it sits apart. */
+.menu-item--converted {
+  border-top: 1px solid var(--border);
+}
+
+/* The container sits beside the quality as a quiet chip: it matters when choosing, but the
+   quality is what someone reads first. */
+.menu-item-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.menu-item-type {
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--border);
+  opacity: 0.85;
+}
+
+/* Menus grow out of the trigger rather than appearing whole - the movement is what tells
+   the eye where the panel came from. */
+.menu-enter {
+  animation: menu-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top right;
+}
+
+.menu-leave {
+  animation: menu-out 100ms ease-in forwards;
+  transform-origin: top right;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+}
+
+@keyframes menu-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-enter,
+  .menu-leave {
+    animation-duration: 1ms;
+  }
 }

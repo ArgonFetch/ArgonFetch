@@ -1,4 +1,4 @@
-namespace ArgonFetch.Application.Services
+﻿namespace ArgonFetch.Application.Services
 {
     /// <summary>
     /// Maps a source container to the media type it is served with. Clients pick the on-disk
@@ -7,6 +7,12 @@ namespace ArgonFetch.Application.Services
     /// </summary>
     public static class MediaFormats
     {
+        /// <summary>
+        /// Bitrate the MP3 conversion encodes at, in kbps. Shared so the offer a client shows
+        /// and the encode FFmpeg performs cannot disagree.
+        /// </summary>
+        public const int Mp3BitrateKbps = 192;
+
         private static readonly Dictionary<string, string> MimeTypesByExtension =
             new(StringComparer.OrdinalIgnoreCase)
             {

@@ -6,7 +6,7 @@
     }
     <p class="notification__message">{{ message }}</p>
   </div>
-  <button type="button" class="notification__close" (click)="dismiss()" aria-label="Dismiss notification">
+  <button type="button" class="notification__close" (click)="dismissed.emit()" aria-label="Dismiss notification">
     <fa-icon [icon]="faXmark"></fa-icon>
   </button>
 </div>

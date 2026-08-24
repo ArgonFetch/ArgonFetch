@@ -1,7 +1,10 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
-import { NotificationComponent, NotificationTone } from './notification.component';
+import { NotificationTone } from './notification.component';
+// The stack injects this service in turn; the reference here is only read when a
+// notification is actually shown, by which point both modules have finished loading.
+import { NotificationStackComponent } from './notification-stack.component';
 
 export interface NotificationConfig {
   title?: string;
@@ -11,6 +14,13 @@ export interface NotificationConfig {
   durationMs?: number;
 }
 
+export interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  tone: NotificationTone;
+}
+
 /**
  * Transient notifications, built on the CDK overlay.
  * <p>
@@ -18,14 +28,56 @@ export interface NotificationConfig {
  * every call site disabled the cancel button, and one disabled confirm too. A blocking
  * dialog for "you forgot to enter a URL" made the user dismiss something they never asked
  * for; a toast says the same thing without taking over the page.
+ * <p>
+ * One overlay holds all of them, rather than one overlay each: stacking them by hand meant
+ * assuming a fixed height, and anything that wrapped to two lines overlapped its neighbour.
  */
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
   private readonly overlay = inject(Overlay);
-  private readonly open: OverlayRef[] = [];
+  private readonly items = signal<Notification[]>([]);
+
+  private overlayRef?: OverlayRef;
+  private nextId = 0;
+
+  /** Everything currently on screen, oldest first. Read by the stack component. */
+  readonly notifications = this.items.asReadonly();
 
   show(config: NotificationConfig): void {
-    const overlayRef = this.overlay.create({
+    this.ensureAttached();
+
+    const id = this.nextId++;
+
+    this.items.update(current => [...current, {
+      id,
+      title: config.title ?? '',
+      message: config.message,
+      tone: config.tone ?? 'info'
+    }]);
+
+    const duration = config.durationMs ?? 6000;
+    if (duration > 0) {
+      setTimeout(() => this.dismiss(id), duration);
+    }
+  }
+
+  dismiss(id: number): void {
+    this.items.update(current => current.filter(notification => notification.id !== id));
+
+    // The overlay is torn down once empty rather than left attached, so it cannot sit over
+    // the page swallowing anything once there is nothing to show.
+    if (this.items().length === 0) {
+      this.overlayRef?.dispose();
+      this.overlayRef = undefined;
+    }
+  }
+
+  private ensureAttached(): void {
+    if (this.overlayRef) {
+      return;
+    }
+
+    this.overlayRef = this.overlay.create({
       positionStrategy: this.overlay.position()
         .global()
         .bottom('1.5rem')
@@ -35,37 +87,6 @@ export class NotificationService {
       hasBackdrop: false
     });
 
-    // Stack rather than overlap when several arrive at once.
-    overlayRef.overlayElement.style.marginBottom = `${this.open.length * 4.5}rem`;
-    this.open.push(overlayRef);
-
-    const instance = overlayRef.attach(new ComponentPortal(NotificationComponent)).instance;
-    instance.title = config.title ?? '';
-    instance.message = config.message;
-    instance.tone = config.tone ?? 'info';
-
-    const dismiss = () => this.dismiss(overlayRef);
-    instance.dismiss = dismiss;
-
-    const duration = config.durationMs ?? 6000;
-    if (duration > 0) {
-      setTimeout(dismiss, duration);
-    }
-  }
-
-  private dismiss(overlayRef: OverlayRef): void {
-    const index = this.open.indexOf(overlayRef);
-    if (index === -1) {
-      // Already dismissed - the timer and the close button can both fire.
-      return;
-    }
-
-    this.open.splice(index, 1);
-    overlayRef.dispose();
-
-    // Close the gap left behind so the remaining notifications stay stacked.
-    this.open.forEach((ref, i) => {
-      ref.overlayElement.style.marginBottom = `${i * 4.5}rem`;
-    });
+    this.overlayRef.attach(new ComponentPortal(NotificationStackComponent));
   }
 }

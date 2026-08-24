@@ -1,4 +1,4 @@
-using ArgonFetch.Application.Enums;
+﻿using ArgonFetch.Application.Enums;
 
 namespace ArgonFetch.Application.Dtos
 {
@@ -26,5 +26,11 @@ namespace ArgonFetch.Application.Dtos
         public string? WorstQualityMimeType { get; set; }
 
         public UrlType UrlType { get; set; }
+
+        /// <summary>
+        /// Every rendition on offer, best first. The three fixed rungs above are the first,
+        /// middle and last of these, kept for clients written against them.
+        /// </summary>
+        public List<MediaRenditionDto> Renditions { get; set; } = [];
     }
 }

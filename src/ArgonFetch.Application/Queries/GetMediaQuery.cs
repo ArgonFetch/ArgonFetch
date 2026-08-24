@@ -101,6 +101,15 @@ namespace ArgonFetch.Application.Queries
                 StreamReferenceDto? combinedReferences = null;
                 StreamReferenceDto? audioReferences = null;
 
+                // Offered alongside the three fixed rungs: a source usually has several more
+                // steps than that, and which ones are worth showing is the client's call.
+                var videoRenditions = new List<MediaRenditionDto>();
+                var audioRenditions = _proxyUrlBuilder.BuildRenditions(
+                    RenditionPicker.PickAudio(AudioSources(resultData.Formats)),
+                    _cacheService,
+                    isAudio: true,
+                    proxy: _fetchProxy);
+
                 if (HasValidUrls(combinedFormats))
                 {
                     // We have pre-muxed formats! Use them directly (FAST!)
@@ -110,6 +119,14 @@ namespace ArgonFetch.Application.Queries
                     // Still extract audio-only for "Audio Only" option
                     var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
                     audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy);
+
+                    // Pre-muxed formats are served as they are, so they are renditions of the
+                    // pass-through kind rather than something to combine.
+                    videoRenditions = _proxyUrlBuilder.BuildRenditions(
+                        RenditionPicker.PickVideo(PreMuxedSources(resultData.Formats)),
+                        _cacheService,
+                        isAudio: false,
+                        proxy: _fetchProxy);
                 }
                 else
                 {
@@ -122,6 +139,23 @@ namespace ArgonFetch.Application.Queries
 
                     // Build proxy references for audio-only option
                     audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy);
+
+                    // Each video step is paired with the best audio for muxing.
+                    videoRenditions = _combinedUrlBuilder.BuildCombinedRenditions(
+                        RenditionPicker.PickVideo(VideoOnlySources(resultData.Formats)),
+                        RenditionPicker.PickAudio(AudioSources(resultData.Formats), count: 1).FirstOrDefault(),
+                        _cacheService,
+                        _fetchProxy);
+                }
+
+                if (combinedReferences != null)
+                {
+                    combinedReferences.Renditions = videoRenditions;
+                }
+
+                if (audioReferences != null)
+                {
+                    audioReferences.Renditions = audioRenditions;
                 }
 
                 return new ResourceInformationDto
@@ -241,6 +275,52 @@ namespace ArgonFetch.Application.Queries
                 WorstQualityFileExtension = worstVideo?.Extension,
             };
         }
+
+        /// <summary>
+        /// Formats that already carry both tracks, so they can be served untouched.
+        /// </summary>
+        private static IEnumerable<RenditionSource> PreMuxedSources(FormatData[] formatData) =>
+            formatData
+                .Where(f =>
+                    !string.IsNullOrEmpty(f.Url) &&
+                    !string.IsNullOrEmpty(f.VideoCodec) && f.VideoCodec != "none" &&
+                    !string.IsNullOrEmpty(f.AudioCodec) && f.AudioCodec != "none" &&
+                    !f.Protocol.Contains("mhtml") &&
+                    !f.Protocol.Contains("m3u8"))
+                .Select(ToSource);
+
+        /// <summary>Video tracks without audio, which have to be muxed before use.</summary>
+        private static IEnumerable<RenditionSource> VideoOnlySources(FormatData[] formatData) =>
+            formatData
+                .Where(f =>
+                    !string.IsNullOrEmpty(f.Url) &&
+                    !string.IsNullOrEmpty(f.VideoCodec) && f.VideoCodec != "none" &&
+                    (string.IsNullOrEmpty(f.AudioCodec) || f.AudioCodec == "none") &&
+                    !f.Protocol.Contains("mhtml") &&
+                    !f.Protocol.Contains("m3u8"))
+                .Select(ToSource);
+
+        private static IEnumerable<RenditionSource> AudioSources(FormatData[] formatData) =>
+            formatData
+                .Where(f =>
+                    !string.IsNullOrEmpty(f.Url) &&
+                    !string.IsNullOrEmpty(f.AudioCodec) && f.AudioCodec != "none" &&
+                    (string.IsNullOrEmpty(f.VideoCodec) || f.VideoCodec == "none") &&
+                    !f.Protocol.Contains("mhtml") &&
+                    !f.Protocol.Contains("m3u8") &&
+                    f.AudioBitrate is > 0)
+                // Weighted the same way the three fixed rungs are, so the top rendition and
+                // "best" do not disagree about which format wins.
+                .OrderByDescending(f => f.Bitrate * OpusQualityFactor(f.AudioCodec))
+                .Select(ToSource);
+
+        private static RenditionSource ToSource(FormatData format) => new(
+            format.Url,
+            format.Format,
+            format.Extension,
+            format.Height,
+            format.Bitrate,
+            (long?)(format.FileSize ?? format.ApproximateFileSize));
 
         /// <summary>
         /// Opus is worth roughly 20% more than AAC at the same bitrate, so it is weighted that

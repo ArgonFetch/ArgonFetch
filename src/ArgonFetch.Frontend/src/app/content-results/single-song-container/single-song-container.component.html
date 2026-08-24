@@ -41,61 +41,87 @@
     </div>
 
     <!-- Download Button with Dropdown Menu -->
+    <!-- Built on the CDK menu rather than hand-rolled flags: it brings keyboard navigation,
+         focus handling, ARIA roles and outside-click dismissal, none of which the previous
+         hover-and-boolean version had. -->
     <div class="download-button-container">
-      <button class="action-button download-button"
+      <button type="button" class="action-button download-button"
         [disabled]="isDownloading"
-        (click)="toggleMainMenu($event)">
+        [cdkMenuTriggerFor]="isDownloading ? null : mainMenu"
+        aria-label="Download">
         @if (!isDownloading) {
           <fa-icon [icon]="faDownload"></fa-icon>
-        }
-        @if (isDownloading) {
+        } @else {
           <fa-icon [icon]="faSpinner" class="fa-spin"></fa-icon>
         }
       </button>
-
-      <!-- Main Dropdown Menu -->
-      @if (showMainMenu && !isDownloading) {
-        <div class="dropdown-menu main-menu">
-          <!-- Video + Audio Option (if video content is available) -->
-          @if (hasCombinedUrls()) {
-            <div class="menu-item-wrapper"
-              (mouseenter)="showVideoMenu($event)"
-              (mouseleave)="showVideoSubmenu = false">
-              <div class="menu-item">
-                <span>Video</span>
-                <fa-icon [icon]="faChevronRight" class="submenu-arrow"></fa-icon>
-              </div>
-              <!-- Video Quality Submenu -->
-              @if (showVideoSubmenu) {
-                <div class="dropdown-menu submenu">
-                  <div class="menu-item" (click)="onDownload('best', 'combined', $event)">Best</div>
-                  <div class="menu-item" (click)="onDownload('medium', 'combined', $event)">Medium</div>
-                  <div class="menu-item" (click)="onDownload('worst', 'combined', $event)">Low</div>
-                </div>
-              }
-            </div>
-          }
-          <!-- Audio Only Option -->
-          @if (hasAudioUrls()) {
-            <div class="menu-item-wrapper"
-              (mouseenter)="showAudioMenu($event)"
-              (mouseleave)="showAudioSubmenu = false">
-              <div class="menu-item">
-                <span>Audio</span>
-                <fa-icon [icon]="faChevronRight" class="submenu-arrow"></fa-icon>
-              </div>
-              <!-- Audio Quality Submenu -->
-              @if (showAudioSubmenu) {
-                <div class="dropdown-menu submenu">
-                  <div class="menu-item" (click)="onDownload('best', 'audio', $event)">Best</div>
-                  <div class="menu-item" (click)="onDownload('medium', 'audio', $event)">Medium</div>
-                  <div class="menu-item" (click)="onDownload('worst', 'audio', $event)">Low</div>
-                </div>
-              }
-            </div>
-          }
-        </div>
-      }
     </div>
+
+    <ng-template #mainMenu>
+      <div class="dropdown-menu" cdkMenu animate.enter="menu-enter" animate.leave="menu-leave">
+        @if (hasCombinedUrls()) {
+          <button type="button" class="menu-item" cdkMenuItem [cdkMenuTriggerFor]="videoMenu">
+            <span>Video</span>
+            <fa-icon [icon]="faChevronRight" class="submenu-arrow"></fa-icon>
+          </button>
+        }
+        @if (hasAudioUrls()) {
+          <button type="button" class="menu-item" cdkMenuItem [cdkMenuTriggerFor]="audioMenu">
+            <span>Audio</span>
+            <fa-icon [icon]="faChevronRight" class="submenu-arrow"></fa-icon>
+          </button>
+        }
+      </div>
+    </ng-template>
+
+    <ng-template #videoMenu>
+      <div class="dropdown-menu" cdkMenu animate.enter="menu-enter" animate.leave="menu-leave">
+        @for (rendition of videoRenditions(); track rendition.key + (rendition.convertTo ?? '')) {
+          <button type="button" class="menu-item" cdkMenuItem
+            (cdkMenuItemTriggered)="onDownloadRendition(rendition)">
+            <span class="menu-item-label">
+              {{ rendition.label }}
+              <span class="menu-item-type">{{ typeOf(rendition) }}</span>
+            </span>
+            @if (sizeOf(rendition)) {
+              <span class="menu-item-size">{{ sizeOf(rendition) }}</span>
+            }
+          </button>
+        } @empty {
+          <!-- Sources that report no renditions still have the three fixed rungs. -->
+          <button type="button" class="menu-item" cdkMenuItem
+            (cdkMenuItemTriggered)="onDownload('best', 'combined')">Best</button>
+          <button type="button" class="menu-item" cdkMenuItem
+            (cdkMenuItemTriggered)="onDownload('worst', 'combined')">Low</button>
+        }
+      </div>
+    </ng-template>
+
+    <ng-template #audioMenu>
+      <div class="dropdown-menu" cdkMenu animate.enter="menu-enter" animate.leave="menu-leave">
+        @for (rendition of audioRenditions(); track rendition.key + (rendition.convertTo ?? '')) {
+          <!-- Converted options come from the server in the same list, marked as such, so
+               they need no case of their own here. -->
+          <button type="button" class="menu-item" cdkMenuItem
+            [class.menu-item--converted]="!!rendition.convertTo"
+            (cdkMenuItemTriggered)="onDownloadRendition(rendition)">
+            <span class="menu-item-label">
+              {{ rendition.label }}
+              <span class="menu-item-type">{{ typeOf(rendition) }}</span>
+            </span>
+            @if (rendition.convertTo) {
+              <span class="menu-item-size">converted</span>
+            } @else if (sizeOf(rendition)) {
+              <span class="menu-item-size">{{ sizeOf(rendition) }}</span>
+            }
+          </button>
+        } @empty {
+          <button type="button" class="menu-item" cdkMenuItem
+            (cdkMenuItemTriggered)="onDownload('best', 'audio')">Best</button>
+          <button type="button" class="menu-item" cdkMenuItem
+            (cdkMenuItemTriggered)="onDownload('worst', 'audio')">Low</button>
+        }
+      </div>
+    </ng-template>
   </div>
 </div>
