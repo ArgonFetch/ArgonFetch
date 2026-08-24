@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace ArgonFetch.Application.Services
 {
@@ -30,7 +30,7 @@ namespace ArgonFetch.Application.Services
         {
             "cover", "covers", "karaoke", "instrumental", "remix", "nightcore", "sped", "slowed",
             "reverb", "piano", "acoustic", "tribute", "parody", "mashup", "rendition", "remake",
-            "unplugged", "orchestral", "lofi", "8d", "guitar", "violin", "flute",
+            "unplugged", "orchestral", "lofi", "8d", "guitar", "violin", "flute", "solo",
         };
 
         private static readonly Regex Bracketed = new(@"[(\[]([^)\]]*)[)\]]", RegexOptions.Compiled);
@@ -47,6 +47,21 @@ namespace ArgonFetch.Application.Services
             string wantTitle,
             string wantArtist,
             long durationMs,
+            bool officialShelf = false) =>
+            RankMatches(candidates, wantTitle, wantArtist, durationMs, officialShelf).FirstOrDefault();
+
+        /// <summary>
+        /// Every candidate that could be the requested recording, best first.
+        /// <para>
+        /// A caller with a way to check its pick - fetching it and reading the real duration -
+        /// can walk this list instead of taking the first and hoping.
+        /// </para>
+        /// </summary>
+        public static IReadOnlyList<MatchCandidate> RankMatches(
+            IReadOnlyList<MatchCandidate> candidates,
+            string wantTitle,
+            string wantArtist,
+            long durationMs,
             bool officialShelf = false)
         {
             var want = TitleWords(wantTitle);
@@ -56,6 +71,11 @@ namespace ArgonFetch.Application.Services
             // (Remix)" must keep the remix, and that marker only survives in the bracket-keeping split.
             var asked = new HashSet<string>(MarkerWords(wantTitle), StringComparer.Ordinal);
             asked.UnionWith(MarkerWords(wantArtist));
+
+            // Title words only. Including the artist's words would let "- MEMcho Solo Ver. -"
+            // count as plainer than the group recording, because the soloist is one of the
+            // credited artists and so appears in asked.
+            var askedTitleWords = new HashSet<string>(MarkerWords(wantTitle), StringComparer.Ordinal);
 
             var titled = candidates.Where(candidate =>
                 (want.Count == 0 || TitleScore(candidate.Title, want) >= MinTitleScore) &&
@@ -80,6 +100,8 @@ namespace ArgonFetch.Application.Services
             var byArtist = titled.Where(c => ArtistMatches(c.Artist, wantArtistWords)).ToList();
             var viable = officialShelf && byArtist.Count == 0 ? titled : byArtist;
 
+            var ordered = viable.Select((candidate, index) => (candidate, index));
+
             // Duration is a tiebreaker, not a requirement. Some search backends do not report it
             // at all - YTMusicAPI returns null for every row - and filtering on it then discards
             // every candidate and resolves nothing.
@@ -87,7 +109,11 @@ namespace ArgonFetch.Application.Services
 
             if (durationMs <= 0L || timed.Count == 0)
             {
-                return viable.FirstOrDefault();
+                return ordered
+                    .OrderBy(x => ExtraWords(x.candidate.Title, askedTitleWords))
+                    .ThenBy(x => x.index)
+                    .Select(x => x.candidate)
+                    .ToList();
             }
 
             var wantSec = durationMs / 1000;
@@ -95,15 +121,56 @@ namespace ArgonFetch.Application.Services
             // YouTube Music ranks the canonical upload first. An instrumental runs to the same length
             // as the vocal take, so picking purely by the smallest duration difference let a second or
             // two of noise outrank that order; only a clearly better fit (a whole bucket) may.
-            return viable
-                .Select((candidate, index) => (candidate, index))
+            return ordered
                 .Where(x => x.candidate.DurationSec > 0 &&
                             Math.Abs(x.candidate.DurationSec - wantSec) <= DurationToleranceSec)
                 .OrderBy(x => Math.Abs(x.candidate.DurationSec - wantSec) / DurationBucketSec)
+                .ThenBy(x => ExtraWords(x.candidate.Title, askedTitleWords))
                 .ThenBy(x => x.index)
                 .Select(x => x.candidate)
-                .FirstOrDefault();
+                .ToList();
         }
+
+        /// <summary>
+        /// Candidates that match on credit alone, best first, for a caller that can verify its
+        /// pick another way.
+        /// <para>
+        /// A release is often filed under a translated name - Spotify says "REVENGE OF B" where
+        /// YouTube Music says the Japanese original - and the two titles share no words at all,
+        /// so title matching rejects every candidate and the track cannot be fetched. The credit
+        /// still matches, and a duration read from the fetched result settles which one it is,
+        /// so this is only safe for a caller that performs that check.
+        /// </para>
+        /// </summary>
+        public static IReadOnlyList<MatchCandidate> RankByCreditOnly(
+            IReadOnlyList<MatchCandidate> candidates,
+            string wantArtist)
+        {
+            var wantArtistWords = Words(RealArtist(wantArtist));
+
+            if (wantArtistWords.Count == 0)
+                return [];
+
+            var asked = new HashSet<string>(MarkerWords(wantArtist), StringComparer.Ordinal);
+
+            return candidates
+                .Where(c => ArtistMatches(c.Artist, wantArtistWords, allowScriptMismatch: false) &&
+                            !AddsRework($"{c.Title} {BracketedIn(c.Details)}", asked))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Words the candidate's title carries that nobody asked for.
+        /// <para>
+        /// Search returns the radio edit, the remaster and the twelve-inch mix alongside the
+        /// album version, all with the right title and the right credit. Where no duration is
+        /// available to separate them - and YTMusicAPI never provides one - the plainest title
+        /// is the one that was asked for. Counted with brackets kept, because that is where the
+        /// qualifier lives.
+        /// </para>
+        /// </summary>
+        internal static int ExtraWords(string candidateTitle, ISet<string> asked) =>
+            MarkerWords(candidateTitle).Count(word => !asked.Contains(word));
 
         /// <summary>
         /// True when the candidate advertises a rework the request never asked for. Asking for a
@@ -147,7 +214,12 @@ namespace ArgonFetch.Application.Services
         /// not by the artist. A source may credit several artists where YouTube credits one, so
         /// sharing a single name is enough. An unknown artist on either side cannot rule anything out.
         /// </summary>
-        internal static bool ArtistMatches(string? candidateArtist, ISet<string> wantArtist)
+        /// <param name="allowScriptMismatch">
+        /// Whether credits written in different scripts may be assumed to match. They may when a
+        /// title match already identified the recording; they may not when the credit is the only
+        /// evidence, or a karaoke label credited in one script passes for any artist in another.
+        /// </param>
+        internal static bool ArtistMatches(string? candidateArtist, ISet<string> wantArtist, bool allowScriptMismatch = true)
         {
             if (wantArtist.Count == 0) return true;
 
@@ -159,7 +231,7 @@ namespace ArgonFetch.Application.Services
             // thrown away. Skipping the check costs nothing the other filters do not already cover:
             // an upload in a different script from the artist we asked for is not what a cover or a
             // karaoke channel looks like.
-            if (HasLatin(have) != HasLatin(wantArtist)) return true;
+            if (allowScriptMismatch && HasLatin(have) != HasLatin(wantArtist)) return true;
 
             return have.Any(h => wantArtist.Any(w => NearlyEqual(h, w)));
         }

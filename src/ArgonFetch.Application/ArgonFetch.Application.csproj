@@ -18,6 +18,12 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <!-- Matching is a pile of heuristics whose individual steps are worth testing on their
+       own; without this a failing track can only be diagnosed through the whole pipeline. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="ArgonFetch.Tests" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.7.1" />
     <PackageReference Include="FluentValidation" Version="11.11.0" />

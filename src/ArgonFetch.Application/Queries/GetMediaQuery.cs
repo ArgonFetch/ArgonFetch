@@ -34,6 +34,15 @@ namespace ArgonFetch.Application.Queries
         private readonly IProxyUrlBuilder _proxyUrlBuilder;
         private readonly IProxyPool _proxyPool;
 
+        // Wrong-recording candidates come in runs - a radio edit, a remaster and a twelve-inch
+        // mix all sit above the album version - so checking a couple past the leader is worth a
+        // fetch each. Beyond that the search itself was wrong.
+        private const int MaxVerificationAttempts = 3;
+
+        // A release and its Spotify entry differ by a second or two of trailing silence. A radio
+        // edit differs by a minute, which is what this has to catch.
+        private const double VerificationToleranceSec = 12.0;
+
         // The proxy the last extraction went through. Media URLs are signed for the IP that
         // requested them, so it has to travel with them to the stream endpoint.
         private string? _fetchProxy;
@@ -323,6 +332,70 @@ namespace ArgonFetch.Application.Queries
             (long?)(format.FileSize ?? format.ApproximateFileSize));
 
         /// <summary>
+        /// Fetches candidates in order until one turns out to be the requested recording.
+        /// </summary>
+        /// <param name="requireDuration">
+        /// Whether a candidate whose length cannot be confirmed may be accepted. It may on the
+        /// normal path, where the title and credit already matched; it may not when the title
+        /// was disregarded, because then the duration is the only thing identifying the track.
+        /// </param>
+        private async Task<VideoData?> FetchVerifiedAgainstSpotify(
+            IReadOnlyList<MatchCandidate> ranked,
+            List<MatchCandidate> candidates,
+            List<YTMusicAPI.Model.Domain.Track> results,
+            SpotifyTrackMetadata track,
+            CancellationToken cancellationToken,
+            bool requireDuration = false)
+        {
+            VideoData? firstFetched = null;
+
+            // Two beyond the leader. Each attempt is a yt-dlp call, and a search whose first
+            // three results are all the wrong recording is not one more fetch away from success.
+            foreach (var candidate in ranked.Take(MaxVerificationAttempts))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Reference equality, not IndexOf: MatchCandidate is a record, so two results with
+                // the same title, artist and length would compare equal and resolve to the wrong URL.
+                var url = results[candidates.FindIndex(c => ReferenceEquals(c, candidate))].Url;
+
+                VideoData fetched;
+
+                try
+                {
+                    fetched = await YT_DLP_Fetch(url);
+                }
+                catch (ArgumentException)
+                {
+                    // A candidate that cannot be fetched is no worse than one that does not fit.
+                    continue;
+                }
+
+                firstFetched ??= fetched;
+
+                if (DurationFits(fetched, track.DurationMs))
+                    return fetched;
+            }
+
+            // Nothing was confirmed. On the normal path the leader had already matched on title
+            // and credit, so it is still the best answer available; on the credit-only path there
+            // is nothing left to identify it by, and a wrong recording is worse than none.
+            return requireDuration ? null : firstFetched;
+        }
+
+        /// <summary>
+        /// Whether a fetched result runs to the length the request asked for. Unknown lengths on
+        /// either side are not evidence against a candidate.
+        /// </summary>
+        private static bool DurationFits(VideoData fetched, long wantedMs)
+        {
+            if (wantedMs <= 0 || fetched.Duration is not > 0)
+                return false;
+
+            return Math.Abs(fetched.Duration.Value - wantedMs / 1000.0) <= VerificationToleranceSec;
+        }
+
+        /// <summary>
         /// Opus is worth roughly 20% more than AAC at the same bitrate, so it is weighted that
         /// way rather than compared on the raw number. YouTube offers the two within a kbps of
         /// each other, which would otherwise make the pick a coin toss.
@@ -441,21 +514,32 @@ namespace ArgonFetch.Application.Queries
                     r.Author ?? string.Empty))
                 .ToList();
 
-            var best = YouTubeMusicMatcher.BestMatch(
+            var ranked = YouTubeMusicMatcher.RankMatches(
                 candidates,
                 track.Title,
                 track.Artist,
                 track.DurationMs,
                 officialShelf: true);
 
-            if (best is null)
+            // Search never reports a duration - YTMusicAPI returns null for every row - so the
+            // one signal that separates an album version from its radio edit is missing while
+            // ranking. Fetching a candidate does report it, so the pick is checked rather than
+            // trusted, and the next candidate tried when it does not fit.
+            var result = await FetchVerifiedAgainstSpotify(ranked, candidates, results, track, cancellationToken);
+
+            if (result is null)
+            {
+                // Titles are often translated - Spotify says "REVENGE OF B" where YouTube Music
+                // says the Japanese original - and then no candidate shares a single word with
+                // what was asked for. The credit still matches, and the duration decides, so
+                // this pass drops the title requirement and leans on the check instead.
+                var byCredit = YouTubeMusicMatcher.RankByCreditOnly(candidates, track.Artist);
+
+                result = await FetchVerifiedAgainstSpotify(byCredit, candidates, results, track, cancellationToken, requireDuration: true);
+            }
+
+            if (result is null)
                 throw new ArgumentException($"No YouTube Music match found for '{searchQuery}'");
-
-            // Reference equality, not IndexOf: MatchCandidate is a record, so two results with the
-            // same title, artist and length would compare equal and resolve to the wrong URL.
-            var ytmTrackUrl = results[candidates.FindIndex(c => ReferenceEquals(c, best))].Url;
-
-            var result = await YT_DLP_Fetch(ytmTrackUrl);
 
             var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(result.Formats);
 
