@@ -8,26 +8,33 @@
       <div class="playlist-info">
         <div class="title-row">
           <h3 class="playlist-title">{{ resourceInformation.title }}</h3>
-          <button class="action-button download-button" (click)="onDownload()">
-            <fa-icon [icon]="faDownload"></fa-icon>
-          </button>
         </div>
         <p class="playlist-author">By {{ resourceInformation.author }}</p>
+
+        <app-download-progress />
+
       </div>
     </div>
   </div>
 
   <div class="songs-list">
     <ul>
-      @for (song of resourceInformation.mediaItems; track song) {
+      @for (song of resourceInformation.mediaItems; track song.requestedUrl) {
         <li class="song-item">
           <img [src]="song.coverUrl" alt="Song Cover" class="song-cover">
           <div class="song-info">
             <p class="song-name">{{ song.title }}</p>
             <p class="song-author">{{ song.author }}</p>
           </div>
-          <button class="action-button download-button">
-            <fa-icon [icon]="faDownload"></fa-icon>
+          <button type="button" class="action-button download-button"
+            [disabled]="isDownloading() || isBusy(song)"
+            (click)="onDownloadSong(song)"
+            [attr.aria-label]="'Download ' + song.title">
+            @if (isBusy(song)) {
+              <fa-icon [icon]="faSpinner" class="fa-spin"></fa-icon>
+            } @else {
+              <fa-icon [icon]="faDownload"></fa-icon>
+            }
           </button>
         </li>
       }

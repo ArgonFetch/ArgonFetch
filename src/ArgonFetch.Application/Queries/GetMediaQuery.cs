@@ -5,6 +5,7 @@ using ArgonFetch.Application.Services.DDLFetcherServices;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Metadata;
 using YoutubeDLSharp.Options;
@@ -36,6 +37,7 @@ namespace ArgonFetch.Application.Queries
         private readonly IProxyUrlBuilder _proxyUrlBuilder;
         private readonly IProxyPool _proxyPool;
         private readonly IToolPaths _toolPaths;
+        private readonly ILogger<GetMediaQueryHandler> _logger;
 
         // Enough to hold the album version when search leads with a radio edit and a remaster,
         // and few enough that a mistyped query does not drag twenty rows through matching.
@@ -65,7 +67,8 @@ namespace ArgonFetch.Application.Queries
             IMediaUrlCacheService cacheService,
             IProxyUrlBuilder proxyUrlBuilder,
             IProxyPool proxyPool,
-            IToolPaths toolPaths
+            IToolPaths toolPaths,
+            ILogger<GetMediaQueryHandler> logger
             )
         {
             _spotifyMetadataService = spotifyMetadataService;
@@ -79,6 +82,7 @@ namespace ArgonFetch.Application.Queries
             _proxyUrlBuilder = proxyUrlBuilder;
             _proxyPool = proxyPool;
             _toolPaths = toolPaths;
+            _logger = logger;
         }
 
         public async Task<ResourceInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
@@ -86,7 +90,13 @@ namespace ArgonFetch.Application.Queries
             var platform = PlatformIdentifierService.IdentifyPlatform(request.Query);
 
             if (platform == Platform.Spotify)
-                return await HandleSpotify(request.Query, cancellationToken);
+            {
+                var contentType = await MediaContentIdentifierService.IdentifyContent(request.Query, platform);
+
+                return contentType is ContentType.Playlist or ContentType.SpotifyAlbum
+                    ? await HandleSpotifyCollection(request.Query, cancellationToken)
+                    : await HandleSpotify(request.Query, cancellationToken);
+            }
 
             else if (platform == Platform.TikTok)
                 return await HandleTikTok(request.Query, cancellationToken);
@@ -521,6 +531,49 @@ namespace ArgonFetch.Application.Queries
             }
 
             return result.Data;
+        }
+
+        /// <summary>
+        /// An album or playlist, listed rather than resolved.
+        /// <para>
+        /// Each entry needs its own YouTube Music match and its own extraction, which is seconds
+        /// of work apiece; doing that for a hundred of them before showing anything would take
+        /// minutes and throw most of it away, since nobody downloads a whole playlist by
+        /// accident. The listing carries what Spotify knows, and picking an entry fetches that
+        /// one track through the path a single link already takes.
+        /// </para>
+        /// </summary>
+        private async Task<ResourceInformationDto> HandleSpotifyCollection(string query, CancellationToken cancellationToken)
+        {
+            var collection = await _spotifyMetadataService.GetCollectionAsync(query, cancellationToken);
+
+            if (collection.MayBeTruncated)
+            {
+                _logger.LogInformation(
+                    "Spotify returned the maximum of {Count} entries for {Url}; there may be more it did not send.",
+                    collection.Items.Count, query);
+            }
+
+            return new ResourceInformationDto
+            {
+                Type = MediaType.PlayList,
+                Title = collection.Title,
+                Author = collection.Author,
+                CoverUrl = collection.CoverUrl,
+                MediaItems = collection.Items
+                    .Select(item => new MediaInformationDto
+                    {
+                        RequestedUrl = item.TrackUrl,
+                        Title = item.Title,
+                        Author = item.Artist,
+                        // The listing has no per-track picture, so entries show the release's.
+                        CoverUrl = collection.CoverUrl,
+                        // Unresolved on purpose: see above.
+                        Audio = null,
+                        Video = null
+                    })
+                    .ToList()
+            };
         }
 
         private async Task<ResourceInformationDto> HandleSpotify(string query, CancellationToken cancellationToken)
