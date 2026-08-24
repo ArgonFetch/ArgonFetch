@@ -1,5 +1,6 @@
 export * from './appInfoDto';
 export * from './mediaInformationDto';
+export * from './mediaRenditionDto';
 export * from './mediaType';
 export * from './problemDetails';
 export * from './proxyHeadResponse';

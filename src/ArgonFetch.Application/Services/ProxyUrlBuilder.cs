@@ -11,6 +11,16 @@ namespace ArgonFetch.Application.Services
             IMediaUrlCacheService cacheService,
             bool forceAudio = false,
             string? proxy = null);
+
+        /// <summary>
+        /// Turns candidate formats into streamable renditions, best first. Each one is cached
+        /// with the media type and proxy it has to be served with.
+        /// </summary>
+        List<MediaRenditionDto> BuildRenditions(
+            IEnumerable<RenditionSource> sources,
+            IMediaUrlCacheService cacheService,
+            bool isAudio,
+            string? proxy = null);
     }
 
     public class ProxyUrlBuilder : IProxyUrlBuilder
@@ -70,6 +80,56 @@ namespace ArgonFetch.Application.Services
             }
 
             return proxyReferences;
+        }
+
+        public List<MediaRenditionDto> BuildRenditions(
+            IEnumerable<RenditionSource> sources,
+            IMediaUrlCacheService cacheService,
+            bool isAudio,
+            string? proxy = null)
+        {
+            var renditions = new List<MediaRenditionDto>();
+
+            foreach (var source in sources)
+            {
+                var (extension, mimeType) = Describe(source.Extension, isAudio);
+
+                renditions.Add(new MediaRenditionDto
+                {
+                    Key = cacheService.CacheSingleUrl(source.Url, isAudio, mimeType, proxy),
+                    Label = RenditionPicker.Label(source, isAudio),
+                    Description = source.Description,
+                    FileExtension = extension,
+                    MimeType = mimeType,
+                    UrlType = UrlType.Media,
+                    FileSizeBytes = source.FileSizeBytes,
+                    Height = isAudio ? null : source.Height,
+                    Bitrate = source.Bitrate
+                });
+            }
+
+            // MP3 is offered explicitly rather than left implicit: it costs a conversion and a
+            // generation of quality, so it belongs in the list beside the sources it is made
+            // from - and stating its bitrate stops "MP3" from being the one option whose
+            // quality nobody can see.
+            if (isAudio && renditions.Count > 0)
+            {
+                renditions.Add(new MediaRenditionDto
+                {
+                    Key = renditions[0].Key,
+                    Label = $"{MediaFormats.Mp3BitrateKbps} kbps",
+                    Description = $"Converted from {renditions[0].Label}",
+                    FileExtension = ".mp3",
+                    MimeType = "audio/mpeg",
+                    UrlType = UrlType.Media,
+                    Bitrate = MediaFormats.Mp3BitrateKbps,
+                    // Not reported: the length of a re-encode is not known before it runs.
+                    FileSizeBytes = null,
+                    ConvertTo = "mp3"
+                });
+            }
+
+            return renditions;
         }
 
         /// <summary>

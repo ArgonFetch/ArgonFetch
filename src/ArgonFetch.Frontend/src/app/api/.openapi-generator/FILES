@@ -12,6 +12,7 @@ git_push.sh
 index.ts
 model/appInfoDto.ts
 model/mediaInformationDto.ts
+model/mediaRenditionDto.ts
 model/mediaType.ts
 model/models.ts
 model/problemDetails.ts

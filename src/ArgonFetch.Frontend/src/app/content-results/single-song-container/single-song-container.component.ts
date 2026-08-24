@@ -1,15 +1,16 @@
-import { Component, Input, HostListener, ElementRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 import { faDownload, faChevronRight, faSpinner } from '@fortawesome/free-solid-svg-icons';
-import { ResourceInformationDto } from '../../api';
+import { MediaRenditionDto, ResourceInformationDto } from '../../api';
 import { HttpClient, HttpEventType, HttpClientModule } from '@angular/common/http';
 import { ResourceUrlService } from '../../services/resource-url.service';
 
 @Component({
   selector: 'app-single-song-container',
   standalone: true,
-  imports: [FontAwesomeModule, HttpClientModule],
+  imports: [FontAwesomeModule, HttpClientModule, CdkMenu, CdkMenuItem, CdkMenuTrigger],
   templateUrl: './single-song-container.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './single-song-container.component.scss'
@@ -20,10 +21,6 @@ export class SingleSongContainerComponent {
   faDownload = faDownload;
   faChevronRight = faChevronRight;
   faSpinner = faSpinner;
-
-  showMainMenu = false;
-  showVideoSubmenu = false;
-  showAudioSubmenu = false;
 
   // Download progress tracking
   isDownloading = false;
@@ -38,58 +35,51 @@ export class SingleSongContainerComponent {
   downloadedMB = '';
 
   constructor(
-    private elementRef: ElementRef,
     private http: HttpClient,
     private resourceUrlService: ResourceUrlService
   ) {}
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent) {
-    if (!this.elementRef.nativeElement.contains(event.target)) {
-      this.closeAllMenus();
+  /** Renditions the server offers, best first. Empty for sources that report none. */
+  videoRenditions(): MediaRenditionDto[] {
+    return this.resourceInformation.mediaItems?.[0]?.video?.renditions ?? [];
+  }
+
+  audioRenditions(): MediaRenditionDto[] {
+    return this.resourceInformation.mediaItems?.[0]?.audio?.renditions ?? [];
+  }
+
+  /**
+   * Container of a rendition, e.g. "WEBM". Worth showing beside the quality: two renditions
+   * can be the same bitrate and still not play in the same places.
+   */
+  typeOf(rendition: MediaRenditionDto): string {
+    return (rendition.fileExtension || '').replace('.', '').toUpperCase();
+  }
+
+  /** Size label for a rendition, e.g. "3.3 MB". Empty when the source does not report one. */
+  sizeOf(rendition: MediaRenditionDto): string {
+    return this.resourceUrlService.formatSize(rendition.fileSizeBytes);
+  }
+
+  /** Downloads one rendition, converted or passed through as the server described it. */
+  async onDownloadRendition(rendition: MediaRenditionDto) {
+    if (this.isDownloading) {
+      return;
     }
-  }
 
-  toggleMainMenu(event: Event) {
-    event.stopPropagation();
-    this.showMainMenu = !this.showMainMenu;
-    if (!this.showMainMenu) {
-      this.showVideoSubmenu = false;
-      this.showAudioSubmenu = false;
+    const url = this.resourceUrlService.buildRenditionUrl(rendition);
+    if (!url) {
+      console.error('No URL available for the selected rendition');
+      return;
     }
+
+    const title = this.resourceInformation.mediaItems?.[0]?.title || 'download';
+    const extension = rendition.fileExtension || '';
+
+    await this.downloadFile(url, `${title}${extension}`);
   }
 
-  showVideoMenu(event: Event) {
-    event.stopPropagation();
-    this.showVideoSubmenu = true;
-    this.showAudioSubmenu = false;
-  }
-
-  showAudioMenu(event: Event) {
-    event.stopPropagation();
-    this.showAudioSubmenu = true;
-    this.showVideoSubmenu = false;
-  }
-
-  hideVideoMenu() {
-    // Removed timeout to prevent menu from disappearing
-    // The menu will stay open when hovering over submenu
-  }
-
-  hideAudioMenu() {
-    // Removed timeout to prevent menu from disappearing
-    // The menu will stay open when hovering over submenu
-  }
-
-  closeAllMenus() {
-    this.showMainMenu = false;
-    this.showVideoSubmenu = false;
-    this.showAudioSubmenu = false;
-  }
-
-  async onDownload(quality: 'best' | 'medium' | 'worst', type: 'combined' | 'audio', event: Event) {
-    event.stopPropagation();
-
+  async onDownload(quality: 'best' | 'medium' | 'worst', type: 'combined' | 'audio') {
     if (this.isDownloading) {
       return; // Prevent multiple downloads at once
     }
@@ -131,8 +121,6 @@ export class SingleSongContainerComponent {
       return;
     }
 
-    // Close menus and start download
-    this.closeAllMenus();
     this.currentDownloadName = `${filename}${extension}`;
     await this.downloadFile(url, this.currentDownloadName);
   }

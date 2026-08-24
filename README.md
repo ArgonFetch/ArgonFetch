@@ -163,6 +163,14 @@ restore it into the new one, or run `pg_upgrade`.
 
 API docs are at `http://localhost:8080/swagger` when running in `Development`.
 
+The schema is also checked in at [`docs/openapi.json`](docs/openapi.json) for generating
+clients elsewhere without running the app. Refresh it from a running instance after changing
+any endpoint or DTO:
+
+```bash
+curl -s http://localhost:5114/swagger/v1/swagger.json -o docs/openapi.json
+```
+
 ## Roadmap
 
 - [x] Spotify tracks

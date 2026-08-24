@@ -7,6 +7,7 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { MediaRenditionDto } from './mediaRenditionDto';
 import { UrlType } from './urlType';
 
 
@@ -24,6 +25,7 @@ export interface StreamReferenceDto {
     worstQualityFileExtension?: string | null;
     worstQualityMimeType?: string | null;
     urlType?: UrlType;
+    renditions?: Array<MediaRenditionDto> | null;
 }
 export namespace StreamReferenceDto {
 }
