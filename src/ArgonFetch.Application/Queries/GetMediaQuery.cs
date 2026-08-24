@@ -463,6 +463,18 @@ namespace ArgonFetch.Application.Queries
             // Force audio mode for Spotify tracks
             var audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy);
 
+            // The audio comes from YouTube Music, so it has the same renditions any other
+            // YouTube track does. Without this a Spotify link fell back to "Best" and "Low",
+            // which says nothing about what either one is.
+            if (audioReferences != null)
+            {
+                audioReferences.Renditions = _proxyUrlBuilder.BuildRenditions(
+                    RenditionPicker.PickAudio(AudioSources(result.Formats)),
+                    _cacheService,
+                    isAudio: true,
+                    proxy: _fetchProxy);
+            }
+
             // Spotify typically only has audio, so combined URLs would be null
 
             return new ResourceInformationDto

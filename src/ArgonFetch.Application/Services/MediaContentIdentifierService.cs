@@ -15,7 +15,7 @@ namespace ArgonFetch.Application.Services
                 case Platform.YouTube:
                     var uri = new Uri(query);
                     var url_parms = System.Web.HttpUtility.ParseQueryString(uri.Query);
-                    string listId = url_parms.Get("list"); // search for list property in url
+                    string? listId = url_parms.Get("list"); // null when the url carries no list
 
                     if (!string.IsNullOrEmpty(listId))
                         return listId.StartsWith("RD") ? ContentType.YouTubeRadio : ContentType.Playlist;

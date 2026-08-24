@@ -20,7 +20,7 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
             _cacheService = cacheService;
         }
 
-        public async Task<MediaInformationDto> FetchLinkAsync(string queryUrl, DllFetcherOptions dllFetcherOptions = null, CancellationToken cancellationToken = default)
+        public async Task<MediaInformationDto> FetchLinkAsync(string queryUrl, DllFetcherOptions? dllFetcherOptions = null, CancellationToken cancellationToken = default)
         {
             string baseUrl = "https://tmate.cc";
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
@@ -79,7 +79,11 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
             }
         }
 
-        private static string CleanHtml(string input)
+        /// <summary>
+        /// Scrubbed page text. Takes null because the selectors feeding it return null
+        /// whenever the element is absent, which is a normal outcome rather than a fault.
+        /// </summary>
+        private static string CleanHtml(string? input)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return string.Empty;
