@@ -9,13 +9,25 @@ namespace ArgonFetch.Application.Queries
 {
     public class StreamMediaQuery : IRequest<StreamResult>
     {
-        public StreamMediaQuery(string key, HttpResponse response, CancellationToken cancellationToken, string? format = null)
+        public StreamMediaQuery(
+            string key,
+            HttpResponse response,
+            CancellationToken cancellationToken,
+            string? format = null,
+            string? rangeHeader = null)
         {
             Key = key;
             Response = response;
             CancellationToken = cancellationToken;
             Format = format;
+            RangeHeader = rangeHeader;
         }
+
+        /// <summary>
+        /// The caller's Range header, if it sent one. Honoured only where bytes are passed
+        /// through: a conversion has no fixed length to seek within.
+        /// </summary>
+        public string? RangeHeader { get; }
 
         /// <summary>
         /// Container the caller insists on, currently only "mp3". Null serves the source
@@ -117,10 +129,43 @@ namespace ArgonFetch.Application.Queries
                         proxy,
                         request.CancellationToken);
 
+                    ByteRange? window = null;
+
                     if (upstreamLength.HasValue)
                     {
-                        request.Response.ContentLength = upstreamLength.Value;
-                        _logger.LogInformation("Declared Content-Length {Length} for {Url}", upstreamLength.Value, mediaUrl);
+                        var total = upstreamLength.Value;
+
+                        // Advertised only here, where it is true: the bytes come from a source
+                        // that serves ranges and reach the caller untouched, so a seek can be
+                        // answered exactly.
+                        request.Response.Headers.AcceptRanges = "bytes";
+
+                        switch (Services.RangeHeader.Parse(request.RangeHeader, total, out var requested))
+                        {
+                            case RangeRequest.Satisfiable:
+                                window = requested;
+                                request.Response.StatusCode = StatusCodes.Status206PartialContent;
+                                request.Response.Headers.ContentRange = $"bytes {requested.From}-{requested.To}/{total}";
+                                request.Response.ContentLength = requested.Length;
+
+                                _logger.LogInformation("Serving bytes {From}-{To} of {Total} for {Url}",
+                                    requested.From, requested.To, total, mediaUrl);
+                                break;
+
+                            case RangeRequest.Unsatisfiable:
+                                // Nothing of the resource lies in the asked-for window, so the
+                                // caller is told how long it actually is and given no body.
+                                request.Response.StatusCode = StatusCodes.Status416RangeNotSatisfiable;
+                                request.Response.Headers.ContentRange = $"bytes */{total}";
+                                request.Response.ContentLength = 0;
+
+                                return StreamResult.Success();
+
+                            default:
+                                request.Response.ContentLength = total;
+                                _logger.LogInformation("Declared Content-Length {Length} for {Url}", total, mediaUrl);
+                                break;
+                        }
                     }
                     else
                     {
@@ -135,6 +180,7 @@ namespace ArgonFetch.Application.Queries
                         request.Response.Body,
                         null, // No progress reporting needed here
                         proxy,
+                        window,
                         request.CancellationToken);
                 }
 
