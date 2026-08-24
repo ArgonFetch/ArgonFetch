@@ -30,7 +30,7 @@ namespace ArgonFetch.Infrastructure.Services
             CancellationToken cancellationToken = default)
         {
             var memoryStream = new MemoryStream();
-            await StreamWithAccelerationAsync(url, memoryStream, null, proxy, cancellationToken);
+            await StreamWithAccelerationAsync(url, memoryStream, null, proxy, cancellationToken: cancellationToken);
             memoryStream.Position = 0;
             return memoryStream;
         }
@@ -71,6 +71,7 @@ namespace ArgonFetch.Infrastructure.Services
             Stream outputStream,
             IProgress<double>? progress = null,
             string? proxy = null,
+            ByteRange? range = null,
             CancellationToken cancellationToken = default)
         {
             // Counts what has already been handed to the caller. Once any byte is written,
@@ -105,16 +106,21 @@ namespace ArgonFetch.Infrastructure.Services
                     _logger.LogInformation("Server doesn't support range requests, using single connection");
                 }
 
-                await DownloadSingleConnectionAsync(url, outputStream, progress, output, proxy, cancellationToken);
+                await DownloadSingleConnectionAsync(url, outputStream, progress, output, proxy, range, cancellationToken);
                 return;
             }
+
+            // Serving a window rather than the file: the caller is seeking or resuming, and
+            // only the requested bytes may be written or the response will not line up with
+            // the Content-Range it announced.
+            var window = range ?? new ByteRange(0, contentLength.Value - 1);
 
             _logger.LogInformation("Starting accelerated download with {Connections} connections for {Size} bytes",
                 MAX_PARALLEL_CONNECTIONS, contentLength.Value);
 
             try
             {
-                await DownloadInChunksAsync(url, outputStream, contentLength.Value, progress, output, proxy, cancellationToken);
+                await DownloadInChunksAsync(url, outputStream, window, progress, output, proxy, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -125,7 +131,7 @@ namespace ArgonFetch.Infrastructure.Services
             {
                 // Nothing has reached the caller yet, so starting over is safe.
                 _logger.LogWarning(ex, "Accelerated download failed before writing any output, falling back to single connection");
-                await DownloadSingleConnectionAsync(url, outputStream, progress, output, proxy, cancellationToken);
+                await DownloadSingleConnectionAsync(url, outputStream, progress, output, proxy, range, cancellationToken);
             }
         }
 
@@ -175,19 +181,21 @@ namespace ArgonFetch.Infrastructure.Services
         private async Task DownloadInChunksAsync(
             string url,
             Stream outputStream,
-            long contentLength,
+            ByteRange window,
             IProgress<double>? progress,
             OutputTracker output,
             string? proxy,
             CancellationToken cancellationToken)
         {
+            var contentLength = window.Length;
             var chunkSize = Math.Clamp(contentLength / (MAX_PARALLEL_CONNECTIONS * 2), MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
             var chunks = new List<(long start, long end)>();
 
-            // Calculate chunks
-            for (long i = 0; i < contentLength; i += chunkSize)
+            // Chunks are offsets into the resource, not into the window, so a request for the
+            // tail of a file still asks the source for the right bytes.
+            for (var i = window.From; i <= window.To; i += chunkSize)
             {
-                var end = Math.Min(i + chunkSize - 1, contentLength - 1);
+                var end = Math.Min(i + chunkSize - 1, window.To);
                 chunks.Add((i, end));
             }
 
@@ -267,13 +275,16 @@ namespace ArgonFetch.Infrastructure.Services
             IProgress<double>? progress,
             OutputTracker output,
             string? proxy,
+            ByteRange? range,
             CancellationToken cancellationToken)
         {
             var httpClient = _mediaHttpClients.For(proxy);
 
             // Ranged from the first byte: an unranged GET is refused for signed media URLs.
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Range = new RangeHeaderValue(0, null);
+            request.Headers.Range = range.HasValue
+                ? new RangeHeaderValue(range.Value.From, range.Value.To)
+                : new RangeHeaderValue(0, null);
 
             using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
