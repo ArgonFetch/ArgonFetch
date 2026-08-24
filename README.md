@@ -39,10 +39,10 @@ streams and serves them back as a normal file download.
 | YouTube | ✅ Video and audio | Muxes separate video/audio streams when no pre-muxed format exists |
 | Spotify | ✅ Single tracks | Metadata is read from the public track page; audio comes from the matching YouTube Music result |
 | TikTok | ✅ | |
+| SoundCloud | ✅ | Except the licensed catalogue, which is DRM protected and refused |
+| Instagram | ❌ Needs a signed-in session | Instagram serves media only to logged-in accounts, and ArgonFetch has no way to supply credentials |
 | Spotify playlists / albums | ❌ Not supported | [#171](https://github.com/ArgonFetch/ArgonFetch/issues/171) |
 | Playlists generally | ❌ Not supported | [#76](https://github.com/ArgonFetch/ArgonFetch/issues/76) |
-| SoundCloud | ⚠️ Unreliable | [#58](https://github.com/ArgonFetch/ArgonFetch/issues/58) |
-| Instagram Reels | ⚠️ Preview issues | [#58](https://github.com/ArgonFetch/ArgonFetch/issues/58) |
 
 Audio is delivered in whatever container the source uses - Opus in WebM for YouTube -
 because passing the original bytes through is both faster and better than re-encoding

@@ -13,10 +13,10 @@ it is worth trying, but is not something we chase when it breaks.
 | YouTube | ✅ Video and audio | Muxes separate video/audio streams when no pre-muxed format exists |
 | Spotify | ✅ Single tracks | Metadata is read from the public track page; audio comes from the matching YouTube Music result |
 | TikTok | ✅ | |
+| SoundCloud | ✅ | Except the licensed catalogue, which is DRM protected and refused - see [below](#drm-protected-tracks) |
+| Instagram | ❌ Needs a signed-in session | Instagram serves media only to logged-in accounts, and ArgonFetch has no way to supply credentials |
 | Spotify playlists / albums | ❌ Not supported | [#171](https://github.com/ArgonFetch/ArgonFetch/issues/171) |
 | Playlists generally | ❌ Not supported | [#76](https://github.com/ArgonFetch/ArgonFetch/issues/76) |
-| SoundCloud | ⚠️ Unreliable | Licensed tracks are DRM protected and refused - see [below](#drm-protected-tracks). [#58](https://github.com/ArgonFetch/ArgonFetch/issues/58) |
-| Instagram Reels | ⚠️ Preview issues | [#58](https://github.com/ArgonFetch/ArgonFetch/issues/58) |
 
 ## Spotify without an API key
 
@@ -34,6 +34,14 @@ refuses to serve it in a usable form, and there is nothing ArgonFetch can do abo
 
 These answer `415 Unsupported Media Type` with the reason in `detail`, rather than the `404` that
 would send you looking for a typo. See [Errors](/api#errors).
+
+## Sites that need an account
+
+Instagram serves media only to a signed-in session, so a link that opens fine in your own browser
+returns nothing to a server that is not logged in. This is not a bug in the extractor and no
+retry will help - the request never had the credentials it needed.
+
+ArgonFetch has no way to supply them today, so Instagram links do not work.
 
 ## When a platform stops working
 
