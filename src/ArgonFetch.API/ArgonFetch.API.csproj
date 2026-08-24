@@ -26,7 +26,6 @@
 	<PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="8.1.2" />
 	<PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="8.1.2" />
 	<PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="8.1.2" />
-	<PackageReference Include="YTMusicAPI" Version="1.0.7" />
   </ItemGroup>
 
   <ItemGroup>
