@@ -1,6 +1,6 @@
-<main class="main-content" [class.showing-result]="hasResult()">
+<main class="main-content" [class.showing-result]="showsCollection()">
   <div class="hero">
-    @if (!hasResult()) {
+    @if (!showsCollection()) {
       <h1>ArgonFetch</h1>
       <p class="subtitle">Universal Media Downloader</p>
     }

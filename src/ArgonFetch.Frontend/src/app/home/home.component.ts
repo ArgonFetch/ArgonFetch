@@ -42,13 +42,17 @@ export class HomeComponent {
   mediaType = signal<MediaType | undefined>(undefined);
 
   /**
-   * Whether the page is showing a result, or about to.
+   * Whether the name should step aside for the result.
    * <p>
-   * Until it is, this is a landing page and the name belongs in the middle of it. Once a
-   * result arrives the name has been read, and the room it takes is room the listing wants.
+   * Only a collection asks for that. A listing wants every row it can show, and by the time
+   * one is on screen the name has been read. A single track is a card of its own height with
+   * space to spare either side of it, so taking the name away buys nothing and leaves the
+   * page looking half-finished.
    */
-  hasResult(): boolean {
-    return this.isLoading() || !!this.resourceInformation();
+  showsCollection(): boolean {
+    return this.isLoading()
+      ? this.loaderType() === 'playlist'
+      : this.resourceInformation()?.type === MediaType.PlayList;
   }
 
   constructor(

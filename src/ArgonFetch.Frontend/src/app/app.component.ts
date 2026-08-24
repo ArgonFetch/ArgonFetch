@@ -1,4 +1,5 @@
-import { Sun, Moon, Settings, GitBranch } from 'lucide';
+import { Sun, Moon, Settings } from 'lucide';
+import { GithubMark } from './icon/brand-icons';
 import { IconComponent } from './/icon/icon.component';
 import { Component, ChangeDetectionStrategy, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
@@ -21,7 +22,7 @@ import { NotificationService } from './notifications/notification.service';
 export class AppComponent {
   sunIcon = Sun;
   moonIcon = Moon;
-  gitIcon = GitBranch;
+  githubIcon = GithubMark;
   gearIcon = Settings;
   isDarkTheme$;
 
