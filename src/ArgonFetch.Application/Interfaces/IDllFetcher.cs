@@ -12,6 +12,6 @@ namespace ArgonFetch.Application.Interfaces
         /// <param name="dllFetcherOptions">Options to customize the fetching process.</param>
         /// <param name="cancellationToken">Token to monitor for cancellation requests.</param>
         /// <returns>The media information as a MediaInformationDto.</returns>
-        Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions dllFetcherOptions, CancellationToken cancellationToken);
+        Task<MediaInformationDto> FetchLinkAsync(string dllName, DllFetcherOptions? dllFetcherOptions, CancellationToken cancellationToken);
     }
 }

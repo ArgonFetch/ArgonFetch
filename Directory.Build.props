@@ -1,4 +1,4 @@
-<Project>
+﻿<Project>
 
   <!--
     Single source of truth for the product version: application.properties at the
@@ -7,6 +7,15 @@
   -->
   <PropertyGroup>
     <ApplicationPropertiesFile>$(MSBuildThisFileDirectory)application.properties</ApplicationPropertiesFile>
+  </PropertyGroup>
+
+  <!--
+    Nullable warnings are errors so the count cannot creep back up. Each one marks a null
+    the code does not handle, and a build that always prints warnings teaches everyone to
+    stop reading build output - which is where the next real problem will appear.
+  -->
+  <PropertyGroup>
+    <WarningsAsErrors>$(WarningsAsErrors);nullable</WarningsAsErrors>
   </PropertyGroup>
 
   <!-- Skipped when Version is supplied on the command line, which is how a release

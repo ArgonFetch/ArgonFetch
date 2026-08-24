@@ -1,5 +1,4 @@
-﻿using ArgonFetch.API.IntegrationValidators;
-using ArgonFetch.Application.Behaviors;
+﻿using ArgonFetch.Application.Behaviors;
 using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services.DDLFetcherServices;
 using ArgonFetch.Application.Validators;
@@ -250,28 +249,6 @@ while (!dbConnected && retryCount < maxRetries)
             }
         }
     }
-}
-#endregion
-
-#region Dependency Validation
-// yt-dlp and FFmpeg Version Check.
-using (var scope = app.Services.CreateScope())
-{
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
-    // Check yt-dlp
-    var ytDlpVersion = await MediaValidators.GetYtDlpVersionAsync();
-    if (string.IsNullOrEmpty(ytDlpVersion))
-        logger.LogWarning("yt-dlp is not installed or cannot be found!");
-    else
-        logger.LogInformation("yt-dlp Version: {Version}", ytDlpVersion);
-
-    // Check FFmpeg
-    var ffmpegVersion = await MediaValidators.GetFfmpegVersionAsync();
-    if (string.IsNullOrEmpty(ffmpegVersion))
-        logger.LogWarning("FFmpeg is not installed or cannot be found!");
-    else
-        logger.LogInformation("FFmpeg Version: {Version}", ffmpegVersion);
 }
 #endregion
 

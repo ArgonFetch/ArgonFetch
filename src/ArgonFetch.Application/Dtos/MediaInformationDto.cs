@@ -10,7 +10,8 @@
         // Audio-only option
         public StreamReferenceDto? Audio { get; set; }
 
-        public required string CoverUrl { get; set; }
+        /// <summary>Cover art, where the source has any.</summary>
+        public string? CoverUrl { get; set; }
         public required string Title { get; set; }
         public required string Author { get; set; }
     }
