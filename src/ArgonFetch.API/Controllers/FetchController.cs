@@ -71,6 +71,9 @@ namespace ArgonFetch.API.Controllers
                 return StatusCode(StatusCodes.Status415UnsupportedMediaType, new ProblemDetails
                 {
                     Title = "Unsupported Media Type",
+                    // Carried through so a caller learns which kind of unsupported this is -
+                    // DRM, or a link shape ArgonFetch does not handle yet.
+                    Detail = ex.Message,
                     Status = StatusCodes.Status415UnsupportedMediaType
                 });
             }
