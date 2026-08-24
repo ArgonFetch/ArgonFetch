@@ -1,5 +1,6 @@
 ﻿using ArgonFetch.Application.Queries;
 using MediatR;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ArgonFetch.API.Controllers
@@ -27,6 +28,39 @@ namespace ArgonFetch.API.Controllers
             var result = await _mediator.Send(query, cancellationToken);
 
             // Handle the result if response hasn't started
+            if (!Response.HasStarted && !result.IsSuccess && result.StatusCode.HasValue)
+            {
+                Response.StatusCode = result.StatusCode.Value;
+                await Response.WriteAsync(result.ErrorMessage ?? "An error occurred");
+                return new EmptyResult();
+            }
+
+            return new EmptyResult();
+        }
+
+        /// <summary>
+        /// Every track of a playlist or album, as one zip.
+        /// </summary>
+        /// <param name="url">Link to the collection, the same one the fetch endpoint takes.</param>
+        [HttpGet("Archive", Name = "Archive")]
+        // Built while it is sent, so it declares no length and cannot be seeked within.
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> StreamArchive([FromQuery] string url, CancellationToken cancellationToken)
+        {
+            // Closing a zip entry writes its data descriptor, and closing the archive writes the
+            // central directory - both synchronously, with no async path offered for either, so
+            // Kestrel's default refusal truncates every archive. Allowed for this response alone;
+            // the bytes of the media itself still go out asynchronously.
+            var bodyControl = HttpContext.Features.Get<IHttpBodyControlFeature>();
+
+            if (bodyControl is not null)
+                bodyControl.AllowSynchronousIO = true;
+
+            var query = new StreamArchiveQuery(url, Response, cancellationToken);
+            var result = await _mediator.Send(query, cancellationToken);
+
             if (!Response.HasStarted && !result.IsSuccess && result.StatusCode.HasValue)
             {
                 Response.StatusCode = result.StatusCode.Value;

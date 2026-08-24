@@ -1,6 +1,6 @@
 import { Component, Input, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faDownload, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faSpinner, faFileZipper } from '@fortawesome/free-solid-svg-icons';
 import { firstValueFrom } from 'rxjs';
 
 import { FetchService, MediaInformationDto, ResourceInformationDto } from '../../api';
@@ -22,6 +22,7 @@ export class PlaylistContainerComponent {
 
   faDownload = faDownload;
   faSpinner = faSpinner;
+  faFileZipper = faFileZipper;
 
   private readonly downloads = inject(MediaDownloadService);
   private readonly fetchService = inject(FetchService);
@@ -33,10 +34,31 @@ export class PlaylistContainerComponent {
   // because resolving two thousand of them up front would take the better part of an hour.
   private readonly resolving = signal<string | null>(null);
 
+  // Mirrors the cap the archive endpoint enforces, so the button can say what it
+  // will actually deliver rather than promising the whole list.
+  private static readonly MaxArchiveTracks = 100;
+
   // The button still needs to know: a second transfer while one is running would
   // have nowhere to report itself.
   readonly isDownloading = this.downloads.isDownloading;
 
+
+  /** Where the whole collection can be had as one zip, or null if we cannot address it. */
+  archiveUrl(): string | null {
+    return this.resourceUrls.buildArchiveUrl(this.resourceInformation.requestedUrl);
+  }
+
+  /**
+   * What the zip button promises, which is not always the whole list: an archive carries a
+   * fixed number of tracks, and a long playlist runs past it.
+   */
+  archiveHint(): string {
+    const total = this.resourceInformation.mediaItems?.length ?? 0;
+
+    return total > PlaylistContainerComponent.MaxArchiveTracks
+      ? `Download the first ${PlaylistContainerComponent.MaxArchiveTracks} of ${total} tracks as a zip`
+      : 'Download all tracks as a zip';
+  }
 
   /** Whether this row is the one being worked on, so its button can show the wait. */
   isBusy(song: MediaInformationDto): boolean {

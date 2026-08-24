@@ -87,6 +87,17 @@ namespace ArgonFetch.Application.Queries
 
         public async Task<ResourceInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
         {
+            var resolved = await Resolve(request, cancellationToken);
+
+            // Stamped in one place rather than at each of the half-dozen points that build
+            // a result, so a new source cannot forget it.
+            resolved.RequestedUrl = request.Query;
+
+            return resolved;
+        }
+
+        private async Task<ResourceInformationDto> Resolve(GetMediaQuery request, CancellationToken cancellationToken)
+        {
             var platform = PlatformIdentifierService.IdentifyPlatform(request.Query);
 
             if (platform == Platform.Spotify)

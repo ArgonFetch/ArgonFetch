@@ -6,9 +6,20 @@
     max-width: 602px;
     width: 100%;
     margin: 16px auto;
+
+    // The card stays put and its list scrolls inside it. A playlist can run to thousands of
+    // entries, and letting the page grow to fit them pushed the search box off the top and
+    // buried the footer under the last rows.
+    display: flex;
+    flex-direction: column;
+    // What is left between the fixed navbar and the fixed footer, once the search above it
+    // has had its share.
+    max-height: calc(100vh - 320px);
+    min-height: 260px;
 }
 
 .playlist-header {
+    flex-shrink: 0;
     margin-bottom: 16px;
     padding-bottom: 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -48,6 +59,21 @@
     display: flex;
     justify-content: flex-start;
     align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+// Sits beside the title rather than where a single result puts its download button, because
+// the two mean different things: this one takes the whole collection.
+.archive-button {
+    flex-shrink: 0;
+    color: var(--primary);
+    text-decoration: none;
+
+    &:hover {
+        background: var(--primary);
+        color: var(--surface);
+    }
 }
 
 .playlist-title {
@@ -122,10 +148,39 @@
 }
 
 .songs-list {
+    flex: 1;
+    // Without this a flex child refuses to shrink below its content, so the list would push
+    // the card past the height it was given instead of scrolling.
+    min-height: 0;
+    overflow-y: auto;
+    // Room for the scrollbar, so a row's download button does not sit under it.
+    padding-right: 4px;
+
     ul {
         list-style: none;
         padding: 0;
         margin: 0;
+    }
+
+    // The default light scrollbar is jarring on a dark card.
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
     }
 }
 

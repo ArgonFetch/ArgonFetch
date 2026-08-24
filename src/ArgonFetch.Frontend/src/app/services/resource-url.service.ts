@@ -67,6 +67,21 @@ export class ResourceUrlService {
   }
 
   /**
+   * The URL that serves a whole collection as one zip.
+   * <p>
+   * Takes the collection's own link rather than a cache key: the entries behind a listing are
+   * deliberately left unresolved, so there are no keys to hand over yet - the server resolves
+   * them as it writes the archive.
+   */
+  buildArchiveUrl(collectionUrl: string | null | undefined): string | null {
+    if (!collectionUrl) {
+      return null;
+    }
+
+    return `${environment.apiBaseUrl}/api/Stream/Archive?url=${encodeURIComponent(collectionUrl)}`;
+  }
+
+  /**
    * Human-readable transfer size, or an empty string when the source does not report one.
    * Shown next to a rendition because size is what tells someone how long it will take.
    */

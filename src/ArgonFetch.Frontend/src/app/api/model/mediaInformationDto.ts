@@ -14,7 +14,7 @@ export interface MediaInformationDto {
     requestedUrl: string | null;
     video?: StreamReferenceDto;
     audio?: StreamReferenceDto;
-    coverUrl: string | null;
+    coverUrl?: string | null;
     title: string | null;
     author: string | null;
 }
