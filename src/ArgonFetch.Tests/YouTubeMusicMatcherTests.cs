@@ -186,6 +186,68 @@ namespace ArgonFetch.Tests
             Assert.Null(Match([]));
         }
 
+        [Fact]
+        public void BestMatch_PrefersThePlainestTitleWhenNothingElseSeparatesCandidates()
+        {
+            // Search returns the radio edit above the album version, and YTMusicAPI reports no
+            // duration for either, so without this the edit wins on search order alone.
+            var radioEdit = Candidate("One More Time (Radio Edit)", artist: "Daft Punk", durationSec: 0);
+            var albumVersion = Candidate("One More Time", artist: "Daft Punk", durationSec: 0);
+
+            var best = Match([radioEdit, albumVersion], title: "One More Time", artist: "Daft Punk", durationMs: 0);
+
+            Assert.Same(albumVersion, best);
+        }
+
+        [Fact]
+        public void BestMatch_RejectsASoloRecordingOfAGroupTrack()
+        {
+            // A solo re-recording is a different performance, and search ranks these above the
+            // group version whenever the soloist is one of the credited artists.
+            const string group = "B小町 ルビー（CV：伊駒ゆりえ）、有馬かな（CV：潘めぐみ）、MEMちょ（CV：大久保瑠美）";
+            var solo = new MatchCandidate("サインはB -MEMちょ Solo Ver.-", "B小町 MEMちょ（CV：大久保瑠美）", 0);
+
+            Assert.Null(Match([solo], title: "サインはB", artist: group, durationMs: 0, officialShelf: true));
+        }
+
+        [Fact]
+        public void RankByCreditOnly_KeepsATranslatedTitleThatSharesNoWords()
+        {
+            // Spotify says "REVENGE OF B" where YouTube Music says the Japanese original, and the
+            // two share nothing to match on. The credit is all that is left, so the caller has to
+            // confirm the pick by its length afterwards.
+            const string wanted = "B小町, ルビー(CV:伊駒ゆりえ), 有馬かな(CV:潘めぐみ), MEMちょ(CV:大久保瑠美)";
+            const string credited = "B小町 ルビー（CV：伊駒ゆりえ）、有馬かな（CV：潘めぐみ）、MEMちょ（CV：大久保瑠美）";
+
+            var translated = new MatchCandidate("Bのリベンジ", credited, 0, credited);
+
+            Assert.Null(Match([translated], title: "REVENGE OF B", artist: wanted, durationMs: 0, officialShelf: true));
+            Assert.Contains(translated, YouTubeMusicMatcher.RankByCreditOnly([translated], wanted));
+        }
+
+        [Fact]
+        public void RankByCreditOnly_StillRefusesReworksAndForeignCredits()
+        {
+            const string wanted = "B小町, ルビー(CV:伊駒ゆりえ)";
+            const string credited = "B小町 ルビー（CV：伊駒ゆりえ）";
+
+            var instrumental = new MatchCandidate("Bのリベンジ（instrumental）", credited, 0, credited);
+            var someoneElse = new MatchCandidate("Bのリベンジ", "歌っちゃ王", 0, "歌っちゃ王");
+
+            Assert.Empty(YouTubeMusicMatcher.RankByCreditOnly([instrumental, someoneElse], wanted));
+        }
+
+        [Fact]
+        public void RankByCreditOnly_RefusesToGuessWhenNoArtistWasGiven()
+        {
+            // Without a credit there is nothing left to match on at all, and returning everything
+            // would hand the caller a list of arbitrary tracks to pick from by length alone.
+            var candidate = new MatchCandidate("Anything At All", "Whoever", 0);
+
+            Assert.Empty(YouTubeMusicMatcher.RankByCreditOnly([candidate], "Unknown"));
+            Assert.Empty(YouTubeMusicMatcher.RankByCreditOnly([candidate], ""));
+        }
+
         [Theory]
         // A leading hyphen is a search operator - it tells YouTube to drop every result
         // containing the word, so the shelf came back empty for tracks named this way.
