@@ -1,0 +1,79 @@
+name: Publish ArgonFetch.Abstractions
+
+# Tagged separately from the application. The contract is what plugins in other people's
+# repositories compile against, so it versions on its own schedule - most application releases
+# change nothing a plugin can see, and republishing an identical package on every one of them
+# would say otherwise.
+on:
+  push:
+    tags:
+      - 'abstractions-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, e.g. 1.0.0 or 1.1.0-preview.1'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: Pack and publish to nuget.org
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Trusted publishing exchanges this for a short-lived key, so there is no API key stored
+      # anywhere to leak or to remember to rotate.
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            RAW_TAG="${{ github.ref_name }}"
+            VERSION="${RAW_TAG#abstractions-v}"
+          fi
+
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::'$VERSION' is not a semantic version"
+            exit 1
+          fi
+
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing ArgonFetch.Abstractions $VERSION"
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # The contract compiles on its own - it references no other project in this repository,
+      # which is the point of it. Building only this project keeps the check honest.
+      - name: Build
+        run: dotnet build src/ArgonFetch.Abstractions/ArgonFetch.Abstractions.csproj -c Release
+
+      - name: Pack
+        run: >
+          dotnet pack src/ArgonFetch.Abstractions/ArgonFetch.Abstractions.csproj
+          -c Release
+          --no-build
+          -p:Version=${{ steps.version.outputs.VERSION }}
+          -o artifacts
+
+      - name: Authenticate to NuGet
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: PianoNic
+
+      - name: Push
+        run: >
+          dotnet nuget push artifacts/*.nupkg
+          --source https://api.nuget.org/v3/index.json
+          --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+          --skip-duplicate

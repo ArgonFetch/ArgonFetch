@@ -32,4 +32,8 @@
     <PackageReference Include="YouTubeMusicAPI" Version="3.0.10" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ArgonFetch.Abstractions\ArgonFetch.Abstractions.csproj" />
+  </ItemGroup>
+
 </Project>
