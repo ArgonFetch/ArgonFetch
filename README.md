@@ -72,13 +72,10 @@ services:
       # yt-dlp and FFmpeg are fetched on boot instead of being baked into the image.
       # Keeping them here means a restart reuses them rather than downloading again.
       - tools:/tools
-      # The served-request counter, and nothing else.
-      - data:/data
     restart: unless-stopped
 
 volumes:
   tools:
-  data:
 ```
 
 **2. Create `.env` next to it:**
@@ -104,7 +101,6 @@ Everything is set through environment variables in `.env`.
 |---|---|---|
 | `CORS_ALLOWED_ORIGINS` | in production | Comma-separated origins allowed to call the API. Defaults to `http://localhost:4200`, and the app warns at startup if that default is still in use in production |
 | `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables Swagger UI |
-| `DATA_PATH` | no | Where the served-request counter is kept. `/data` in the image, with a volume mounted on it so the total survives a restart |
 | `PROXY_LIST_PATH` | no | File with one proxy per line, rotated across yt-dlp fetches so they do not all leave from the same IP. See below |
 | `COOKIES_PATH` | no | Netscape-format cookies file, for sources that serve media only to a signed-in session. See below |
 
@@ -165,8 +161,8 @@ ignored. Without the variable, fetches go out from the server's own IP as before
 ArgonFetch no longer ships a database. Delete the `postgres` service, its
 `postgres_data` volume and the `POSTGRES_*` and
 `ConnectionStrings__ArgonFetchDatabase` variables from your `.env`, then add the
-`data` volume shown above. Nothing needs migrating — the only thing the database
-held was the request counter, and that total starts again from zero.
+`ConnectionStrings__ArgonFetchDatabase` variables from your `.env`. Nothing needs
+migrating — ArgonFetch keeps no persistent state at all.
 
 ## Usage
 

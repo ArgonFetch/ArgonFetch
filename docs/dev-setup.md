@@ -53,16 +53,15 @@ That builds the API image from source and serves everything on `http://localhost
 |---|---|
 | `ArgonFetch.API` | ASP.NET Core host, controllers, startup |
 | `ArgonFetch.Application` | Use cases, DTOs, media resolution |
-| `ArgonFetch.Domain` | Domain types |
-| `ArgonFetch.Infrastructure` | External services and process-local state |
+| `ArgonFetch.Infrastructure` | External services and media tooling |
 | `ArgonFetch.Frontend` | Angular 22 SPA |
 | `ArgonFetch.Tests` | Test suite |
 
 ## Persistent state
 
-There is none worth the name. The only thing that outlives a request is the served-request
-counter, held in memory and mirrored to `request-counter.json` under `DATA_PATH` (next to the
-built app when that is unset). Delete the file to reset the count.
+There is none. Nothing survives a restart except the `yt-dlp` and `FFmpeg` binaries under
+`TOOLS_PATH`, and those are re-fetched when they are missing. ArgonFetch keeps no record of
+what it has been asked to fetch, and no count of how often.
 
 ## Tests
 

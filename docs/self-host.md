@@ -23,13 +23,10 @@ services:
       # yt-dlp and FFmpeg are fetched on boot instead of being baked into the image.
       # Keeping them here means a restart reuses them rather than downloading again.
       - tools:/tools
-      # The served-request counter, and nothing else.
-      - data:/data
     restart: unless-stopped
 
 volumes:
   tools:
-  data:
 ```
 
 ## 2. Create `.env` next to it
@@ -69,15 +66,14 @@ ArgonFetch images are published to two registries - pick whichever suits your se
 | GitHub Container Registry | `ghcr.io/argonfetch/argonfetch:latest` |
 | Docker Hub | `docker.io/pianonic/argonfetch:latest` |
 
-## Volumes
+## Mount `/tools`
 
-The compose file above mounts two, and neither is a database.
+The compose file above mounts one volume, and it is not a database. `/tools` holds `yt-dlp`
+and `FFmpeg`. Keep it - without one, roughly 100MB is downloaded again every time the
+container starts.
 
-`/tools` holds `yt-dlp` and `FFmpeg`. Keep it - without one, roughly 100MB is downloaded again
-every time the container starts.
-
-`/data` holds a single JSON file with the number of requests this instance has served. Drop it
-if you do not care about the total; the only consequence is that it restarts from zero.
+Nothing else is written anywhere. ArgonFetch keeps no record of what it has been asked to
+fetch, and no count of how often.
 
 ## Behind a reverse proxy
 
@@ -113,8 +109,7 @@ CORS_ALLOWED_ORIGINS=https://argonfetch.example.com
 
 ArgonFetch no longer ships a database. Delete the `postgres` service, its `postgres_data`
 volume and the `POSTGRES_*` and `ConnectionStrings__ArgonFetchDatabase` variables from your
-`.env`, then add the `data` volume shown above. Nothing needs migrating - the only thing the
-database held was the request counter, and that total starts again from zero.
+`.env`. Nothing needs migrating - ArgonFetch keeps no persistent state at all.
 
 ## Next
 

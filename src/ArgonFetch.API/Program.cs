@@ -58,16 +58,6 @@ builder.Services.AddSingleton<ArgonFetch.Infrastructure.Services.MediaToolsServi
 builder.Services.AddHostedService(
     sp => sp.GetRequiredService<ArgonFetch.Infrastructure.Services.MediaToolsService>());
 
-// The request counter is the only state that outlives a request. It is held in memory and
-// mirrored to a file under DATA_PATH, so a restart does not reset the total.
-builder.Services.AddSingleton<ArgonFetch.Application.Services.IDataPaths>(
-    new ArgonFetch.Application.Services.DataPaths(builder.Configuration["DATA_PATH"]));
-builder.Services.AddSingleton<ArgonFetch.Infrastructure.Services.RequestCounterService>();
-builder.Services.AddSingleton<ArgonFetch.Application.Services.IRequestCounterService>(
-    sp => sp.GetRequiredService<ArgonFetch.Infrastructure.Services.RequestCounterService>());
-builder.Services.AddHostedService(
-    sp => sp.GetRequiredService<ArgonFetch.Infrastructure.Services.RequestCounterService>());
-
 // Register Application Info Service
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IApplicationInfoService, ArgonFetch.Infrastructure.Services.ApplicationInfoService>();
 #endregion
