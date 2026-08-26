@@ -1,6 +1,8 @@
 ﻿using ArgonFetch.Application.Dtos;
 using ArgonFetch.Application.Enums;
 using ArgonFetch.Application.Services;
+using ArgonFetch.Abstractions;
+using ArgonFetch.Application.Plugins;
 using ArgonFetch.Application.Services.DDLFetcherServices;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -11,6 +13,7 @@ using YoutubeDLSharp.Metadata;
 using YoutubeDLSharp.Options;
 using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models.Search;
+using MediaTags = ArgonFetch.Application.Services.MediaTags;
 
 namespace ArgonFetch.Application.Queries
 {
@@ -37,6 +40,8 @@ namespace ArgonFetch.Application.Queries
         private readonly IProxyUrlBuilder _proxyUrlBuilder;
         private readonly IProxyPool _proxyPool;
         private readonly IToolPaths _toolPaths;
+        private readonly IProviderRegistry _providers;
+        private readonly IProviderContextFactory _providerContexts;
         private readonly ILogger<GetMediaQueryHandler> _logger;
 
         // Enough to hold the album version when search leads with a radio edit and a remaster,
@@ -56,6 +61,13 @@ namespace ArgonFetch.Application.Queries
         // requested them, so it has to travel with them to the stream endpoint.
         private string? _fetchProxy;
 
+        // Set when a plugin rewrote the link. Knowing the release better than the page it was
+        // redirected to is the reason the track was matched rather than merely searched for, so
+        // what the plugin said wins over what the fetch reports.
+        private MediaTags? _overrideTags;
+        private string? _overrideCover;
+        private string? _originalUrl;
+
         public GetMediaQueryHandler(
             ISpotifyMetadataService spotifyMetadataService,
             YouTubeMusicClient ytmClient,
@@ -68,6 +80,8 @@ namespace ArgonFetch.Application.Queries
             IProxyUrlBuilder proxyUrlBuilder,
             IProxyPool proxyPool,
             IToolPaths toolPaths,
+            IProviderRegistry providers,
+            IProviderContextFactory providerContexts,
             ILogger<GetMediaQueryHandler> logger
             )
         {
@@ -82,6 +96,8 @@ namespace ArgonFetch.Application.Queries
             _proxyUrlBuilder = proxyUrlBuilder;
             _proxyPool = proxyPool;
             _toolPaths = toolPaths;
+            _providers = providers;
+            _providerContexts = providerContexts;
             _logger = logger;
         }
 
@@ -98,6 +114,15 @@ namespace ArgonFetch.Application.Queries
 
         private async Task<ResourceInformationDto> Resolve(GetMediaQuery request, CancellationToken cancellationToken)
         {
+            // Plugins first, and only for a real link - a search term is nobody's source.
+            if (Uri.TryCreate(request.Query, UriKind.Absolute, out var link))
+            {
+                var handled = await AskProvidersAsync(link, request, cancellationToken);
+
+                if (handled is not null)
+                    return handled;
+            }
+
             var platform = PlatformIdentifierService.IdentifyPlatform(request.Query);
 
             if (platform == Platform.Spotify)
@@ -147,7 +172,7 @@ namespace ArgonFetch.Application.Queries
 
                 // Carried into the cache so the stream endpoint can name and tag the file it
                 // serves; by then only a key is left to identify the media by.
-                var tags = new MediaTags(resultData.Title, resultData.Uploader);
+                var tags = _overrideTags ?? new MediaTags(resultData.Title, resultData.Uploader);
 
                 var audioRenditions = _proxyUrlBuilder.BuildRenditions(
                     RenditionPicker.PickAudio(AudioSources(resultData.Formats)),
@@ -203,18 +228,186 @@ namespace ArgonFetch.Application.Queries
                     [
                             new MediaInformationDto
                             {
-                                RequestedUrl = request.Query,
+                                RequestedUrl = _originalUrl ?? request.Query,
                                 Video = combinedReferences,  // Either pre-muxed or FFmpeg-combined
                                 Audio = audioReferences,      // Audio-only option
-                                CoverUrl = thumbnailUrl,
-                                Title = resultData.Title,
-                                Author = resultData.Uploader
+                                CoverUrl = _overrideCover ?? thumbnailUrl,
+                                Title = tags.Title ?? string.Empty,
+                                Author = tags.Artist ?? string.Empty
                             }
                     ]
                 };
             }
             else
                 throw new NotSupportedException("This isn't implemented yet");
+        }
+
+        /// <summary>
+        /// Offers the link to whichever plugin claims it, and turns its answer into a result.
+        /// <para>
+        /// Null when no plugin wanted it, or when the one that did decided there was nothing to
+        /// do - both of which mean carrying on and fetching the link the ordinary way.
+        /// </para>
+        /// </summary>
+        private async Task<ResourceInformationDto?> AskProvidersAsync(
+            Uri link,
+            GetMediaQuery request,
+            CancellationToken cancellationToken)
+        {
+            var provider = _providers.For(link);
+
+            if (provider is null)
+                return null;
+
+            ProviderOutcome outcome;
+
+            try
+            {
+                var context = _providerContexts.For(provider.Id, ProbeAsync);
+
+                outcome = await provider.PrepareAsync(link, context, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // A plugin that fails is not a reason to refuse the link outright: yt-dlp knows
+                // a great many sources, and the ordinary path may well handle it.
+                _logger.LogWarning(ex, "The {Id} plugin failed on {Url}; falling back", provider.Id, link);
+                return null;
+            }
+
+            switch (outcome)
+            {
+                case ProviderOutcome.RewriteOutcome rewrite:
+                    // The fetch that follows is the ordinary one; it is only pointed elsewhere,
+                    // and told what to call what it finds.
+                    _logger.LogInformation("The {Id} plugin redirected {From} to {To}", provider.Id, link, rewrite.Url);
+
+                    _overrideTags = new MediaTags(rewrite.Tags.Title, rewrite.Tags.Artist);
+                    _overrideCover = rewrite.CoverUrl;
+                    _originalUrl = request.Query;
+                    request.Query = rewrite.Url.ToString();
+
+                    return null;
+
+                case ProviderOutcome.ListingOutcome listing:
+                    return MapCollection(listing.Collection, provider.Id);
+
+                case ProviderOutcome.CompleteOutcome complete:
+                    return MapMedia(complete.Media, request.Query);
+
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// A plugin's listing, as the API describes one. Entries stay unresolved, exactly as they
+        /// do for a collection yt-dlp listed.
+        /// </summary>
+        private ResourceInformationDto MapCollection(CollectionResult collection, string pluginId)
+        {
+            if (collection.MayBeTruncated)
+            {
+                _logger.LogInformation(
+                    "The {Id} plugin returned {Count} entries and says there may be more it could not send",
+                    pluginId, collection.Items.Count);
+            }
+
+            return new ResourceInformationDto
+            {
+                Type = MediaType.PlayList,
+                Title = collection.Title,
+                Author = collection.Author,
+                CoverUrl = collection.CoverUrl,
+                MediaItems = collection.Items
+                    .Select(item => new MediaInformationDto
+                    {
+                        RequestedUrl = item.Url.ToString(),
+                        Title = item.Title,
+                        Author = item.Author ?? string.Empty,
+                        CoverUrl = item.CoverUrl ?? collection.CoverUrl,
+                        Audio = null,
+                        Video = null
+                    })
+                    .ToList()
+            };
+        }
+
+        /// <summary>
+        /// Media a plugin fetched itself. It hands over plain addresses; caching them, hiding
+        /// them behind keys and building the URLs a client is given stay here, because that is
+        /// how this application serves bytes and it is not a plugin's business.
+        /// </summary>
+        private ResourceInformationDto MapMedia(MediaResult media, string requestedUrl)
+        {
+            var tags = new MediaTags(media.Title, media.Author);
+
+            var audio = BuildReference(media.Streams.Where(stream => stream.IsAudio), isAudio: true, tags);
+            var video = BuildReference(media.Streams.Where(stream => !stream.IsAudio), isAudio: false, tags);
+
+            return new ResourceInformationDto
+            {
+                Type = MediaType.Media,
+                MediaItems =
+                [
+                    new MediaInformationDto
+                    {
+                        RequestedUrl = requestedUrl,
+                        Video = video,
+                        Audio = audio,
+                        CoverUrl = media.CoverUrl,
+                        Title = media.Title,
+                        Author = media.Author ?? string.Empty
+                    }
+                ]
+            };
+        }
+
+        private StreamReferenceDto? BuildReference(IEnumerable<MediaStream> streams, bool isAudio, MediaTags tags)
+        {
+            var renditions = streams
+                .Select(stream => new MediaRenditionDto
+                {
+                    Key = _cacheService.CacheSingleUrl(
+                        stream.Url.ToString(),
+                        isAudio,
+                        stream.MimeType,
+                        stream.Proxy,
+                        tags),
+                    Label = stream.Label ?? (isAudio ? "Audio" : "Video"),
+                    FileExtension = stream.FileExtension
+                        ?? MediaFormats.ExtensionFor(stream.MimeType)
+                        ?? (isAudio ? ".m4a" : ".mp4"),
+                    MimeType = stream.MimeType ?? string.Empty,
+                    FileSizeBytes = stream.SizeBytes,
+                    UrlType = UrlType.Media
+                })
+                .ToList();
+
+            return renditions.Count == 0
+                ? null
+                : new StreamReferenceDto { UrlType = UrlType.Media, Renditions = renditions };
+        }
+
+        /// <summary>
+        /// What the fetch engine can say about a link without downloading it, for a plugin
+        /// choosing between candidates.
+        /// </summary>
+        private async Task<ProbeResult?> ProbeAsync(Uri url, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var fetched = await YT_DLP_Fetch(url.ToString());
+
+                return new ProbeResult(fetched.Title, fetched.Uploader, fetched.Duration);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // A link that cannot be read is an answer, not a fault - it is exactly what a
+                // plugin sifting candidates wants to know.
+                _logger.LogDebug(ex, "Could not probe {Url}", url);
+                return null;
+            }
         }
 
         /// <summary>

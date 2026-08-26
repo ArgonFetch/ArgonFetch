@@ -125,6 +125,34 @@ builder.Services.AddSingleton<ArgonFetch.Application.Services.IProxyPool>(sp =>
 #region Validation
 // Register FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
+#region Plugins
+// Read as desired state: what the configuration lists is installed, what it does not is removed.
+var pluginOptions = builder.Configuration
+    .GetSection(ArgonFetch.Application.Plugins.PluginOptions.SectionName)
+    .Get<ArgonFetch.Application.Plugins.PluginOptions>() ?? new ArgonFetch.Application.Plugins.PluginOptions();
+
+builder.Services.AddSingleton(pluginOptions);
+builder.Services.AddSingleton<ArgonFetch.Application.Plugins.PluginInstaller>();
+builder.Services.AddSingleton<ArgonFetch.Application.Plugins.PluginLoader>();
+builder.Services.AddSingleton<ArgonFetch.Application.Plugins.IProviderContextFactory,
+    ArgonFetch.Application.Plugins.ProviderContextFactory>();
+
+// Loaded once. Providers are asked on every request, so building them per request would pay
+// reflection over and over for an answer that cannot change while the process is running.
+builder.Services.AddSingleton<ArgonFetch.Application.Plugins.IProviderRegistry>(serviceProvider =>
+{
+    var loader = serviceProvider.GetRequiredService<ArgonFetch.Application.Plugins.PluginLoader>();
+    var environment = serviceProvider.GetRequiredService<IWebHostEnvironment>();
+    var root = Path.IsPathRooted(pluginOptions.Path)
+        ? pluginOptions.Path
+        : Path.Combine(environment.ContentRootPath, pluginOptions.Path);
+
+    return new ArgonFetch.Application.Plugins.ProviderRegistry(
+        loader.Load(root, pluginOptions.Install),
+        serviceProvider.GetRequiredService<ILogger<ArgonFetch.Application.Plugins.ProviderRegistry>>());
+});
+#endregion
+
 builder.Services.AddValidatorsFromAssemblyContaining<GetMediaQueryValidator>();
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 #endregion
@@ -164,6 +192,24 @@ var app = builder.Build();
 
 #region Startup Diagnostics
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+
+// Before the registry is ever resolved, so what is on disk is what was asked for by the time
+// anything looks. Deliberately at startup and never during a request: software that installs
+// itself halfway through a download is not something anyone wants to debug.
+{
+    var pluginRoot = Path.IsPathRooted(pluginOptions.Path)
+        ? pluginOptions.Path
+        : Path.Combine(app.Environment.ContentRootPath, pluginOptions.Path);
+
+    await app.Services.GetRequiredService<ArgonFetch.Application.Plugins.PluginInstaller>()
+        .InstallAsync(pluginOptions, pluginRoot);
+
+    var registry = app.Services.GetRequiredService<ArgonFetch.Application.Plugins.IProviderRegistry>();
+
+    startupLogger.LogInformation("Plugins: {Count} loaded{Names}",
+        registry.Plugins.Count,
+        registry.Plugins.Count == 0 ? string.Empty : " - " + string.Join(", ", registry.Plugins.Select(p => $"{p.Id} {p.Version}")));
+}
 
 if (app.Environment.IsProduction() && corsUsesDevelopmentDefault)
 {

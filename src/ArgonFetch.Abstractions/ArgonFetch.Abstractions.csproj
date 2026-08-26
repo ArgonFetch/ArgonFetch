@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!--
+      Everything a plugin author compiles against, and nothing else. Kept deliberately thin: a
+      type that appears here is a promise, and a promise made to code living in somebody else's
+      repository is expensive to take back.
+    -->
+    <PackageId>ArgonFetch.Abstractions</PackageId>
+    <Version>1.0.0-preview.1</Version>
+    <Authors>ArgonFetch</Authors>
+    <Description>Contract for writing ArgonFetch source plugins.</Description>
+    <PackageProjectUrl>https://github.com/ArgonFetch/ArgonFetch</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ArgonFetch/ArgonFetch</RepositoryUrl>
+
+    <!--
+      MIT while the application around it is GPL-3.0. A plugin has to reference this to exist,
+      so a copyleft licence here would decide the licence of every plugin anyone ever writes.
+    -->
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="LICENSE" Pack="true" PackagePath="" />
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The only dependencies allowed here, and only because every .NET application already has
+      them: a plugin that needs a logger should not be handed a second logging abstraction to
+      learn. Nothing else may be added without the same argument.
+    -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>
