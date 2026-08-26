@@ -202,6 +202,17 @@ app.UseRouting();
 app.UseAuthorization();
 app.UseCors();
 app.MapControllers();
+
+// An unmatched /api path is a client error, not a page. UseSpa below is terminal and answers
+// anything routing did not match with index.html, which for an API path means a caller gets
+// 200 and a page of HTML instead of a 404 - a parse error rather than a status they can act
+// on. Registered as a fallback so it is chosen only when no controller matched, and the SPA
+// middleware passes through any request that already has an endpoint, so every non-API path
+// still reaches the client router untouched.
+app.MapFallback("/api/{**path}", (HttpContext context) => Results.Problem(
+    title: "Not Found",
+    detail: $"No endpoint matches {context.Request.Path}.",
+    statusCode: StatusCodes.Status404NotFound));
 #endregion
 
 #region SPA Configuration
