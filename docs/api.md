@@ -19,7 +19,6 @@ point it at your own instance instead - and make sure that instance lists `docs.
 | Endpoint | What it does |
 |---|---|
 | [`GET /api/App`](/operations/GetAppInfo) | Version and health, including why the instance is in maintenance |
-| [`GET /api/App/requests`](/operations/GetRequestCount) | How many resolve requests this instance has served |
 | [`GET /api/Fetch/GetResource`](/operations/GetResource) | Resolves a media URL into metadata and available renditions |
 | [`GET /api/Stream/Media/{key}`](/operations/Media) | Streams one rendition; `?format=mp3` re-encodes audio |
 | [`GET /api/Stream/Combined/{key}`](/operations/Combined) | Muxes separate video and audio into MP4 |

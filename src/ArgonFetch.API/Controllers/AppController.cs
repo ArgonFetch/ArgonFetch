@@ -12,15 +12,13 @@ namespace ArgonFetch.API.Controllers
         private readonly IMediator _mediator;
         private readonly IWebHostEnvironment _environment;
         private readonly IApplicationInfoService _applicationInfoService;
-        private readonly IRequestCounterService _requestCounter;
         private readonly IMaintenanceState _maintenance;
 
-        public AppController(IMediator mediator, IWebHostEnvironment environment, IApplicationInfoService applicationInfoService, IRequestCounterService requestCounter, IMaintenanceState maintenance)
+        public AppController(IMediator mediator, IWebHostEnvironment environment, IApplicationInfoService applicationInfoService, IMaintenanceState maintenance)
         {
             _mediator = mediator;
             _environment = environment;
             _applicationInfoService = applicationInfoService;
-            _requestCounter = requestCounter;
             _maintenance = maintenance;
         }
 
@@ -41,25 +39,6 @@ namespace ArgonFetch.API.Controllers
 
             return Ok(appInfo);
         }
-    
-        /// <summary>
-        /// Total media requests this installation has served. Shaped for shields.io so it can
-        /// be embedded as a badge without another service in between.
-        /// </summary>
-        [HttpGet("requests", Name = "GetRequestCount")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult> GetRequestCount(CancellationToken cancellationToken)
-        {
-            var total = await _requestCounter.GetTotalAsync(cancellationToken);
-
-            return Ok(new
-            {
-                schemaVersion = 1,
-                label = "requests",
-                message = total.ToString("N0", System.Globalization.CultureInfo.InvariantCulture),
-                color = "9f54e5",
-                total
-            });
-        }
     }
 }
+
