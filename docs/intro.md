@@ -53,4 +53,4 @@ from a broken version.
 - [**Self-hosting**](/self-host) - run it with `docker compose`.
 - [**Configuration**](/configuration) - every environment variable, including proxy rotation.
 - [**Usage**](/usage) - the web UI and the API, end to end.
-- [**Developer setup**](/dev-setup) - local dev, migrations, tests.
+- [**Developer setup**](/dev-setup) - local dev, tests, and how the projects fit together.
