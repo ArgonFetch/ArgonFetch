@@ -6,7 +6,6 @@
         Media,
         Playlist,
         YouTubeRadio,
-        SpotifyAlbum,
         Url,
         Unknown
     }
