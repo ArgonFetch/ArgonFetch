@@ -11,12 +11,11 @@ it is worth trying, but is not something we chase when it breaks.
 | Platform | Status | Notes |
 |---|---|---|
 | YouTube | ✅ Video and audio | Muxes separate video/audio streams when no pre-muxed format exists |
-| Spotify | ✅ Single tracks | Metadata is read from the public track page; audio comes from the matching YouTube Music result |
+| Spotify | ✅ Tracks, playlists and albums | Metadata is read from the public pages; audio comes from the matching YouTube Music result |
 | TikTok | ✅ | |
 | SoundCloud | ✅ | Except the licensed catalogue, which is DRM protected and refused - see [below](#drm-protected-tracks) |
-| Instagram | ❌ Needs a signed-in session | Instagram serves media only to logged-in accounts, and ArgonFetch has no way to supply credentials |
-| Spotify playlists / albums | ❌ Not supported | [#171](https://github.com/ArgonFetch/ArgonFetch/issues/171) |
-| Playlists generally | ❌ Not supported | [#76](https://github.com/ArgonFetch/ArgonFetch/issues/76) |
+| Instagram | ⚠️ Needs a signed-in session | Instagram serves media only to logged-in accounts. Point [`COOKIES_PATH`](/configuration) at an exported session and it works |
+| Playlists | ✅ Any source | Resolved as a collection; download the tracks individually or the whole list as one zip |
 
 ## Spotify without an API key
 
@@ -24,7 +23,9 @@ Spotify links do not need credentials. ArgonFetch reads the title, artist and co
 public track page, then finds the matching result on YouTube Music and streams the audio from
 there. There is no developer app to register and no secret to rotate.
 
-This is also why only single tracks work: playlists and albums need the Spotify API proper.
+Playlists and albums work the same way. The track list is read through the same API the
+Spotify web player uses, which needs no credentials either, and each track is then matched on
+YouTube Music like a single one.
 
 ## DRM protected tracks
 

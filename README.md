@@ -37,12 +37,11 @@ streams and serves them back as a normal file download.
 | Platform | Status | Notes |
 |---|---|---|
 | YouTube | ✅ Video and audio | Muxes separate video/audio streams when no pre-muxed format exists |
-| Spotify | ✅ Single tracks | Metadata is read from the public track page; audio comes from the matching YouTube Music result |
+| Spotify | ✅ Tracks, playlists and albums | Metadata is read from the public pages; audio comes from the matching YouTube Music result |
 | TikTok | ✅ | |
 | SoundCloud | ✅ | Except the licensed catalogue, which is DRM protected and refused |
 | Instagram | ⚠️ Needs `COOKIES_PATH` | Instagram serves media only to a signed-in session; supply one and it works |
-| Spotify playlists / albums | ❌ Not supported | [#171](https://github.com/ArgonFetch/ArgonFetch/issues/171) |
-| Playlists generally | ❌ Not supported | [#76](https://github.com/ArgonFetch/ArgonFetch/issues/76) |
+| Playlists | ✅ Any source | Resolved as a collection; download them individually or the whole list as one zip |
 
 Downloads carry the title and artist: in the filename always, and written into the file
 itself when it is converted to MP3. A pass-through download is served byte for byte, so it
@@ -160,7 +159,6 @@ ignored. Without the variable, fetches go out from the server's own IP as before
 
 ArgonFetch no longer ships a database. Delete the `postgres` service, its
 `postgres_data` volume and the `POSTGRES_*` and
-`ConnectionStrings__ArgonFetchDatabase` variables from your `.env`, then add the
 `ConnectionStrings__ArgonFetchDatabase` variables from your `.env`. Nothing needs
 migrating — ArgonFetch keeps no persistent state at all.
 
