@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using ArgonFetch.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +21,18 @@ namespace ArgonFetch.Application.Plugins
 
     public class ProviderRegistry : IProviderRegistry
     {
-        private readonly IReadOnlyList<(string PluginId, ISourceProvider Provider)> _providers;
+        /// <summary>
+        /// How long one pattern may spend deciding.
+        /// <para>
+        /// A pattern is written by whoever wrote the plugin, and one that backtracks badly can
+        /// take a very long time over a URL built to provoke it. Every request is matched against
+        /// every installed pattern, so without a limit here one careless plugin would be enough
+        /// to stall the whole application.
+        /// </para>
+        /// </summary>
+        private static readonly TimeSpan MatchTimeout = TimeSpan.FromMilliseconds(100);
+
+        private readonly IReadOnlyList<Claim> _providers;
         private readonly ILogger<ProviderRegistry> _logger;
 
         public ProviderRegistry(IReadOnlyList<LoadedPlugin> plugins, ILogger<ProviderRegistry> logger)
@@ -32,7 +44,8 @@ namespace ArgonFetch.Application.Plugins
             // the plugins rather than to a number each plugin declares about itself - given the
             // chance, every author decides theirs is the important one.
             _providers = plugins
-                .SelectMany(plugin => plugin.Providers.Select(provider => (plugin.Id, provider)))
+                .SelectMany(plugin => plugin.Providers.Select(provider =>
+                    new Claim(plugin.Id, provider, Compile(plugin.Id, provider, logger))))
                 .ToList();
 
             Hooks = plugins.SelectMany(plugin => plugin.Hooks).ToList();
@@ -42,12 +55,55 @@ namespace ArgonFetch.Application.Plugins
 
         public IReadOnlyList<LoadedPlugin> Plugins { get; }
 
+        /// <summary>
+        /// Compiles a provider's declared patterns once, here, rather than on every request.
+        /// </summary>
+        private static IReadOnlyList<Regex> Compile(string pluginId, ISourceProvider provider, ILogger logger)
+        {
+            var compiled = new List<Regex>();
+
+            IReadOnlyList<string> patterns;
+
+            try
+            {
+                patterns = provider.UrlPatterns ?? [];
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "The {Id} plugin threw while listing the links it wants", pluginId);
+                return compiled;
+            }
+
+            foreach (var pattern in patterns)
+            {
+                try
+                {
+                    compiled.Add(new Regex(
+                        pattern,
+                        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant,
+                        MatchTimeout));
+                }
+                catch (ArgumentException ex)
+                {
+                    // One unusable pattern costs that pattern. The plugin may well have others,
+                    // and taking it out entirely over a typo helps nobody.
+                    logger.LogWarning(ex, "The {Id} plugin declared a pattern that does not compile: {Pattern}", pluginId, pattern);
+                }
+            }
+
+            if (compiled.Count == 0)
+                logger.LogWarning("The {Id} plugin declares no usable link patterns, so it will never be asked", pluginId);
+
+            return compiled;
+        }
+
         public ISourceProvider? For(Uri url)
         {
             // Every provider is asked, rather than stopping at the first that says yes. A second
             // claim on the same link is worth knowing about: left unsaid, the losing plugin
             // simply never runs and nobody can see why.
-            var claimed = _providers.Where(entry => Claims(entry, url)).ToList();
+            var address = url.ToString();
+            var claimed = _providers.Where(entry => Claims(entry, url, address)).ToList();
 
             if (claimed.Count == 0)
                 return null;
@@ -63,11 +119,18 @@ namespace ArgonFetch.Application.Plugins
             return claimed[0].Provider;
         }
 
-        private bool Claims((string PluginId, ISourceProvider Provider) entry, Uri url)
+        private bool Claims(Claim entry, Uri url, string address)
         {
             try
             {
-                return entry.Provider.CanHandle(url);
+                // The declared patterns first, then the provider's own say - which almost every
+                // provider leaves at the default, because the patterns were the whole answer.
+                return entry.Patterns.Any(pattern => pattern.IsMatch(address)) && entry.Provider.CanHandle(url);
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                LogPatternTimeout(entry.PluginId, address);
+                return false;
             }
             catch (Exception ex)
             {
@@ -78,5 +141,10 @@ namespace ArgonFetch.Application.Plugins
                 return false;
             }
         }
+
+        private void LogPatternTimeout(string pluginId, string address) =>
+            _logger.LogWarning("A link pattern from the {Id} plugin took too long over {Url} and was abandoned", pluginId, address);
+
+        private sealed record Claim(string PluginId, ISourceProvider Provider, IReadOnlyList<Regex> Patterns);
     }
 }

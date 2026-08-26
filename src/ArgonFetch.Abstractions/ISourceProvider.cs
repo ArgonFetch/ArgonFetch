@@ -21,15 +21,35 @@ namespace ArgonFetch.Abstractions
         string Id { get; }
 
         /// <summary>
-        /// Whether this provider wants the link.
+        /// Which links this provider wants, as regular expressions matched against the whole URL.
         /// <para>
-        /// Must be cheap, must not touch the network, and must not throw: it is asked of every
-        /// installed provider on every request, so anything expensive here is paid for by
-        /// downloads that have nothing to do with this plugin. That is the whole reason it is
-        /// not asynchronous - an awaitable signature invites a request nobody meant to make.
+        /// Declared rather than decided in code so the host can do the matching: it compiles each
+        /// one once instead of on every request, applies a time limit so a pattern that backtracks
+        /// badly cannot hang a download, and can say plainly which plugin claimed what. It also
+        /// means the usual plugin writes one line here and no matching code at all.
+        /// </para>
+        /// <para>
+        /// Matched without regard to case. A pattern that does not compile is skipped with a line
+        /// in the log rather than taking the plugin down with it.
         /// </para>
         /// </summary>
-        bool CanHandle(Uri url);
+        /// <example><c>[@"^https?://([\w-]+\.)*spotify\.com/"]</c></example>
+        IReadOnlyList<string> UrlPatterns { get; }
+
+        /// <summary>
+        /// A second opinion, once a pattern has already matched.
+        /// <para>
+        /// Almost no provider needs this - the patterns are usually the whole answer, and the
+        /// default accepts whatever they matched. Override it when the URL alone decides
+        /// something a regular expression should not be asked to express.
+        /// </para>
+        /// <para>
+        /// Must be cheap, must not touch the network, and must not throw: it is asked on every
+        /// request for a link this provider claimed. That is why it is not asynchronous - an
+        /// awaitable signature invites a request nobody meant to make.
+        /// </para>
+        /// </summary>
+        bool CanHandle(Uri url) => true;
 
         /// <summary>
         /// What should happen to the link. See <see cref="ProviderOutcome"/> for the four answers.

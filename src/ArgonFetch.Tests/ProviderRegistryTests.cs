@@ -10,8 +10,8 @@ namespace ArgonFetch.Tests
         public void For_PicksTheProviderThatClaimsTheLink()
         {
             var registry = Registry(
-                Plugin("spotify", new StubProvider("spotify", "open.spotify.com")),
-                Plugin("tiktok", new StubProvider("tiktok", "tiktok.com")));
+                Plugin("spotify", new StubProvider("spotify", @"^https?://([\w-]+\.)*spotify\.com/")),
+                Plugin("tiktok", new StubProvider("tiktok", @"^https?://([\w-]+\.)*tiktok\.com/")));
 
             Assert.Equal("tiktok", registry.For(new Uri("https://www.tiktok.com/@a/video/1"))?.Id);
         }
@@ -19,7 +19,7 @@ namespace ArgonFetch.Tests
         [Fact]
         public void For_LeavesALinkNobodyClaimsToTheOrdinaryPath()
         {
-            var registry = Registry(Plugin("spotify", new StubProvider("spotify", "open.spotify.com")));
+            var registry = Registry(Plugin("spotify", new StubProvider("spotify", @"^https?://([\w-]+\.)*spotify\.com/")));
 
             Assert.Null(registry.For(new Uri("https://www.youtube.com/watch?v=dQw4w9WgXcQ")));
         }
@@ -30,8 +30,8 @@ namespace ArgonFetch.Tests
             // Two plugins wanting the same link is a decision for whoever chose them, not for
             // whichever one happened to load first.
             var registry = Registry(
-                Plugin("spotify-fork", new StubProvider("spotify-fork", "open.spotify.com")),
-                Plugin("spotify", new StubProvider("spotify", "open.spotify.com")));
+                Plugin("spotify-fork", new StubProvider("spotify-fork", @"^https?://([\w-]+\.)*spotify\.com/")),
+                Plugin("spotify", new StubProvider("spotify", @"^https?://([\w-]+\.)*spotify\.com/")));
 
             Assert.Equal("spotify-fork", registry.For(new Uri("https://open.spotify.com/track/1"))?.Id);
         }
@@ -43,9 +43,31 @@ namespace ArgonFetch.Tests
             // nothing to do with, so one that throws must not break an unrelated download.
             var registry = Registry(
                 Plugin("broken", new ThrowingProvider()),
-                Plugin("spotify", new StubProvider("spotify", "open.spotify.com")));
+                Plugin("spotify", new StubProvider("spotify", @"^https?://([\w-]+\.)*spotify\.com/")));
 
             Assert.Equal("spotify", registry.For(new Uri("https://open.spotify.com/track/1"))?.Id);
+        }
+
+        [Fact]
+        public void For_IgnoresAPatternThatDoesNotCompile()
+        {
+            // A typo in one pattern costs that pattern. Taking the plugin out entirely over it
+            // would help nobody, and the working patterns beside it are still worth having.
+            var registry = Registry(Plugin("broken-pattern", new BadPatternProvider(
+                "broken-pattern", "([unclosed", @"^https?://([\w-]+\.)*spotify\.com/")));
+
+            Assert.Equal("broken-pattern", registry.For(new Uri("https://open.spotify.com/track/1"))?.Id);
+        }
+
+        [Fact]
+        public void For_AsksTheProviderOnlyAfterAPatternMatched()
+        {
+            // The throwing provider claims every link, so if it were consulted for this one the
+            // exception would be swallowed and it would be the winner that never ran.
+            var registry = Registry(
+                Plugin("spotify", new StubProvider("spotify", @"^https?://([\w-]+\.)*spotify\.com/")));
+
+            Assert.Null(registry.For(new Uri("https://example.com/whatever")));
         }
 
         [Fact]
@@ -64,11 +86,11 @@ namespace ArgonFetch.Tests
         private static LoadedPlugin Plugin(string id, ISourceProvider provider) =>
             new(id, null, "1.0", [provider], []);
 
-        private sealed class StubProvider(string id, string host) : ISourceProvider
+        private sealed class StubProvider(string id, params string[] patterns) : ISourceProvider
         {
             public string Id { get; } = id;
 
-            public bool CanHandle(Uri url) => url.Host.Contains(host, StringComparison.OrdinalIgnoreCase);
+            public IReadOnlyList<string> UrlPatterns { get; } = patterns;
 
             public Task<ProviderOutcome> PrepareAsync(Uri url, IProviderContext context, CancellationToken cancellationToken) =>
                 Task.FromResult(ProviderOutcome.PassThrough);
@@ -78,10 +100,22 @@ namespace ArgonFetch.Tests
         {
             public string Id => "broken";
 
+            public IReadOnlyList<string> UrlPatterns => [".*"];
+
             public bool CanHandle(Uri url) => throw new InvalidOperationException("bad plugin");
 
             public Task<ProviderOutcome> PrepareAsync(Uri url, IProviderContext context, CancellationToken cancellationToken) =>
                 throw new NotSupportedException();
+        }
+
+        private sealed class BadPatternProvider(string id, params string[] patterns) : ISourceProvider
+        {
+            public string Id { get; } = id;
+
+            public IReadOnlyList<string> UrlPatterns { get; } = patterns;
+
+            public Task<ProviderOutcome> PrepareAsync(Uri url, IProviderContext context, CancellationToken cancellationToken) =>
+                Task.FromResult(ProviderOutcome.PassThrough);
         }
 
         private sealed class StubHook : IFetchOptionsHook

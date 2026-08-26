@@ -415,3 +415,6 @@ docs/.vitepress/cache/
 # took them, not part of the project - a stray `git add -A` swept a megabyte of them into
 # the history once already. (.playwright-mcp/ above covers the ones that land in its folder.)
 /*.png
+
+# Plugins installed at runtime, not source.
+/src/ArgonFetch.API/plugins/

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.Loader;
 using ArgonFetch.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -10,7 +11,20 @@ namespace ArgonFetch.Application.Plugins
         string? Name,
         string Version,
         IReadOnlyList<ISourceProvider> Providers,
-        IReadOnlyList<IFetchOptionsHook> Hooks);
+        IReadOnlyList<IFetchOptionsHook> Hooks)
+    {
+        /// <summary>
+        /// The context this plugin's assemblies live in, held only so that it keeps living.
+        /// <para>
+        /// A collectible context is collected once nothing refers to it, and unloading takes the
+        /// plugin's own dependencies with it - which does not show up until the plugin first
+        /// reaches for one and is told the context is already unloaded. The providers above are
+        /// not enough to keep it: they are instances, and an instance does not root the context
+        /// its type was loaded into.
+        /// </para>
+        /// </summary>
+        internal AssemblyLoadContext? Context { get; init; }
+    }
 
     /// <summary>
     /// Turns the plugins folder into objects the application can call.
@@ -126,7 +140,7 @@ namespace ArgonFetch.Application.Plugins
                     "Loaded the {Id} plugin {Version} ({Providers} provider(s), {Hooks} hook(s))",
                     manifest.Id, version, providers.Count, hooks.Count);
 
-                return new LoadedPlugin(manifest.Id, manifest.Name, version, providers, hooks);
+                return new LoadedPlugin(manifest.Id, manifest.Name, version, providers, hooks) { Context = context };
             }
 
             _logger.LogWarning("Nothing in {Folder} declares itself an ArgonFetch plugin", folder);
