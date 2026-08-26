@@ -109,11 +109,7 @@ export class PlaylistContainerComponent {
       const media = resolved.mediaItems?.[0];
       const audio = media?.audio;
 
-      // Renditions first, since they carry the real containers; the fixed rungs are what
-      // sources that report no renditions still offer.
-      const url = audio?.renditions?.length
-        ? this.resourceUrls.buildRenditionUrl(audio.renditions[0])
-        : this.resourceUrls.buildResourceUrl(audio, 'best');
+      const url = this.resourceUrls.buildRenditionUrl(audio?.renditions?.[0]);
 
       if (!url) {
         this.notifications.show({
@@ -124,9 +120,7 @@ export class PlaylistContainerComponent {
         return;
       }
 
-      const extension = audio?.renditions?.length
-        ? audio.renditions[0].fileExtension || ''
-        : this.resourceUrls.getFileExtension(audio, 'best');
+      const extension = audio?.renditions?.[0]?.fileExtension || '';
 
       await this.downloads.download(url, `${media?.title || song.title}${extension}`);
     } catch (error: any) {

@@ -6,13 +6,6 @@ namespace ArgonFetch.Application.Services
 {
     public interface IProxyUrlBuilder
     {
-        StreamReferenceDto? BuildProxyReferences(
-            StreamingUrlDto? originalUrls,
-            IMediaUrlCacheService cacheService,
-            bool forceAudio = false,
-            string? proxy = null,
-            MediaTags? tags = null);
-
         /// <summary>
         /// Turns candidate formats into streamable renditions, best first. Each one is cached
         /// with the media type and proxy it has to be served with.
@@ -27,64 +20,6 @@ namespace ArgonFetch.Application.Services
 
     public class ProxyUrlBuilder : IProxyUrlBuilder
     {
-        public StreamReferenceDto? BuildProxyReferences(
-            StreamingUrlDto? originalUrls,
-            IMediaUrlCacheService cacheService,
-            bool forceAudio = false,
-            string? proxy = null,
-            MediaTags? tags = null)
-        {
-            if (originalUrls == null)
-                return null;
-
-            var proxyReferences = new StreamReferenceDto
-            {
-                UrlType = UrlType.Media
-            };
-
-            // Determine if these are audio URLs
-            // Check extensions OR if descriptions contain "audio" OR forced audio mode
-            bool isAudio = forceAudio ||
-                          IsAudioFormat(originalUrls.BestQualityFileExtension) ||
-                          IsAudioFormat(originalUrls.MediumQualityFileExtension) ||
-                          IsAudioFormat(originalUrls.WorstQualityFileExtension) ||
-                          ContainsAudioIndicator(originalUrls.BestQualityDescription) ||
-                          ContainsAudioIndicator(originalUrls.MediumQualityDescription) ||
-                          ContainsAudioIndicator(originalUrls.WorstQualityDescription);
-
-            // Build proxy reference for best quality
-            if (!string.IsNullOrEmpty(originalUrls.BestQuality))
-            {
-                var (extension, mimeType) = Describe(originalUrls.BestQualityFileExtension, isAudio);
-                proxyReferences.BestQualityKey = cacheService.CacheSingleUrl(originalUrls.BestQuality, isAudio, mimeType, proxy, tags);
-                proxyReferences.BestQualityDescription = originalUrls.BestQualityDescription;
-                proxyReferences.BestQualityFileExtension = extension;
-                proxyReferences.BestQualityMimeType = mimeType;
-            }
-
-            // Build proxy reference for medium quality
-            if (!string.IsNullOrEmpty(originalUrls.MediumQuality))
-            {
-                var (extension, mimeType) = Describe(originalUrls.MediumQualityFileExtension, isAudio);
-                proxyReferences.MediumQualityKey = cacheService.CacheSingleUrl(originalUrls.MediumQuality, isAudio, mimeType, proxy, tags);
-                proxyReferences.MediumQualityDescription = originalUrls.MediumQualityDescription;
-                proxyReferences.MediumQualityFileExtension = extension;
-                proxyReferences.MediumQualityMimeType = mimeType;
-            }
-
-            // Build proxy reference for worst quality
-            if (!string.IsNullOrEmpty(originalUrls.WorstQuality))
-            {
-                var (extension, mimeType) = Describe(originalUrls.WorstQualityFileExtension, isAudio);
-                proxyReferences.WorstQualityKey = cacheService.CacheSingleUrl(originalUrls.WorstQuality, isAudio, mimeType, proxy, tags);
-                proxyReferences.WorstQualityDescription = originalUrls.WorstQualityDescription;
-                proxyReferences.WorstQualityFileExtension = extension;
-                proxyReferences.WorstQualityMimeType = mimeType;
-            }
-
-            return proxyReferences;
-        }
-
         public List<MediaRenditionDto> BuildRenditions(
             IEnumerable<RenditionSource> sources,
             IMediaUrlCacheService cacheService,
@@ -159,22 +94,5 @@ namespace ArgonFetch.Application.Services
             return (MediaFormats.NormalizeExtension(sourceExtension)!, mimeType);
         }
 
-        private bool IsAudioFormat(string? fileExtension)
-        {
-            if (string.IsNullOrEmpty(fileExtension))
-                return false;
-
-            var audioExtensions = new[] { ".mp3", ".m4a", ".webm", ".ogg", ".opus", ".wav", ".aac", ".flac" };
-            return audioExtensions.Any(ext => fileExtension.Equals(ext, StringComparison.OrdinalIgnoreCase));
-        }
-
-        private bool ContainsAudioIndicator(string? description)
-        {
-            if (string.IsNullOrEmpty(description))
-                return false;
-
-            var lowerDesc = description.ToLower();
-            return lowerDesc.Contains("audio") && !lowerDesc.Contains("video");
-        }
     }
 }

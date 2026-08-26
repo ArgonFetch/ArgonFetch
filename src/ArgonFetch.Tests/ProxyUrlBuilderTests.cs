@@ -1,4 +1,4 @@
-using ArgonFetch.Application.Dtos;
+﻿using ArgonFetch.Application.Dtos;
 using ArgonFetch.Application.Services;
 using Moq;
 
@@ -6,45 +6,42 @@ namespace ArgonFetch.Tests
 {
     public class ProxyUrlBuilderTests
     {
-        private static StreamingUrlDto AudioSource(string extension) => new()
-        {
-            BestQualityDescription = "251 - audio only (medium)",
-            BestQuality = "https://example.googlevideo.com/videoplayback?itag=251",
-            BestQualityFileExtension = extension,
-        };
+        private static RenditionSource AudioSource(string extension) =>
+            new("https://example.googlevideo.com/videoplayback?itag=251",
+                "251 - audio only (medium)", extension, null, 129, null);
 
         [Fact]
-        public void BuildProxyReferences_KeepsTheSourceContainerForAudio()
+        public void BuildRenditions_KeepsTheSourceContainerForAudio()
         {
             var builder = new ProxyUrlBuilder();
 
-            var result = builder.BuildProxyReferences(AudioSource(".webm"), CacheStub(), forceAudio: true);
+            var renditions = builder.BuildRenditions([AudioSource(".webm")], CacheStub(), isAudio: true);
 
             // Opus in WebM used to be advertised as ".mp3", which forced a needless re-encode.
-            Assert.Equal(".webm", result!.BestQualityFileExtension);
-            Assert.Equal("audio/webm", result.BestQualityMimeType);
+            Assert.Equal(".webm", renditions[0].FileExtension);
+            Assert.Equal("audio/webm", renditions[0].MimeType);
         }
 
         [Fact]
-        public void BuildProxyReferences_FallsBackToMp3ForUnknownAudioContainers()
+        public void BuildRenditions_FallsBackToMp3ForUnknownAudioContainers()
         {
             var builder = new ProxyUrlBuilder();
 
-            var result = builder.BuildProxyReferences(AudioSource(".sph"), CacheStub(), forceAudio: true);
+            var renditions = builder.BuildRenditions([AudioSource(".sph")], CacheStub(), isAudio: true);
 
             // Unknown containers are still converted, so the converted format is what is promised.
-            Assert.Equal(".mp3", result!.BestQualityFileExtension);
-            Assert.Equal("audio/mpeg", result.BestQualityMimeType);
+            Assert.Equal(".mp3", renditions[0].FileExtension);
+            Assert.Equal("audio/mpeg", renditions[0].MimeType);
         }
 
         [Fact]
-        public void BuildProxyReferences_CachesTheMimeTypeItAdvertised()
+        public void BuildRenditions_CachesTheMimeTypeItAdvertised()
         {
             var cache = new Mock<IMediaUrlCacheService>();
             cache.Setup(c => c.CacheSingleUrl(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), null))
                 .Returns("key");
 
-            new ProxyUrlBuilder().BuildProxyReferences(AudioSource(".webm"), cache.Object, forceAudio: true);
+            new ProxyUrlBuilder().BuildRenditions([AudioSource(".webm")], cache.Object, isAudio: true);
 
             cache.Verify(c => c.CacheSingleUrl(It.IsAny<string>(), true, "audio/webm", null), Times.Once);
         }

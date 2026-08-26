@@ -574,54 +574,6 @@
       "StreamReferenceDto": {
         "type": "object",
         "properties": {
-          "bestQualityDescription": {
-            "type": "string",
-            "nullable": true
-          },
-          "bestQualityKey": {
-            "type": "string",
-            "nullable": true
-          },
-          "bestQualityFileExtension": {
-            "type": "string",
-            "nullable": true
-          },
-          "bestQualityMimeType": {
-            "type": "string",
-            "nullable": true
-          },
-          "mediumQualityDescription": {
-            "type": "string",
-            "nullable": true
-          },
-          "mediumQualityKey": {
-            "type": "string",
-            "nullable": true
-          },
-          "mediumQualityFileExtension": {
-            "type": "string",
-            "nullable": true
-          },
-          "mediumQualityMimeType": {
-            "type": "string",
-            "nullable": true
-          },
-          "worstQualityDescription": {
-            "type": "string",
-            "nullable": true
-          },
-          "worstQualityKey": {
-            "type": "string",
-            "nullable": true
-          },
-          "worstQualityFileExtension": {
-            "type": "string",
-            "nullable": true
-          },
-          "worstQualityMimeType": {
-            "type": "string",
-            "nullable": true
-          },
           "urlType": {
             "$ref": "#/components/schemas/UrlType"
           },

@@ -59,11 +59,7 @@
             }
           </button>
         } @empty {
-          <!-- Sources that report no renditions still have the three fixed rungs. -->
-          <button type="button" class="menu-item" cdkMenuItem
-            (cdkMenuItemTriggered)="onDownload('best', 'combined')">Best</button>
-          <button type="button" class="menu-item" cdkMenuItem
-            (cdkMenuItemTriggered)="onDownload('worst', 'combined')">Low</button>
+          <span class="menu-item menu-item--empty">Nothing downloadable here</span>
         }
       </div>
     </ng-template>
@@ -87,10 +83,7 @@
             }
           </button>
         } @empty {
-          <button type="button" class="menu-item" cdkMenuItem
-            (cdkMenuItemTriggered)="onDownload('best', 'audio')">Best</button>
-          <button type="button" class="menu-item" cdkMenuItem
-            (cdkMenuItemTriggered)="onDownload('worst', 'audio')">Low</button>
+          <span class="menu-item menu-item--empty">Nothing downloadable here</span>
         }
       </div>
     </ng-template>

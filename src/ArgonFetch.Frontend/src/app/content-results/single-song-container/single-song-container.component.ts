@@ -74,51 +74,6 @@ export class SingleSongContainerComponent {
     await this.downloads.download(url, `${title}${extension}`);
   }
 
-  async onDownload(quality: 'best' | 'medium' | 'worst', type: 'combined' | 'audio') {
-    if (this.downloads.busy) {
-      return; // Prevent multiple downloads at once
-    }
-
-    const mediaItem = this.resourceInformation.mediaItems?.[0];
-    if (!mediaItem) {
-      console.error('No media item available');
-      return;
-    }
-
-    let url: string | null | undefined = null;
-    let filename = mediaItem.title || 'download';
-    let extension = '';
-
-    if (type === 'combined') {
-      // Handle video streams (with audio)
-      const videoRef = mediaItem.video;
-      if (!videoRef) {
-        console.error('No video references available');
-        return;
-      }
-
-      url = this.resourceUrlService.buildResourceUrl(videoRef, quality);
-      extension = this.resourceUrlService.getFileExtension(videoRef, quality) || '.mp4';
-    } else if (type === 'audio') {
-      // Handle audio-only streams
-      const audioRef = mediaItem.audio;
-      if (!audioRef) {
-        console.error('No audio references available');
-        return;
-      }
-
-      url = this.resourceUrlService.buildResourceUrl(audioRef, quality);
-      extension = this.resourceUrlService.getFileExtension(audioRef, quality) || '.mp3';
-    }
-
-    if (!url) {
-      console.error('No URL available for the selected quality and type');
-      return;
-    }
-
-    await this.downloads.download(url, `${filename}${extension}`);
-  }
-
   hasCombinedUrls(): boolean {
     return !!this.resourceInformation.mediaItems?.[0]?.video;
   }

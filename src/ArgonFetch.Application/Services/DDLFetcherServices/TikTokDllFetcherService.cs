@@ -1,5 +1,6 @@
 ﻿using AngleSharp.Html.Parser;
 using ArgonFetch.Application.Dtos;
+using ArgonFetch.Application.Enums;
 using ArgonFetch.Application.Interfaces;
 using ArgonFetch.Application.Models;
 using System.Net;
@@ -53,15 +54,22 @@ namespace ArgonFetch.Application.Services.DDLFetcherServices
                 var imageUrl = document.QuerySelector("img")?.GetAttribute("src") ?? string.Empty;
                 var downloadLink = document.QuerySelectorAll("a[href]").FirstOrDefault()?.GetAttribute("href") ?? string.Empty;
 
-                var videoUrls = new StreamingUrlDto  // TikTok videos have audio included
+                // TikTok offers exactly one download, already carrying both tracks, so it is a
+                // single pass-through rendition rather than a choice.
+                var videoReferences = new StreamReferenceDto
                 {
-                    BestQualityDescription = "Best Quality",
-                    BestQuality = CleanHtml(downloadLink),
-                    BestQualityFileExtension = ".mp4",
+                    UrlType = UrlType.Media,
+                    Renditions = _proxyUrlBuilder.BuildRenditions(
+                        [new RenditionSource(
+                            Url: CleanHtml(downloadLink),
+                            Description: "Video with audio",
+                            Extension: ".mp4",
+                            Height: null,
+                            Bitrate: null,
+                            FileSizeBytes: null)],
+                        _cacheService,
+                        isAudio: false)
                 };
-
-                // Build proxy references for the video
-                var videoReferences = _proxyUrlBuilder.BuildProxyReferences(videoUrls, _cacheService);
 
                 return new MediaInformationDto
                 {
