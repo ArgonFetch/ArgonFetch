@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 
 namespace ArgonFetch.Application.Plugins
 {
-    /// <summary>A plugin that was loaded, and what came out of it.</summary>
     public sealed record LoadedPlugin(
         string Id,
         string? Name,
@@ -26,19 +25,12 @@ namespace ArgonFetch.Application.Plugins
         internal AssemblyLoadContext? Context { get; init; }
     }
 
-    /// <summary>
-    /// Turns the plugins folder into objects the application can call.
-    /// </summary>
     public class PluginLoader
     {
         private readonly ILogger<PluginLoader> _logger;
 
         public PluginLoader(ILogger<PluginLoader> logger) => _logger = logger;
 
-        /// <summary>
-        /// Loads the requested plugins, in the order they were requested - which is the order
-        /// their providers are then asked in.
-        /// </summary>
         public IReadOnlyList<LoadedPlugin> Load(string root, IEnumerable<string> install)
         {
             var loaded = new List<LoadedPlugin>();
@@ -70,7 +62,6 @@ namespace ArgonFetch.Application.Plugins
                 }
                 catch (Exception ex)
                 {
-                    // One bad plugin costs its own sources and nothing else.
                     _logger.LogError(ex, "Could not load the {Id} plugin", parsed.Value.Id);
                 }
             }
@@ -80,9 +71,6 @@ namespace ArgonFetch.Application.Plugins
 
         private LoadedPlugin? LoadOne(string folder, string id)
         {
-            // The assembly named after the folder, or failing that whichever one declares
-            // itself a plugin. Named first because it is the cheap answer and almost always
-            // the right one.
             var candidates = Directory.GetFiles(folder, "*.dll")
                 .OrderByDescending(path => Path.GetFileNameWithoutExtension(path)
                     .EndsWith(id, StringComparison.OrdinalIgnoreCase))
@@ -99,7 +87,6 @@ namespace ArgonFetch.Application.Plugins
                 }
                 catch (BadImageFormatException)
                 {
-                    // A native library sitting beside the managed ones.
                     context.Unload();
                     continue;
                 }
@@ -114,8 +101,6 @@ namespace ArgonFetch.Application.Plugins
 
                 if (manifest.Abi != ArgonFetchPluginAttribute.CurrentAbi)
                 {
-                    // Set aside before anything in it runs. A contract that changed shape is not
-                    // something to find out about halfway through somebody's download.
                     _logger.LogWarning(
                         "The {Id} plugin was built for contract {Theirs}; this build implements {Ours}",
                         manifest.Id, manifest.Abi, ArgonFetchPluginAttribute.CurrentAbi);
@@ -156,8 +141,6 @@ namespace ArgonFetch.Application.Plugins
                 if (type.IsAbstract || type.IsInterface || !typeof(T).IsAssignableFrom(type))
                     continue;
 
-                // Parameterless only, as the manifest is read before any of the host's services
-                // could be handed over. What a plugin needs arrives with each call instead.
                 if (type.GetConstructor(Type.EmptyTypes) is null)
                 {
                     _logger.LogWarning("{Type} has no parameterless constructor and was skipped", type.FullName);

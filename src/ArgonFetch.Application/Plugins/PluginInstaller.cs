@@ -6,13 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace ArgonFetch.Application.Plugins
 {
-    /// <summary>
-    /// Makes the plugins folder match what was asked for.
-    /// <para>
-    /// Runs once at startup and never during a request: a download that quietly installs software
-    /// halfway through is not something anyone wants to debug.
-    /// </para>
-    /// </summary>
     public class PluginInstaller
     {
         private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -51,9 +44,6 @@ namespace ArgonFetch.Application.Plugins
                 }
                 catch (Exception ex)
                 {
-                    // A plugin that cannot be installed must not stop the application: the rest
-                    // of it still works, and refusing to start would take a whole downloader
-                    // offline because one source's repository is having a bad morning.
                     _logger.LogError(ex, "Could not install the {Id} plugin", id);
                 }
             }
@@ -70,9 +60,6 @@ namespace ArgonFetch.Application.Plugins
 
             if (!index.TryGetValue(id, out var candidates))
             {
-                // Already present and no index to check it against is a working setup, not a
-                // failure - which is what keeps an unreachable repository from taking the
-                // application down with it.
                 if (installed is not null)
                 {
                     _logger.LogInformation("Keeping the {Id} plugin at {Version}; no repository listed it", id, installed);
@@ -120,8 +107,6 @@ namespace ArgonFetch.Application.Plugins
 
             var folder = Path.Combine(root, entry.Id);
 
-            // Replaced rather than merged: leaving an older build's files behind is how a plugin
-            // ends up loading half of one version and half of another.
             if (Directory.Exists(folder))
                 Directory.Delete(folder, recursive: true);
 
@@ -158,10 +143,6 @@ namespace ArgonFetch.Application.Plugins
                         if (string.IsNullOrWhiteSpace(entry.Id))
                             continue;
 
-                        // Two repositories offering the same id makes the configuration
-                        // ambiguous - "spotify" would mean different software depending on
-                        // which repository answered first. The one listed earlier wins, and
-                        // the clash is said out loud rather than resolved quietly.
                         if (index.TryGetValue(entry.Id, out var existing) && existing[0].Item2 != uri)
                         {
                             _logger.LogWarning(
@@ -185,7 +166,6 @@ namespace ArgonFetch.Application.Plugins
             return index;
         }
 
-        /// <summary>Removes anything installed that is no longer asked for.</summary>
         private void Prune(string root, HashSet<string> wanted)
         {
             foreach (var folder in Directory.GetDirectories(root))
@@ -215,7 +195,6 @@ namespace ArgonFetch.Application.Plugins
             return File.Exists(marker) ? File.ReadAllText(marker).Trim() : null;
         }
 
-        /// <summary>Splits "spotify" or "spotify@1.2.0".</summary>
         internal static (string Id, string? Version)? Parse(string request)
         {
             if (string.IsNullOrWhiteSpace(request))
@@ -228,7 +207,6 @@ namespace ArgonFetch.Application.Plugins
                 : (parts[0], null);
         }
 
-        /// <summary>Compares as a version where possible, so 1.10.0 outranks 1.9.0.</summary>
         private static Version ParseVersion(string version) =>
             Version.TryParse(version.Split('-')[0], out var parsed) ? parsed : new Version(0, 0);
     }

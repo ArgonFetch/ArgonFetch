@@ -12,10 +12,6 @@ namespace ArgonFetch.Application.Plugins
     {
         public const string SectionName = "Plugins";
 
-        /// <summary>
-        /// Indexes to look in, in order. Each is the URL of an index.json listing what that
-        /// repository publishes.
-        /// </summary>
         public List<string> Repositories { get; set; } = [];
 
         /// <summary>
@@ -30,38 +26,21 @@ namespace ArgonFetch.Application.Plugins
         /// </summary>
         public List<string> Install { get; set; } = [];
 
-        /// <summary>
-        /// Where plugins are kept. Relative paths are from the content root.
-        /// </summary>
         public string Path { get; set; } = "plugins";
 
-        /// <summary>
-        /// Settings for individual plugins, keyed by plugin id. Reaches the plugin as its
-        /// <c>IProviderContext.Settings</c>.
-        /// </summary>
         public Dictionary<string, Dictionary<string, string?>> Settings { get; set; } = [];
     }
 
-    /// <summary>One plugin as a repository index describes it.</summary>
     public sealed record PluginIndexEntry
     {
         public string Id { get; init; } = string.Empty;
         public string? Name { get; init; }
         public string Version { get; init; } = string.Empty;
 
-        /// <summary>
-        /// Contract this was built against. The host implements exactly one and skips anything
-        /// else, because a contract that changed shape is not something to guess at.
-        /// </summary>
         public int Abi { get; init; }
 
-        /// <summary>Path to the archive, relative to the index that named it.</summary>
         public string File { get; init; } = string.Empty;
 
-        /// <summary>
-        /// Hash of that archive. Checked after downloading, which is what makes a plugin
-        /// repository something you can host anywhere without also having to trust the host.
-        /// </summary>
         public string Sha256 { get; init; } = string.Empty;
     }
 }

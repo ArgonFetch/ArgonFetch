@@ -15,8 +15,6 @@ namespace ArgonFetch.Tests
         [Fact]
         public void Unique_SeparatesTracksThatShareAName()
         {
-            // A release can carry the same title twice - an edit and its instrumental resolve to
-            // the same tags - and a zip holding two identical names unpacks to one file.
             var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             Assert.Equal("Song.webm", StreamArchiveQueryHandler.Unique("Song.webm", used));

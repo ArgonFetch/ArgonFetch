@@ -24,10 +24,6 @@ namespace ArgonFetch.Infrastructure.Services
             _logger = logger;
         }
 
-        /// <summary>
-        /// Length the upstream reports, or null when it does not report one. A failure here is
-        /// not fatal - the caller simply cannot declare Content-Length and the response is chunked.
-        /// </summary>
         public async Task<long?> GetContentLengthAsync(
             string url,
             string? proxy = null,
@@ -63,13 +59,8 @@ namespace ArgonFetch.Infrastructure.Services
             ByteRange? range = null,
             CancellationToken cancellationToken = default)
         {
-            // Counts what has already been handed to the caller. Once any byte is written,
-            // restarting the download would append a second copy of the file, so a failure
-            // past that point has to propagate rather than fall back.
             var output = new OutputTracker();
 
-            // Probe for range support first. This writes nothing, so failing here is
-            // always safe to recover from.
             long? contentLength = null;
             var acceptsRanges = false;
             var probeSucceeded = false;
@@ -113,25 +104,15 @@ namespace ArgonFetch.Infrastructure.Services
             }
             catch (OperationCanceledException)
             {
-                // The caller went away or the request was aborted; retrying is pointless.
                 throw;
             }
             catch (Exception ex) when (output.BytesWritten == 0)
             {
-                // Nothing has reached the caller yet, so starting over is safe.
                 _logger.LogWarning(ex, "Accelerated download failed before writing any output, falling back to single connection");
                 await DownloadSingleConnectionAsync(url, outputStream, progress, output, proxy, range, cancellationToken);
             }
         }
 
-        /// <summary>
-        /// Asks for the first byte to learn the resource's length and whether it serves ranges.
-        /// <para>
-        /// A HEAD request would be the obvious probe, but media hosts answer 403 to both HEAD
-        /// and an unranged GET for signed URLs, so the only shape that reliably works is the
-        /// ranged GET the chunked download uses anyway.
-        /// </para>
-        /// </summary>
         private async Task<(long? ContentLength, bool AcceptsRanges)> ProbeAsync(
             string url,
             string? proxy,
@@ -146,8 +127,6 @@ namespace ArgonFetch.Infrastructure.Services
 
             response.EnsureSuccessStatusCode();
 
-            // 206 answers with the total after the slash in "bytes 0-0/12345"; a host that
-            // ignored the range answered 200 and reported the whole length instead.
             if (response.StatusCode == System.Net.HttpStatusCode.PartialContent)
             {
                 return (response.Content.Headers.ContentRange?.Length, true);
@@ -156,10 +135,6 @@ namespace ArgonFetch.Infrastructure.Services
             return (response.Content.Headers.ContentLength, false);
         }
 
-        /// <summary>
-        /// Tracks how much of the output stream has already been written, so callers can tell
-        /// whether restarting a transfer would duplicate bytes the consumer has already seen.
-        /// </summary>
         private sealed class OutputTracker
         {
             public long BytesWritten { get; private set; }
@@ -212,8 +187,6 @@ namespace ArgonFetch.Infrastructure.Services
 
                     var data = await inFlight.Dequeue();
 
-                    // Counted before the write: a write that throws may still have pushed
-                    // bytes to the consumer, so the output can no longer be restarted.
                     output.Add(data.Length);
                     await outputStream.WriteAsync(data, 0, data.Length, cancellationToken);
 
@@ -226,8 +199,6 @@ namespace ArgonFetch.Infrastructure.Services
             }
             catch
             {
-                // Observe the downloads still running so their failures don't resurface
-                // later as unobserved task exceptions.
                 foreach (var pending in inFlight)
                 {
                     _ = pending.ContinueWith(static t => _ = t.Exception, TaskScheduler.Default);
@@ -269,7 +240,6 @@ namespace ArgonFetch.Infrastructure.Services
         {
             var httpClient = _mediaHttpClients.For(proxy);
 
-            // Ranged from the first byte: an unranged GET is refused for signed media URLs.
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Range = range.HasValue
                 ? new RangeHeaderValue(range.Value.From, range.Value.To)

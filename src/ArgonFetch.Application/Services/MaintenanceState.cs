@@ -2,24 +2,11 @@ namespace ArgonFetch.Application.Services
 {
     public interface IMaintenanceState
     {
-        /// <summary>
-        /// What the app is busy with, or null when it is serving normally. Clients show this
-        /// verbatim, so it is written for a reader rather than a log.
-        /// </summary>
         string? Activity { get; }
 
-        /// <summary>
-        /// Marks the app as under maintenance until the returned handle is disposed.
-        /// </summary>
         IDisposable Begin(string activity);
     }
 
-    /// <summary>
-    /// Tracks background work that makes fetching unreliable while it runs - swapping the yt-dlp
-    /// binary being the one that actually happens. Without it a fetch landing mid-update fails
-    /// with whatever error the half-replaced binary produces, which reads like a broken site
-    /// rather than a busy server.
-    /// </summary>
     public class MaintenanceState : IMaintenanceState
     {
         private readonly Lock _gate = new();

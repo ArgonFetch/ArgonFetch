@@ -33,7 +33,6 @@ namespace ArgonFetch.Tests
 
             first.Dispose();
 
-            // The second run is still going, so the app is not back yet.
             Assert.Equal("Migrating database", state.Activity);
 
             second.Dispose();
@@ -52,7 +51,6 @@ namespace ArgonFetch.Tests
             scope.Dispose();
             scope.Dispose();
 
-            // Disposing one scope twice must not retire the identically named one still running.
             Assert.Equal("Updating yt-dlp", state.Activity);
         }
     }

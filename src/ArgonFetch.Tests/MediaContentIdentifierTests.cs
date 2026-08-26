@@ -9,9 +9,6 @@ namespace ArgonFetch.Tests
         [Theory]
         [InlineData("https://www.youtube.com/playlist?list=PLFgquLnL59alCl", ContentType.Playlist)]
         [InlineData("https://www.youtube.com/playlist?list=RDabc123", ContentType.YouTubeRadio)]
-        // A watch link that also names a list is one video seen in that list's context, which is
-        // what YouTube plays. Reading it as the list handed back hundreds of entries to someone
-        // who asked for one video.
         [InlineData("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLFgquLnL59alCl", ContentType.Media)]
         [InlineData("https://www.youtube.com/watch?v=dQw4w9WgXcQ", ContentType.Media)]
         public async Task IdentifyContent_TellsAListFromAVideoInOne(string url, ContentType expected)
@@ -28,8 +25,6 @@ namespace ArgonFetch.Tests
         }
 
         [Theory]
-        // SoundCloud lists a set as bare links and nothing else, so without this every row of a
-        // 329-track set read "Unknown" and there was no way to pick one.
         [InlineData("https://soundcloud.com/sweet-medicine/sweet-medicine-w-odyssee-breezin", "Sweet Medicine W Odyssee Breezin")]
         [InlineData("https://soundcloud.com/artist/some_track_name", "Some Track Name")]
         [InlineData("https://example.com/", null)]

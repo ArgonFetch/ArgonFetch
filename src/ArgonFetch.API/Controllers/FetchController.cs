@@ -29,13 +29,8 @@ namespace ArgonFetch.API.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status415UnsupportedMediaType)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
-        // Marked required rather than merely being non-nullable: binding already refused a
-        // call without it, but the generated schema said the parameter was optional, so every
-        // client built from it offered a request the API will only ever answer with a 400.
         public async Task<ActionResult<ResourceInformationDto>> GetResource([FromQuery][Required] string url)
         {
-            // Refused rather than attempted: the yt-dlp binary is being replaced underneath us,
-            // and the error that produces looks like a broken source rather than a busy server.
             if (_maintenance.Activity is { } activity)
             {
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, new ProblemDetails
@@ -69,8 +64,6 @@ namespace ArgonFetch.API.Controllers
                 return StatusCode(StatusCodes.Status415UnsupportedMediaType, new ProblemDetails
                 {
                     Title = "Unsupported Media Type",
-                    // Carried through so a caller learns which kind of unsupported this is -
-                    // DRM, or a link shape ArgonFetch does not handle yet.
                     Detail = ex.Message,
                     Status = StatusCodes.Status415UnsupportedMediaType
                 });

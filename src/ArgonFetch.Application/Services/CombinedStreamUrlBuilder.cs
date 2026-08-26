@@ -6,9 +6,6 @@ namespace ArgonFetch.Application.Services
 {
     public interface ICombinedStreamUrlBuilder
     {
-        /// <summary>
-        /// Pairs each video rendition with the given audio track for muxing, best first.
-        /// </summary>
         List<MediaRenditionDto> BuildCombinedRenditions(
             IEnumerable<RenditionSource> videoSources,
             RenditionSource? audioSource,
@@ -41,8 +38,6 @@ namespace ArgonFetch.Application.Services
                     FileExtension = ".mp4",
                     MimeType = "video/mp4",
                     UrlType = UrlType.Combined,
-                    // Only reported when both halves report one: a partial sum would read as a
-                    // small download and be wrong by however much the other track weighs.
                     FileSizeBytes = video.FileSizeBytes.HasValue && audioSource.FileSizeBytes.HasValue
                         ? video.FileSizeBytes + audioSource.FileSizeBytes
                         : null,

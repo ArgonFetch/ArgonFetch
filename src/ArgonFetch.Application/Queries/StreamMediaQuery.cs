@@ -23,16 +23,8 @@ namespace ArgonFetch.Application.Queries
             RangeHeader = rangeHeader;
         }
 
-        /// <summary>
-        /// The caller's Range header, if it sent one. Honoured only where bytes are passed
-        /// through: a conversion has no fixed length to seek within.
-        /// </summary>
         public string? RangeHeader { get; }
 
-        /// <summary>
-        /// Container the caller insists on, currently only "mp3". Null serves the source
-        /// untouched, which is faster and keeps the original quality.
-        /// </summary>
         public string? Format { get; }
 
         public string Key { get; }
@@ -63,13 +55,11 @@ namespace ArgonFetch.Application.Queries
         {
             try
             {
-                // Validate input
                 if (string.IsNullOrWhiteSpace(request.Key))
                 {
                     return StreamResult.BadRequest("Cache key is required");
                 }
 
-                // Get URL and format info from cache
                 var cacheData = _cacheService.GetCachedUrlWithFormat(request.Key);
 
                 if (cacheData == null)
@@ -79,13 +69,8 @@ namespace ArgonFetch.Application.Queries
 
                 var (mediaUrl, isAudio, advertisedMimeType, proxy, tags) = cacheData.Value;
 
-                // The fetch response already committed to a media type for this key. When it
-                // knows one, those bytes go out untouched: re-encoding Opus into MP3 cost a
-                // generation of quality, every tag the source carried, and the FFmpeg pass.
                 var passThroughMimeType = advertisedMimeType ?? StandardFormatMimeType(mediaUrl, isAudio);
 
-                // A caller can still ask for MP3 explicitly - players that cannot read Opus are
-                // the reason the endpoint used to convert everything - but it is opt-in now.
                 var mp3Requested = string.Equals(request.Format, "mp3", StringComparison.OrdinalIgnoreCase);
                 bool needsConversion = passThroughMimeType == null || (isAudio && mp3Requested);
 
@@ -94,15 +79,11 @@ namespace ArgonFetch.Application.Queries
                     _logger.LogInformation("Converting media from {Url} to {Format}",
                         mediaUrl, isAudio ? "MP3" : "MP4");
 
-                    // Set response headers for converted format
                     request.Response.ContentType = isAudio ? "audio/mpeg" : "video/mp4";
                     request.Response.Headers.Append("Cache-Control", "public, max-age=3600");
                     request.Response.Headers.ContentDisposition =
                         MediaFileName.ContentDisposition(tags, isAudio ? ".mp3" : ".mp4");
 
-                    // Stream and convert using FFmpeg. The conversion re-encodes anyway, so it
-                    // is the one path that can write the title, artist and cover art into the
-                    // file rather than only into its name.
                     await _ffmpegStreamingService.ConvertAndStreamMediaAsync(
                         mediaUrl,
                         request.Response.Body,
@@ -113,18 +94,13 @@ namespace ArgonFetch.Application.Queries
                 }
                 else
                 {
-                    // Source format, stream directly without conversion
                     _logger.LogInformation("Streaming {MimeType} media from {Url} using accelerated download via {Proxy}",
                         passThroughMimeType, mediaUrl, MediaHttpClients.Describe(proxy));
 
                     request.Response.ContentType = passThroughMimeType;
 
-                    // Add cache headers
                     request.Response.Headers.Append("Cache-Control", "public, max-age=3600");
 
-                    // Named, but not touched: writing tags into these bytes would mean remuxing
-                    // them, which costs the exact length the response has already promised and
-                    // the byte ranges a client may be asking for.
                     request.Response.Headers.ContentDisposition = MediaFileName.ContentDisposition(
                         tags,
                         MediaFormats.ExtensionFor(passThroughMimeType) ?? (isAudio ? ".mp3" : ".mp4"));
@@ -147,9 +123,6 @@ namespace ArgonFetch.Application.Queries
                     {
                         var total = upstreamLength.Value;
 
-                        // Advertised only here, where it is true: the bytes come from a source
-                        // that serves ranges and reach the caller untouched, so a seek can be
-                        // answered exactly.
                         request.Response.Headers.AcceptRanges = "bytes";
 
                         switch (Services.RangeHeader.Parse(request.RangeHeader, total, out var requested))
@@ -184,9 +157,6 @@ namespace ArgonFetch.Application.Queries
                         _logger.LogInformation("Upstream did not report a length for {Url}; response will be chunked", mediaUrl);
                     }
 
-                    // The service already falls back to a single connection internally, and only
-                    // while doing so is still safe. Retrying here would append a second copy of
-                    // the file to a response body that may already hold part of one.
                     await _acceleratedDownloadService.StreamWithAccelerationAsync(
                         mediaUrl,
                         request.Response.Body,
@@ -200,7 +170,6 @@ namespace ArgonFetch.Application.Queries
             }
             catch (OperationCanceledException)
             {
-                // Client disconnected, this is normal
                 _logger.LogInformation("Client disconnected during media streaming");
                 return StreamResult.ClientDisconnected();
             }
@@ -221,21 +190,12 @@ namespace ArgonFetch.Application.Queries
             }
         }
 
-        /// <summary>
-        /// The media type to serve a source with untouched, or null when it has to be converted.
-        /// <para>
-        /// Only reached for keys cached before the fetch response started recording the type,
-        /// so it works the type out of the URL: media URLs carry a "mime" query parameter, and
-        /// failing that an extension is sometimes recoverable from the path.
-        /// </para>
-        /// </summary>
         private string? StandardFormatMimeType(string url, bool isAudio)
         {
             var mimeType = GetMimeType(url);
 
             if (mimeType != null)
             {
-                // "audio/webm; codecs=opus" and friends: the parameters are not ours to forward.
                 var bare = mimeType.Split(';')[0].Trim();
 
                 if (bare.StartsWith(isAudio ? "audio/" : "video/", StringComparison.OrdinalIgnoreCase))
@@ -245,10 +205,6 @@ namespace ArgonFetch.Application.Queries
             return MediaFormats.MimeTypeFor(GetFileExtension(url), isAudio);
         }
 
-        /// <summary>
-        /// The source's media type. Media URLs carry it as a "mime" query parameter
-        /// (e.g. mime=video%2Fmp4) even though the path has no file extension.
-        /// </summary>
         private string? GetMimeType(string url)
         {
             try
@@ -280,10 +236,8 @@ namespace ArgonFetch.Application.Queries
                 var path = uri.AbsolutePath;
                 var extension = Path.GetExtension(path);
 
-                // If no extension found in path, try to extract from query parameters
                 if (string.IsNullOrEmpty(extension))
                 {
-                    // Check for common patterns like "format=mp4" or "ext=mp3"
                     var query = uri.Query.ToLower();
                     if (query.Contains("format=mp4") || query.Contains("ext=mp4"))
                         return ".mp4";
