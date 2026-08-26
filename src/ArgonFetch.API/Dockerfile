@@ -39,7 +39,6 @@ COPY Directory.Build.props application.properties ./
 COPY ["src/ArgonFetch.API/ArgonFetch.API.csproj", "src/ArgonFetch.API/"]
 COPY ["src/ArgonFetch.Application/ArgonFetch.Application.csproj", "src/ArgonFetch.Application/"]
 COPY ["src/ArgonFetch.Infrastructure/ArgonFetch.Infrastructure.csproj", "src/ArgonFetch.Infrastructure/"]
-COPY ["src/ArgonFetch.Domain/ArgonFetch.Domain.csproj", "src/ArgonFetch.Domain/"]
 RUN dotnet restore "src/ArgonFetch.API/ArgonFetch.API.csproj"
 
 # Stage 3: Backend build
