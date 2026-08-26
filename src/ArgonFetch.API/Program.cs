@@ -3,7 +3,7 @@ using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Validators;
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using MediatR;
+using Mediator;
 using System.Text.Json.Serialization;
 using YoutubeDLSharp;
 
@@ -35,8 +35,10 @@ builder.Services.AddControllers()
         o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSpaStaticFiles(spaStaticFilesOptions => { spaStaticFilesOptions.RootPath = "wwwroot/browser"; });
 
-// Add MediatR
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetMediaQuery).Assembly));
+// Handlers are wired up at compile time by the source generator rather than found by
+// reflection at startup, so a handler that does not exist is a build error rather than a
+// request that fails once somebody makes it.
+builder.Services.AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped);
 
 // Register In memory caching
 builder.Services.AddMemoryCache();

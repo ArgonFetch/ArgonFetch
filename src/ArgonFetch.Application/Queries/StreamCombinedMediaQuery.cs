@@ -1,6 +1,6 @@
 ﻿using ArgonFetch.Application.Interfaces;
 using ArgonFetch.Application.Services;
-using MediatR;
+using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -36,7 +36,7 @@ namespace ArgonFetch.Application.Queries
             _logger = logger;
         }
 
-        public async Task<StreamResult> Handle(StreamCombinedMediaQuery request, CancellationToken cancellationToken)
+        public async ValueTask<StreamResult> Handle(StreamCombinedMediaQuery request, CancellationToken cancellationToken)
         {
             try
             {

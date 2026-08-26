@@ -6,7 +6,7 @@ using ArgonFetch.Application.Services;
 using MediaTags = ArgonFetch.Application.Services.MediaTags;
 using ArgonFetch.Abstractions;
 using ArgonFetch.Application.Plugins;
-using MediatR;
+using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -78,7 +78,7 @@ namespace ArgonFetch.Application.Queries
             _logger = logger;
         }
 
-        public async Task<ResourceInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
+        public async ValueTask<ResourceInformationDto> Handle(GetMediaQuery request, CancellationToken cancellationToken)
         {
             var resolved = await Resolve(request, cancellationToken);
 

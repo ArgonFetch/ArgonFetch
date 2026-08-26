@@ -45,8 +45,8 @@
       them: a plugin that needs a logger should not be handed a second logging abstraction to
       learn. Nothing else may be added without the same argument.
     -->
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.11" />
   </ItemGroup>
 
 </Project>
