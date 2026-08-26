@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ArgonFetch.Application\ArgonFetch.Application.csproj" />
+    <ProjectReference Include="..\ArgonFetch.Infrastructure\ArgonFetch.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

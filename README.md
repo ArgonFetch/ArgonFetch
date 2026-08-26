@@ -26,7 +26,7 @@ streams and serves them back as a normal file download.
 - **No API keys.** Nothing to register, no credentials to configure — including Spotify.
 - **Audio or video**, at a quality you choose.
 - **Web interface and REST API**, with Swagger docs.
-- **One container plus a database.** Runs anywhere Docker does.
+- **One container, no database.** Runs anywhere Docker does.
 
 ## Screenshots
 
@@ -61,45 +61,29 @@ sources in a container ArgonFetch does not recognise. Video is delivered as MP4.
 
 ```yaml
 services:
-  postgres:
-    image: postgres:18
-    container_name: argonfetch-db
-    env_file: .env
-    volumes:
-      # Postgres 18 stores data in a version-specific subdirectory, so the volume
-      # goes here and NOT on /var/lib/postgresql/data.
-      - postgres_data:/var/lib/postgresql
-    restart: unless-stopped
-
   argonfetch:
     image: ghcr.io/argonfetch/argonfetch:latest
     # Alternative: docker.io/pianonic/argonfetch:latest
     container_name: argonfetch
     env_file: .env
-    environment:
-      ConnectionStrings__ArgonFetchDatabase: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
     ports:
       - "8080:8080"
     volumes:
       # yt-dlp and FFmpeg are fetched on boot instead of being baked into the image.
       # Keeping them here means a restart reuses them rather than downloading again.
       - tools:/tools
-    depends_on:
-      - postgres
+      # The served-request counter, and nothing else.
+      - data:/data
     restart: unless-stopped
 
 volumes:
-  postgres_data:
   tools:
+  data:
 ```
 
 **2. Create `.env` next to it:**
 
 ```env
-POSTGRES_USER=argonfetch
-POSTGRES_PASSWORD=changeme123
-POSTGRES_DB=argonfetch
-
 # Origins allowed to call the API. Set this to your own host in production.
 CORS_ALLOWED_ORIGINS=http://localhost:8080
 ```
@@ -118,10 +102,9 @@ Everything is set through environment variables in `.env`.
 
 | Variable | Required | Description |
 |---|---|---|
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | yes | Database credentials, shared by both containers |
-| `ConnectionStrings__ArgonFetchDatabase` | yes | Set in `compose.yml` from the values above |
 | `CORS_ALLOWED_ORIGINS` | in production | Comma-separated origins allowed to call the API. Defaults to `http://localhost:4200`, and the app warns at startup if that default is still in use in production |
 | `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables Swagger UI |
+| `DATA_PATH` | no | Where the served-request counter is kept. `/data` in the image, with a volume mounted on it so the total survives a restart |
 | `PROXY_LIST_PATH` | no | File with one proxy per line, rotated across yt-dlp fetches so they do not all leave from the same IP. See below |
 | `COOKIES_PATH` | no | Netscape-format cookies file, for sources that serve media only to a signed-in session. See below |
 
@@ -177,12 +160,13 @@ Both `http://user:pass@host:port` and the `host:port:user:pass` export format us
 by providers such as Webshare are accepted; blank lines and `#` comments are
 ignored. Without the variable, fetches go out from the server's own IP as before.
 
-### Upgrading from a release older than Postgres 18
+### Upgrading from a release that still used Postgres
 
-The database image moved from Postgres 15 to 18, which is a major upgrade: the
-on-disk format changed and the volume mount path moved. An existing
-`postgres_data` volume will not start under 18 — dump the old database and
-restore it into the new one, or run `pg_upgrade`.
+ArgonFetch no longer ships a database. Delete the `postgres` service, its
+`postgres_data` volume and the `POSTGRES_*` and
+`ConnectionStrings__ArgonFetchDatabase` variables from your `.env`, then add the
+`data` volume shown above. Nothing needs migrating — the only thing the database
+held was the request counter, and that total starts again from zero.
 
 ## Usage
 

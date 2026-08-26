@@ -2,12 +2,9 @@
 using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services.DDLFetcherServices;
 using ArgonFetch.Application.Validators;
-using ArgonFetch.Infrastructure;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using System.Text.Json.Serialization;
 using YoutubeDLSharp;
 
@@ -61,25 +58,18 @@ builder.Services.AddSingleton<ArgonFetch.Infrastructure.Services.MediaToolsServi
 builder.Services.AddHostedService(
     sp => sp.GetRequiredService<ArgonFetch.Infrastructure.Services.MediaToolsService>());
 
-builder.Services.AddScoped<ArgonFetch.Application.Services.IRequestCounterService,
-                           ArgonFetch.Infrastructure.Services.RequestCounterService>();
+// The request counter is the only state that outlives a request. It is held in memory and
+// mirrored to a file under DATA_PATH, so a restart does not reset the total.
+builder.Services.AddSingleton<ArgonFetch.Application.Services.IDataPaths>(
+    new ArgonFetch.Application.Services.DataPaths(builder.Configuration["DATA_PATH"]));
+builder.Services.AddSingleton<ArgonFetch.Infrastructure.Services.RequestCounterService>();
+builder.Services.AddSingleton<ArgonFetch.Application.Services.IRequestCounterService>(
+    sp => sp.GetRequiredService<ArgonFetch.Infrastructure.Services.RequestCounterService>());
+builder.Services.AddHostedService(
+    sp => sp.GetRequiredService<ArgonFetch.Infrastructure.Services.RequestCounterService>());
 
 // Register Application Info Service
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IApplicationInfoService, ArgonFetch.Infrastructure.Services.ApplicationInfoService>();
-#endregion
-
-#region Database Configuration
-// Configure the DbContext with a connection string.
-builder.Services.AddDbContext<ArgonFetchDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("ArgonFetchDatabase"),
-        npgsqlOptions => npgsqlOptions
-        .EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
-            errorCodesToAdd: null
-        )
-    ));
 #endregion
 
 #region API Documentation
@@ -182,12 +172,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-#region Database Initialization with Retry Logic
-bool dbConnected = false;
-int retryCount = 0;
-const int maxRetries = 10;
-const int retryDelaySeconds = 5;
-
+#region Startup Diagnostics
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
 
 if (app.Environment.IsProduction() && corsUsesDevelopmentDefault)
@@ -198,70 +183,6 @@ if (app.Environment.IsProduction() && corsUsesDevelopmentDefault)
 // Logged so a mistyped PROXY_LIST_PATH shows up at startup rather than as silent direct fetches.
 startupLogger.LogInformation("Proxy rotation: {Count} proxies loaded",
     app.Services.GetRequiredService<ArgonFetch.Application.Services.IProxyPool>().Count);
-
-while (!dbConnected && retryCount < maxRetries)
-{
-    using (var scope = app.Services.CreateScope())
-    {
-        var dbContext = scope.ServiceProvider
-            .GetRequiredService<ArgonFetchDbContext>();
-        try
-        {
-            startupLogger.LogInformation("Attempting to connect to the " +
-                                         "database and apply migrations " +
-                                         "(Attempt {Attempt}/{MaxRetries})...",
-                                         retryCount + 1, maxRetries);
-            dbContext.Database.Migrate();
-            dbConnected = true;
-            startupLogger.LogInformation("Database connection successful " +
-                                         "and migrations applied.");
-        }
-        catch (NpgsqlException ex)
-        {
-            startupLogger.LogError(ex, "Database connection failed: {ErrorMessage}",
-                ex.Message);
-            retryCount++;
-            if (retryCount < maxRetries)
-            {
-                startupLogger.LogInformation("Retrying in {Delay} seconds...",
-                                             retryDelaySeconds);
-                System.Threading.Thread.Sleep(TimeSpan
-                    .FromSeconds(retryDelaySeconds));
-            }
-            else
-            {
-                startupLogger.LogCritical("Failed to connect to the database " +
-                                         "after {MaxRetries} retries. " +
-                                         "Application will now terminate.",
-                                         maxRetries);
-                throw;
-            }
-        }
-        catch (Exception ex)
-        {
-            startupLogger.LogError(ex, "An unexpected error occurred during " +
-                                     "database connection/migration: {ErrorMessage}",
-                                     ex.Message);
-            retryCount++;
-            if (retryCount < maxRetries)
-            {
-                startupLogger.LogInformation("Retrying in {Delay} seconds...",
-                                             retryDelaySeconds);
-                System.Threading.Thread.Sleep(TimeSpan
-                    .FromSeconds(retryDelaySeconds));
-            }
-            else
-            {
-                startupLogger.LogCritical("Failed to perform database " +
-                                         "operations after {MaxRetries} " +
-                                         "retries due to an unexpected error. " +
-                                         "Application will now terminate.",
-                                         maxRetries);
-                throw;
-            }
-        }
-    }
-}
 #endregion
 
 #region Configure HTTP Pipeline
