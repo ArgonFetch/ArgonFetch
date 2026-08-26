@@ -5,14 +5,7 @@ namespace ArgonFetch.Abstractions
 {
     public interface IProviderContext
     {
-        /// <summary>
-        /// A client for talking to the source.
-        /// </summary>
-        /// <param name="rotateProxy">
-        /// Whether to go through the next proxy in the pool. Sources that count requests per
-        /// address want this; one that hands out an address signed for the caller does not,
-        /// because the download that follows has to come from the same place.
-        /// </param>
+        // rotateProxy: leave off for a source that signs an address for whoever asked.
         HttpClient CreateHttpClient(bool rotateProxy = true);
 
         IMemoryCache Cache { get; }

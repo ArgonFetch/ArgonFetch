@@ -25,8 +25,7 @@ namespace ArgonFetch.Tests
         [Fact]
         public void Unique_TreatsNamesDifferingOnlyInCaseAsTheSame()
         {
-            // Windows and macOS would, so an archive that relies on the difference unpacks to
-            // fewer files than it holds.
+            // Windows and macOS would collide these, unpacking fewer files than the zip holds.
             var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             StreamArchiveQueryHandler.Unique("Song.webm", used);

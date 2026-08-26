@@ -10,9 +10,7 @@ namespace ArgonFetch.Infrastructure.Services
         private readonly IMediaHttpClients _mediaHttpClients;
         private readonly ILogger<AcceleratedDownloadService> _logger;
         private const int MIN_CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks
-        // Chunk size is capped so the sliding window below stays bounded. Without a cap it
-        // scales with the file, and the window along with it - a 2GB download would hold
-        // roughly 1GB in memory.
+        // Capped so the window below stays bounded rather than scaling with the file.
         private const int MAX_CHUNK_SIZE = 8 * 1024 * 1024; // 8MB chunks
         private const int MAX_PARALLEL_CONNECTIONS = 8; // Maximum parallel connections
 
@@ -90,9 +88,7 @@ namespace ArgonFetch.Infrastructure.Services
                 return;
             }
 
-            // Serving a window rather than the file: the caller is seeking or resuming, and
-            // only the requested bytes may be written or the response will not line up with
-            // the Content-Range it announced.
+            // Only the requested bytes, or the response will not match its Content-Range.
             var window = range ?? new ByteRange(0, contentLength.Value - 1);
 
             _logger.LogInformation("Starting accelerated download with {Connections} connections for {Size} bytes",
@@ -155,8 +151,7 @@ namespace ArgonFetch.Infrastructure.Services
             var chunkSize = Math.Clamp(contentLength / (MAX_PARALLEL_CONNECTIONS * 2), MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
             var chunks = new List<(long start, long end)>();
 
-            // Chunks are offsets into the resource, not into the window, so a request for the
-            // tail of a file still asks the source for the right bytes.
+            // Offsets into the resource, not the window.
             for (var i = window.From; i <= window.To; i += chunkSize)
             {
                 var end = Math.Min(i + chunkSize - 1, window.To);
@@ -166,11 +161,8 @@ namespace ArgonFetch.Infrastructure.Services
             _logger.LogInformation("Downloading {ChunkCount} chunks of ~{ChunkSizeMb} MB each",
                 chunks.Count, chunkSize / 1024 / 1024);
 
-            // Sliding window: at most MAX_PARALLEL_CONNECTIONS chunks are downloading or
-            // waiting to be written at any moment, so peak memory is bounded by the window
-            // rather than by the size of the file. Chunks are written in order and their
-            // buffers released as soon as they reach the output stream, which also means the
-            // consumer starts receiving data before the last chunk has arrived.
+            // Sliding window: peak memory is bounded by the window, not the file size, and the
+            // consumer starts receiving before the last chunk arrives.
             var inFlight = new Queue<Task<byte[]>>(MAX_PARALLEL_CONNECTIONS);
             var nextToStart = 0;
             var totalBytesDownloaded = 0L;

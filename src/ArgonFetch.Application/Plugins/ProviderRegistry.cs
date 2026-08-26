@@ -15,15 +15,7 @@ namespace ArgonFetch.Application.Plugins
 
     public class ProviderRegistry : IProviderRegistry
     {
-        /// <summary>
-        /// How long one pattern may spend deciding.
-        /// <para>
-        /// A pattern is written by whoever wrote the plugin, and one that backtracks badly can
-        /// take a very long time over a URL built to provoke it. Every request is matched against
-        /// every installed pattern, so without a limit here one careless plugin would be enough
-        /// to stall the whole application.
-        /// </para>
-        /// </summary>
+        // A plugin's pattern can backtrack badly enough to stall every request.
         private static readonly TimeSpan MatchTimeout = TimeSpan.FromMilliseconds(100);
 
         private readonly IReadOnlyList<Claim> _providers;
@@ -34,9 +26,7 @@ namespace ArgonFetch.Application.Plugins
             Plugins = plugins;
             _logger = logger;
 
-            // Configured order, which the loader preserved. Precedence belongs to whoever chose
-            // the plugins rather than to a number each plugin declares about itself - given the
-            // chance, every author decides theirs is the important one.
+            // Configured order is precedence, so the choice stays with whoever installed them.
             _providers = plugins
                 .SelectMany(plugin => plugin.Providers.Select(provider =>
                     new Claim(plugin.Id, provider, Compile(plugin.Id, provider, logger))))

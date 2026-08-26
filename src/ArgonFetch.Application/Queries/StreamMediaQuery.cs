@@ -105,13 +105,8 @@ namespace ArgonFetch.Application.Queries
                         tags,
                         MediaFormats.ExtensionFor(passThroughMimeType) ?? (isAudio ? ".mp3" : ".mp4"));
 
-                    // This path copies the upstream bytes through unchanged, so the upstream
-                    // length is the response length and can be declared. Without it the client
-                    // gets no Content-Length and cannot show real download progress.
-                    //
-                    // Only declared when the probe returns a length: whatever is written must
-                    // match it exactly or Kestrel throws on response completion. Conversion is
-                    // handled in the branch above, where the output length is not knowable.
+                    // Declared only when the probe knows it: what is written must match exactly or Kestrel
+                    // throws. Without it the client cannot show progress.
                     var upstreamLength = await _acceleratedDownloadService.GetContentLengthAsync(
                         mediaUrl,
                         proxy,
@@ -138,8 +133,6 @@ namespace ArgonFetch.Application.Queries
                                 break;
 
                             case RangeRequest.Unsatisfiable:
-                                // Nothing of the resource lies in the asked-for window, so the
-                                // caller is told how long it actually is and given no body.
                                 request.Response.StatusCode = StatusCodes.Status416RangeNotSatisfiable;
                                 request.Response.Headers.ContentRange = $"bytes */{total}";
                                 request.Response.ContentLength = 0;

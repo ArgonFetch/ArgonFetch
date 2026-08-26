@@ -12,16 +12,8 @@ namespace ArgonFetch.Application.Plugins
         IReadOnlyList<ISourceProvider> Providers,
         IReadOnlyList<IFetchOptionsHook> Hooks)
     {
-        /// <summary>
-        /// The context this plugin's assemblies live in, held only so that it keeps living.
-        /// <para>
-        /// A collectible context is collected once nothing refers to it, and unloading takes the
-        /// plugin's own dependencies with it - which does not show up until the plugin first
-        /// reaches for one and is told the context is already unloaded. The providers above are
-        /// not enough to keep it: they are instances, and an instance does not root the context
-        /// its type was loaded into.
-        /// </para>
-        /// </summary>
+        // Held only to keep it alive: a collectible context is collected once nothing refers to
+        // it, taking the plugin's dependencies with it. Instances do not root it.
         internal AssemblyLoadContext? Context { get; init; }
     }
 

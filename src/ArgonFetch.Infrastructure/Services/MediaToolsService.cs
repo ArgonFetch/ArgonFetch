@@ -49,8 +49,7 @@ namespace ArgonFetch.Infrastructure.Services
                     }
                 }
 
-                // One window covers both steps: whether yt-dlp is being written for the first
-                // time or replaced by --update, it is unusable while it happens.
+                // yt-dlp is unusable while it is written, whether first install or --update.
                 using (_maintenance.Begin(File.Exists(_paths.YtDlpPath) ? "Updating yt-dlp" : "Downloading yt-dlp"))
                 {
                     if (!File.Exists(_paths.YtDlpPath))

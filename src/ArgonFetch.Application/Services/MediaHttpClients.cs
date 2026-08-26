@@ -8,15 +8,7 @@ namespace ArgonFetch.Application.Services
         HttpClient For(string? proxy);
     }
 
-    /// <summary>
-    /// Hands out the HTTP client a media URL has to be fetched with.
-    /// <para>
-    /// Media URLs are signed for the IP that requested them, so one extracted through a proxy
-    /// is only downloadable through that same proxy - fetching it directly answers 403. Each
-    /// proxy therefore gets its own client, kept for the process lifetime because a handler per
-    /// request exhausts sockets.
-    /// </para>
-    /// </summary>
+    // Media URLs are signed for the requesting IP, so each proxy keeps its own client.
     public class MediaHttpClients : IMediaHttpClients
     {
         private readonly ConcurrentDictionary<string, HttpClient> _proxiedClients = new();

@@ -57,10 +57,8 @@ namespace ArgonFetch.API.Controllers
             CancellationToken cancellationToken,
             [FromQuery] string? jobId = null)
         {
-            // Closing a zip entry writes its data descriptor, and closing the archive writes the
-            // central directory - both synchronously, with no async path offered for either, so
-            // Kestrel's default refusal truncates every archive. Allowed for this response alone;
-            // the bytes of the media itself still go out asynchronously.
+            // ZipArchive writes its central directory synchronously and Kestrel refuses that,
+            // which truncated every archive. The media itself still goes out asynchronously.
             var bodyControl = HttpContext.Features.Get<IHttpBodyControlFeature>();
 
             if (bodyControl is not null)
