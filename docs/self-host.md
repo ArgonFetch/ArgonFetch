@@ -1,7 +1,7 @@
 # Self-hosting
 
-ArgonFetch runs as two containers: the app and a Postgres database. There is nothing else to
-install and no credentials to register.
+ArgonFetch runs as a single container. There is no database, nothing else to install and no
+credentials to register.
 
 ## Prerequisites
 
@@ -12,45 +12,29 @@ install and no credentials to register.
 
 ```yaml
 services:
-  postgres:
-    image: postgres:18
-    container_name: argonfetch-db
-    env_file: .env
-    volumes:
-      # Postgres 18 stores data in a version-specific subdirectory, so the volume
-      # goes here and NOT on /var/lib/postgresql/data.
-      - postgres_data:/var/lib/postgresql
-    restart: unless-stopped
-
   argonfetch:
     image: ghcr.io/argonfetch/argonfetch:latest
     # Alternative: docker.io/pianonic/argonfetch:latest
     container_name: argonfetch
     env_file: .env
-    environment:
-      ConnectionStrings__ArgonFetchDatabase: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
     ports:
       - "8080:8080"
     volumes:
       # yt-dlp and FFmpeg are fetched on boot instead of being baked into the image.
       # Keeping them here means a restart reuses them rather than downloading again.
       - tools:/tools
-    depends_on:
-      - postgres
+      # The served-request counter, and nothing else.
+      - data:/data
     restart: unless-stopped
 
 volumes:
-  postgres_data:
   tools:
+  data:
 ```
 
 ## 2. Create `.env` next to it
 
 ```ini
-POSTGRES_USER=argonfetch
-POSTGRES_PASSWORD=changeme123
-POSTGRES_DB=argonfetch
-
 # Origins allowed to call the API. Set this to your own host in production.
 CORS_ALLOWED_ORIGINS=http://localhost:8080
 ```
@@ -85,10 +69,15 @@ ArgonFetch images are published to two registries - pick whichever suits your se
 | GitHub Container Registry | `ghcr.io/argonfetch/argonfetch:latest` |
 | Docker Hub | `docker.io/pianonic/argonfetch:latest` |
 
-## Mount `/tools`
+## Volumes
 
-The compose file above mounts a `tools` volume at `/tools`. Keep it. Without one, roughly 100MB
-of `yt-dlp` and `FFmpeg` is downloaded again every time the container starts.
+The compose file above mounts two, and neither is a database.
+
+`/tools` holds `yt-dlp` and `FFmpeg`. Keep it - without one, roughly 100MB is downloaded again
+every time the container starts.
+
+`/data` holds a single JSON file with the number of requests this instance has served. Drop it
+if you do not care about the total; the only consequence is that it restarts from zero.
 
 ## Behind a reverse proxy
 
@@ -120,11 +109,12 @@ Then set `CORS_ALLOWED_ORIGINS` to the public origin you just published:
 CORS_ALLOWED_ORIGINS=https://argonfetch.example.com
 ```
 
-## Upgrading from a release older than Postgres 18
+## Upgrading from a release that still used Postgres
 
-The database image moved from Postgres 15 to 18, which is a major upgrade: the on-disk format
-changed and the volume mount path moved. An existing `postgres_data` volume will not start under
-18 - dump the old database and restore it into the new one, or run `pg_upgrade`.
+ArgonFetch no longer ships a database. Delete the `postgres` service, its `postgres_data`
+volume and the `POSTGRES_*` and `ConnectionStrings__ArgonFetchDatabase` variables from your
+`.env`, then add the `data` volume shown above. Nothing needs migrating - the only thing the
+database held was the request counter, and that total starts again from zero.
 
 ## Next
 

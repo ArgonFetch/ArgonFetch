@@ -7,20 +7,15 @@ Everything is set through environment variables, normally in the `.env` file nex
 
 | Variable | Required | Description |
 |---|---|---|
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | yes | Database credentials, shared by both containers |
-| `ConnectionStrings__ArgonFetchDatabase` | yes | The app's connection string. Set in `compose.yml` from the values above |
 | `CORS_ALLOWED_ORIGINS` | in production | Comma-separated origins allowed to call the API. Defaults to `http://localhost:4200`, and the app warns at startup if that default is still in use in production |
 | `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables the Swagger UI |
 | `TOOLS_PATH` | no | Where `yt-dlp` and `FFmpeg` are downloaded to. `/tools` in the image, which is the path the compose file mounts a volume on. Must be writable by the runtime user |
+| `DATA_PATH` | no | Where the served-request counter is kept. `/data` in the image, with a volume mounted on it so the total survives a restart. Must be writable by the runtime user |
 | `PROXY_LIST_PATH` | no | File with one proxy per line, rotated across `yt-dlp` fetches so they do not all leave from the same IP. See [below](#proxy-rotation) |
 
 A complete `.env` for a public deployment:
 
 ```ini
-POSTGRES_USER=argonfetch
-POSTGRES_PASSWORD=changeme123
-POSTGRES_DB=argonfetch
-
 ASPNETCORE_ENVIRONMENT=Production
 CORS_ALLOWED_ORIGINS=https://argonfetch.example.com
 ```

@@ -17,6 +17,13 @@ ENV TOOLS_PATH=/tools
 RUN mkdir -p /tools && chown -R $APP_UID:0 /tools && chmod 0775 /tools
 VOLUME /tools
 
+# The request counter is the only state this app keeps, and it is a single small JSON file.
+# Mount a volume over /data to keep the total across restarts - without one it starts at
+# zero again on every boot.
+ENV DATA_PATH=/data
+RUN mkdir -p /data && chown -R $APP_UID:0 /data && chmod 0775 /data
+VOLUME /data
+
 # The fetched FFmpeg is built against OpenSSL's own default paths, which are Debian's and do
 # not exist here, so every HTTPS input failed certificate verification. Pointing it at this
 # image's bundle fixes that; the CA data itself is already in the base image.

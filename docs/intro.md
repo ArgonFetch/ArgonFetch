@@ -12,7 +12,7 @@ and nothing to configure - not even Spotify credentials.
   so you can see what you are choosing.
 - **Web interface and REST API.** The UI is one input box; the API is a handful of `GET`
   endpoints, documented at `/swagger` and checked in as [`openapi.json`](/openapi.json).
-- **One container plus a database.** Postgres holds the resolved-media cache. Everything else
+- **One container, no database.** Resolved media is cached in memory. Everything else
   runs in the app container.
 
 ::: warning Pre-release

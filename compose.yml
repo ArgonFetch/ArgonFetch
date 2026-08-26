@@ -1,35 +1,24 @@
 services:
-  postgres:
-    image: postgres:18
-    container_name: argonfetch-db
-    env_file: .env
-    volumes:
-      - postgres_data:/var/lib/postgresql
-    ports:
-      - "5439:5432"
-    restart: unless-stopped
-
   argonfetch:
     build:
       context: .
       dockerfile: src/ArgonFetch.API/Dockerfile
     container_name: argonfetch
     env_file: .env
-    environment:
-      ConnectionStrings__ArgonFetchDatabase: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
     ports:
       - "4358:8080"
     volumes:
       # yt-dlp and FFmpeg are fetched on boot rather than baked into the image. Keeping them
       # here means a restart reuses them instead of downloading roughly 100MB again.
       - tools:/tools
+      # The request counter, and nothing else. There is no database - this is one small JSON
+      # file, kept here so the total survives a restart.
+      - data:/data
       # Uncomment for sources that need a signed-in session, e.g. Instagram, and set
       # COOKIES_PATH=/config/cookies.txt in .env. Treat the file as a credential.
       # - ./cookies.txt:/config/cookies.txt:ro
-    depends_on:
-      - postgres
     restart: unless-stopped
 
 volumes:
-  postgres_data:
   tools:
+  data:
