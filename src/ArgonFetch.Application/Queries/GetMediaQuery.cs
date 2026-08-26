@@ -149,9 +149,6 @@ namespace ArgonFetch.Application.Queries
                 // serves; by then only a key is left to identify the media by.
                 var tags = new MediaTags(resultData.Title, resultData.Uploader);
 
-                // Offered alongside the three fixed rungs: a source usually has several more
-                // steps than that, and which ones are worth showing is the client's call.
-                var videoRenditions = new List<MediaRenditionDto>();
                 var audioRenditions = _proxyUrlBuilder.BuildRenditions(
                     RenditionPicker.PickAudio(AudioSources(resultData.Formats)),
                     _cacheService,
@@ -159,18 +156,15 @@ namespace ArgonFetch.Application.Queries
                     proxy: _fetchProxy,
                     tags: tags);
 
+                List<MediaRenditionDto> videoRenditions;
+                UrlType videoUrlType;
+
                 if (HasValidUrls(combinedFormats))
                 {
-                    // We have pre-muxed formats! Use them directly (FAST!)
-                    // These go through the proxy endpoint, not the combine endpoint
-                    combinedReferences = _proxyUrlBuilder.BuildProxyReferences(combinedFormats, _cacheService, proxy: _fetchProxy, tags: tags);
-
-                    // Still extract audio-only for "Audio Only" option
-                    var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
-                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy, tags: tags);
-
                     // Pre-muxed formats are served as they are, so they are renditions of the
-                    // pass-through kind rather than something to combine.
+                    // pass-through kind rather than something to combine - which is also the
+                    // fast path, since nothing has to be run through FFmpeg.
+                    videoUrlType = UrlType.Media;
                     videoRenditions = _proxyUrlBuilder.BuildRenditions(
                         RenditionPicker.PickVideo(PreMuxedSources(resultData.Formats), perContainer: true),
                         _cacheService,
@@ -180,17 +174,9 @@ namespace ArgonFetch.Application.Queries
                 }
                 else
                 {
-                    // No combined formats available, use separate streams (slower, needs FFmpeg)
-                    var videoUrls = ExtractThreeVideoQualitiesAndCacheNewUrl(resultData.Formats);
-                    var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(resultData.Formats);
-
-                    // Build combined references using the combine endpoint (FFmpeg muxing)
-                    combinedReferences = _combinedUrlBuilder.BuildCombinedReferences(videoUrls, audioUrls, _cacheService, _fetchProxy, tags);
-
-                    // Build proxy references for audio-only option
-                    audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy, tags: tags);
-
-                    // Each video step is paired with the best audio for muxing.
+                    // Nothing carries both tracks, so each video step is paired with the best
+                    // audio and muxed on the way out.
+                    videoUrlType = UrlType.Combined;
                     videoRenditions = _combinedUrlBuilder.BuildCombinedRenditions(
                         RenditionPicker.PickVideo(VideoOnlySources(resultData.Formats)),
                         RenditionPicker.PickAudio(AudioSources(resultData.Formats), count: 1).FirstOrDefault(),
@@ -199,15 +185,16 @@ namespace ArgonFetch.Application.Queries
                         tags);
                 }
 
-                if (combinedReferences != null)
-                {
-                    combinedReferences.Renditions = videoRenditions;
-                }
+                // Left null rather than empty when a source has none of that kind: an audio-only
+                // track that still reported a video reference put an empty Video menu in front of
+                // people, offering a choice with nothing behind it.
+                combinedReferences = videoRenditions.Count > 0
+                    ? new StreamReferenceDto { UrlType = videoUrlType, Renditions = videoRenditions }
+                    : null;
 
-                if (audioReferences != null)
-                {
-                    audioReferences.Renditions = audioRenditions;
-                }
+                audioReferences = audioRenditions.Count > 0
+                    ? new StreamReferenceDto { UrlType = UrlType.Media, Renditions = audioRenditions }
+                    : null;
 
                 return new ResourceInformationDto
                 {
@@ -387,51 +374,6 @@ namespace ArgonFetch.Application.Queries
                     !string.IsNullOrEmpty(urls.WorstQuality));
         }
 
-        private StreamingUrlDto ExtractThreeVideoQualitiesAndCacheNewUrl(FormatData[] formatData)
-        {
-            // Only get video-only formats (for separate stream approach)
-            // These will be combined with audio using FFmpeg
-            var videoOnlyFormats = formatData
-                .Where(f =>
-                    !string.IsNullOrEmpty(f.VideoCodec) &&
-                    f.VideoCodec != "none" &&
-                    (string.IsNullOrEmpty(f.AudioCodec) || f.AudioCodec == "none") && // Video only!
-                    !f.Protocol.Contains("mhtml") &&
-                    !f.Protocol.Contains("m3u8")
-                )
-                .OrderByDescending(f => f.Height ?? 0)
-                .ThenByDescending(f => f.Bitrate)
-                .ToList();
-
-            // Prefer MP4 if available
-            var mp4Formats = videoOnlyFormats
-                .Where(f => f.Extension?.Equals(".mp4", StringComparison.OrdinalIgnoreCase) == true)
-                .ToList();
-
-            if (mp4Formats.Any())
-            {
-                videoOnlyFormats = mp4Formats;
-            }
-
-            var bestVideo = videoOnlyFormats.FirstOrDefault();
-            var mediumVideo = videoOnlyFormats.ElementAtOrDefault(videoOnlyFormats.Count() / 2);
-            var worstVideo = videoOnlyFormats.LastOrDefault();
-
-            return new StreamingUrlDto
-            {
-                BestQualityDescription = bestVideo?.Format,
-                BestQuality = bestVideo?.Url,
-                BestQualityFileExtension = bestVideo?.Extension,
-
-                MediumQualityDescription = mediumVideo?.Format,
-                MediumQuality = mediumVideo?.Url,
-                MediumQualityFileExtension = mediumVideo?.Extension,
-
-                WorstQualityDescription = worstVideo?.Format,
-                WorstQuality = worstVideo?.Url,
-                WorstQualityFileExtension = worstVideo?.Extension,
-            };
-        }
 
         /// <summary>
         /// Formats that already carry both tracks, so they can be served untouched.
@@ -556,43 +498,6 @@ namespace ArgonFetch.Application.Queries
         private static double OpusQualityFactor(string? audioCodec) =>
             audioCodec?.StartsWith("opus", StringComparison.OrdinalIgnoreCase) == true ? 1.2 : 1.0;
 
-        private StreamingUrlDto ExtractThreeAudioQualitiesAndCacheNewUrl(FormatData[] formatData)
-        {
-            // Ranked purely by bitrate. MP3 and M4A used to be preferred because everything
-            // else was re-encoded to MP3 anyway, so the cheaper source won; sources are now
-            // passed through untouched, which makes YouTube's Opus the better pick over the
-            // AAC it also offers at a lower bitrate.
-            var audioFormats = formatData
-                .Where(f =>
-                    !string.IsNullOrEmpty(f.AudioCodec) &&
-                    f.Format.Contains("audio") &&
-                    !f.Protocol.Contains("mhtml") &&
-                    !f.Protocol.Contains("m3u8") &&
-                    f.AudioBitrate != null &&
-                    f.AudioBitrate != 0
-                )
-                .OrderByDescending(f => f.Bitrate * OpusQualityFactor(f.AudioCodec))
-                .ToList();
-
-            var bestAudio = audioFormats.FirstOrDefault();
-            var mediumAudio = audioFormats.ElementAtOrDefault(audioFormats.Count() / 2);
-            var worstAudio = audioFormats.LastOrDefault();
-
-            return new StreamingUrlDto
-            {
-                BestQualityDescription = bestAudio?.Format,
-                BestQuality = bestAudio?.Url,
-                BestQualityFileExtension = bestAudio?.Extension,
-
-                MediumQualityDescription = mediumAudio?.Format,
-                MediumQuality = mediumAudio?.Url,
-                MediumQualityFileExtension = mediumAudio?.Extension,
-
-                WorstQualityDescription = worstAudio?.Format,
-                WorstQuality = worstAudio?.Url,
-                WorstQualityFileExtension = worstAudio?.Extension,
-            };
-        }
 
 
 
@@ -752,28 +657,22 @@ namespace ArgonFetch.Application.Queries
             if (result is null)
                 throw new ArgumentException($"No YouTube Music match found for '{searchQuery}'");
 
-            var audioUrls = ExtractThreeAudioQualitiesAndCacheNewUrl(result.Formats);
-
-            // Build proxy references
-            // Force audio mode for Spotify tracks
             // Spotify's own metadata, not YouTube's: knowing the release better than YouTube
             // does is the reason the track was matched rather than simply searched for.
             var spotifyTags = new MediaTags(track.Title, track.Artist);
 
-            var audioReferences = _proxyUrlBuilder.BuildProxyReferences(audioUrls, _cacheService, forceAudio: true, proxy: _fetchProxy, tags: spotifyTags);
-
             // The audio comes from YouTube Music, so it has the same renditions any other
-            // YouTube track does. Without this a Spotify link fell back to "Best" and "Low",
-            // which says nothing about what either one is.
-            if (audioReferences != null)
+            // YouTube track does.
+            var audioReferences = new StreamReferenceDto
             {
-                audioReferences.Renditions = _proxyUrlBuilder.BuildRenditions(
+                UrlType = UrlType.Media,
+                Renditions = _proxyUrlBuilder.BuildRenditions(
                     RenditionPicker.PickAudio(AudioSources(result.Formats)),
                     _cacheService,
                     isAudio: true,
                     proxy: _fetchProxy,
-                    tags: spotifyTags);
-            }
+                    tags: spotifyTags)
+            };
 
             // Spotify typically only has audio, so combined URLs would be null
 

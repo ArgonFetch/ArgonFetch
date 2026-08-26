@@ -208,6 +208,13 @@
   border-top: 1px solid var(--border);
 }
 
+/* Not a button: there is nothing to press when a source offers no renditions, and a menu
+   item that looks pressable but does nothing is worse than one that plainly cannot be. */
+.menu-item--empty {
+  cursor: default;
+  opacity: 0.6;
+}
+
 /* The container sits beside the quality as a quiet chip: it matters when choosing, but the
    quality is what someone reads first. */
 .menu-item-label {

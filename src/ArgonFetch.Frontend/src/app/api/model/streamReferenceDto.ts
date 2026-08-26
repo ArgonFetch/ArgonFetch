@@ -12,18 +12,6 @@ import { UrlType } from './urlType';
 
 
 export interface StreamReferenceDto { 
-    bestQualityDescription?: string | null;
-    bestQualityKey?: string | null;
-    bestQualityFileExtension?: string | null;
-    bestQualityMimeType?: string | null;
-    mediumQualityDescription?: string | null;
-    mediumQualityKey?: string | null;
-    mediumQualityFileExtension?: string | null;
-    mediumQualityMimeType?: string | null;
-    worstQualityDescription?: string | null;
-    worstQualityKey?: string | null;
-    worstQualityFileExtension?: string | null;
-    worstQualityMimeType?: string | null;
     urlType?: UrlType;
     renditions?: Array<MediaRenditionDto> | null;
 }

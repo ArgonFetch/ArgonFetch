@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Text;
 using ArgonFetch.Application.Dtos;
 using ArgonFetch.Application.Enums;
@@ -259,7 +259,7 @@ namespace ArgonFetch.Application.Queries
                 var resolved = await _mediator.Send(new GetMediaQuery(entry.RequestedUrl), cancellationToken);
                 var audio = resolved.MediaItems?.FirstOrDefault()?.Audio;
 
-                var key = audio?.Renditions?.FirstOrDefault()?.Key ?? audio?.BestQualityKey;
+                var key = audio?.Renditions?.FirstOrDefault()?.Key;
 
                 if (string.IsNullOrWhiteSpace(key))
                     return null;
