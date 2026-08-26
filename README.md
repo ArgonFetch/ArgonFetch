@@ -24,6 +24,7 @@ Paste a link, get the media. ArgonFetch resolves the URL, picks the best availab
 streams and serves them back as a normal file download.
 
 - **No API keys.** Nothing to register, no credentials to configure — including Spotify.
+- **Plugins.** Sources yt-dlp cannot reach are installed by name rather than built in, and anyone can publish one.
 - **Audio or video**, at a quality you choose.
 - **Web interface and REST API**, with Swagger docs.
 - **One container, no database.** Runs anywhere Docker does.
@@ -37,8 +38,8 @@ streams and serves them back as a normal file download.
 | Platform | Status | Notes |
 |---|---|---|
 | YouTube | ✅ Video and audio | Muxes separate video/audio streams when no pre-muxed format exists |
-| Spotify | ✅ Tracks, playlists and albums | Metadata is read from the public pages; audio comes from the matching YouTube Music result |
-| TikTok | ✅ | |
+| Spotify | ✅ Tracks, playlists and albums | Needs the `spotify` plugin. Metadata is read from the public pages; audio comes from the matching YouTube Music result |
+| TikTok | ✅ | Needs the `tiktok` plugin |
 | SoundCloud | ✅ | Except the licensed catalogue, which is DRM protected and refused |
 | Instagram | ⚠️ Needs `COOKIES_PATH` | Instagram serves media only to a signed-in session; supply one and it works |
 | Playlists | ✅ Any source | Resolved as a collection; download them individually or the whole list as one zip |

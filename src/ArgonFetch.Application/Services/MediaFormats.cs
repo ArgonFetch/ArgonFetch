@@ -1,16 +1,7 @@
 ﻿namespace ArgonFetch.Application.Services
 {
-    /// <summary>
-    /// Maps a source container to the media type it is served with. Clients pick the on-disk
-    /// name and the tagging path from the mime type, so it has to describe the bytes that are
-    /// actually sent rather than the format the API would like them to be in.
-    /// </summary>
     public static class MediaFormats
     {
-        /// <summary>
-        /// Bitrate the MP3 conversion encodes at, in kbps. Shared so the offer a client shows
-        /// and the encode FFmpeg performs cannot disagree.
-        /// </summary>
         public const int Mp3BitrateKbps = 192;
 
         private static readonly Dictionary<string, string> MimeTypesByExtension =
@@ -29,13 +20,6 @@
                 [".mov"] = "video/quicktime",
             };
 
-        /// <summary>
-        /// The media type for a file extension, or null when the container is unknown and the
-        /// caller therefore has to convert rather than pass the bytes through.
-        /// <para>
-        /// WebM carries either audio or video, so the caller says which one it asked for.
-        /// </para>
-        /// </summary>
         public static string? MimeTypeFor(string? fileExtension, bool isAudio)
         {
             if (string.IsNullOrWhiteSpace(fileExtension))
@@ -52,10 +36,6 @@
             return MimeTypesByExtension.TryGetValue(extension, out var mimeType) ? mimeType : null;
         }
 
-        /// <summary>
-        /// The extension a media type is normally saved with, or null for one we do not know.
-        /// Used to name a pass-through download, whose bytes are the source's own.
-        /// </summary>
         public static string? ExtensionFor(string? mimeType)
         {
             if (string.IsNullOrWhiteSpace(mimeType))
@@ -76,7 +56,6 @@
             return null;
         }
 
-        /// <summary>Normalises an extension to a leading dot, e.g. <c>webm</c> to <c>.webm</c>.</summary>
         public static string? NormalizeExtension(string? fileExtension)
         {
             if (string.IsNullOrWhiteSpace(fileExtension))

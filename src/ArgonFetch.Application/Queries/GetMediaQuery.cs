@@ -1,8 +1,6 @@
 ﻿using ArgonFetch.Application.Dtos;
 using ArgonFetch.Application.Enums;
 using ArgonFetch.Application.Services;
-// Both namespaces name one: the contract has its own so a plugin need not reference the
-// application, and the application keeps the one its cache and file naming already speak.
 using MediaTags = ArgonFetch.Application.Services.MediaTags;
 using ArgonFetch.Abstractions;
 using ArgonFetch.Application.Plugins;
@@ -44,9 +42,6 @@ namespace ArgonFetch.Application.Queries
         // requested them, so it has to travel with them to the stream endpoint.
         private string? _fetchProxy;
 
-        // Set when a plugin rewrote the link. Knowing the release better than the page it was
-        // redirected to is the reason the track was matched rather than merely searched for, so
-        // what the plugin said wins over what the fetch reports.
         private MediaTags? _overrideTags;
         private string? _overrideCover;
         private string? _originalUrl;
@@ -82,8 +77,6 @@ namespace ArgonFetch.Application.Queries
         {
             var resolved = await Resolve(request, cancellationToken);
 
-            // Stamped in one place rather than at each of the half-dozen points that build
-            // a result, so a new source cannot forget it.
             resolved.RequestedUrl = request.Query;
 
             return resolved;
@@ -91,7 +84,6 @@ namespace ArgonFetch.Application.Queries
 
         private async Task<ResourceInformationDto> Resolve(GetMediaQuery request, CancellationToken cancellationToken)
         {
-            // Plugins first, and only for a real link - a search term is nobody's source.
             if (Uri.TryCreate(request.Query, UriKind.Absolute, out var link))
             {
                 var handled = await AskProvidersAsync(link, request, cancellationToken);
@@ -102,8 +94,6 @@ namespace ArgonFetch.Application.Queries
 
             var platform = PlatformIdentifierService.IdentifyPlatform(request.Query);
 
-            // Asked before fetching rather than after: a playlist read the ordinary way extracts
-            // every entry in full, which is seconds apiece and minutes for a list of any size.
             if (await IsCollection(request.Query, platform))
                 return await HandleCollection(request.Query);
 
@@ -113,7 +103,6 @@ namespace ArgonFetch.Application.Queries
             {
                 string thumbnailUrl = resultData.Thumbnail;
 
-                // Try to find largest square thumbnail if available
                 if (resultData.Thumbnails?.Any() == true)
                 {
                     var squareThumbnails = resultData.Thumbnails
@@ -129,14 +118,11 @@ namespace ArgonFetch.Application.Queries
                     }
                 }
 
-                // First, check if we have formats that already contain both video AND audio
                 var combinedFormats = ExtractCombinedFormatsAndCacheNewUrl(resultData.Formats);
 
                 StreamReferenceDto? combinedReferences = null;
                 StreamReferenceDto? audioReferences = null;
 
-                // Carried into the cache so the stream endpoint can name and tag the file it
-                // serves; by then only a key is left to identify the media by.
                 var tags = _overrideTags ?? new MediaTags(resultData.Title, resultData.Uploader);
 
                 var audioRenditions = _proxyUrlBuilder.BuildRenditions(
@@ -151,9 +137,6 @@ namespace ArgonFetch.Application.Queries
 
                 if (HasValidUrls(combinedFormats))
                 {
-                    // Pre-muxed formats are served as they are, so they are renditions of the
-                    // pass-through kind rather than something to combine - which is also the
-                    // fast path, since nothing has to be run through FFmpeg.
                     videoUrlType = UrlType.Media;
                     videoRenditions = _proxyUrlBuilder.BuildRenditions(
                         RenditionPicker.PickVideo(PreMuxedSources(resultData.Formats), perContainer: true),
@@ -164,8 +147,6 @@ namespace ArgonFetch.Application.Queries
                 }
                 else
                 {
-                    // Nothing carries both tracks, so each video step is paired with the best
-                    // audio and muxed on the way out.
                     videoUrlType = UrlType.Combined;
                     videoRenditions = _combinedUrlBuilder.BuildCombinedRenditions(
                         RenditionPicker.PickVideo(VideoOnlySources(resultData.Formats)),
@@ -175,9 +156,6 @@ namespace ArgonFetch.Application.Queries
                         tags);
                 }
 
-                // Left null rather than empty when a source has none of that kind: an audio-only
-                // track that still reported a video reference put an empty Video menu in front of
-                // people, offering a choice with nothing behind it.
                 combinedReferences = videoRenditions.Count > 0
                     ? new StreamReferenceDto { UrlType = videoUrlType, Renditions = videoRenditions }
                     : null;
@@ -207,13 +185,6 @@ namespace ArgonFetch.Application.Queries
                 throw new NotSupportedException("This isn't implemented yet");
         }
 
-        /// <summary>
-        /// Offers the link to whichever plugin claims it, and turns its answer into a result.
-        /// <para>
-        /// Null when no plugin wanted it, or when the one that did decided there was nothing to
-        /// do - both of which mean carrying on and fetching the link the ordinary way.
-        /// </para>
-        /// </summary>
         private async Task<ResourceInformationDto?> AskProvidersAsync(
             Uri link,
             GetMediaQuery request,
@@ -234,8 +205,6 @@ namespace ArgonFetch.Application.Queries
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // A plugin that fails is not a reason to refuse the link outright: yt-dlp knows
-                // a great many sources, and the ordinary path may well handle it.
                 _logger.LogWarning(ex, "The {Id} plugin failed on {Url}; falling back", provider.Id, link);
                 return null;
             }
@@ -243,8 +212,6 @@ namespace ArgonFetch.Application.Queries
             switch (outcome)
             {
                 case ProviderOutcome.RewriteOutcome rewrite:
-                    // The fetch that follows is the ordinary one; it is only pointed elsewhere,
-                    // and told what to call what it finds.
                     _logger.LogInformation("The {Id} plugin redirected {From} to {To}", provider.Id, link, rewrite.Url);
 
                     _overrideTags = new MediaTags(rewrite.Tags.Title, rewrite.Tags.Artist);
@@ -265,10 +232,6 @@ namespace ArgonFetch.Application.Queries
             }
         }
 
-        /// <summary>
-        /// A plugin's listing, as the API describes one. Entries stay unresolved, exactly as they
-        /// do for a collection yt-dlp listed.
-        /// </summary>
         private ResourceInformationDto MapCollection(CollectionResult collection, string pluginId)
         {
             if (collection.MayBeTruncated)
@@ -298,11 +261,6 @@ namespace ArgonFetch.Application.Queries
             };
         }
 
-        /// <summary>
-        /// Media a plugin fetched itself. It hands over plain addresses; caching them, hiding
-        /// them behind keys and building the URLs a client is given stay here, because that is
-        /// how this application serves bytes and it is not a plugin's business.
-        /// </summary>
         private ResourceInformationDto MapMedia(MediaResult media, string requestedUrl)
         {
             var tags = new MediaTags(media.Title, media.Author);
@@ -354,10 +312,6 @@ namespace ArgonFetch.Application.Queries
                 : new StreamReferenceDto { UrlType = UrlType.Media, Renditions = renditions };
         }
 
-        /// <summary>
-        /// What the fetch engine can say about a link without downloading it, for a plugin
-        /// choosing between candidates.
-        /// </summary>
         private async Task<ProbeResult?> ProbeAsync(Uri url, CancellationToken cancellationToken)
         {
             try
@@ -368,18 +322,11 @@ namespace ArgonFetch.Application.Queries
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // A link that cannot be read is an answer, not a fault - it is exactly what a
-                // plugin sifting candidates wants to know.
                 _logger.LogDebug(ex, "Could not probe {Url}", url);
                 return null;
             }
         }
 
-        /// <summary>
-        /// Whether the link names a collection rather than one recording. A source that has no
-        /// notion of playlists, or a link that is simply not one, answers no rather than failing:
-        /// an unreadable link is the fetch's problem to report, not this one's.
-        /// </summary>
         private static async Task<bool> IsCollection(string query, Platform platform)
         {
             try
@@ -392,16 +339,6 @@ namespace ArgonFetch.Application.Queries
             }
         }
 
-        /// <summary>
-        /// A playlist from any source yt-dlp can read - a YouTube list, a SoundCloud set.
-        /// <para>
-        /// Listed flat, so each entry costs a line of the index rather than its own extraction.
-        /// The entries are deliberately left unresolved for the same reason the Spotify listing
-        /// leaves them: resolving several hundred before showing anything would take minutes and
-        /// throw nearly all of it away. Picking one fetches that entry through the path its own
-        /// link already takes.
-        /// </para>
-        /// </summary>
         private async Task<ResourceInformationDto> HandleCollection(string query)
         {
             var listing = await YT_DLP_Fetch(query, new OptionSet
@@ -421,32 +358,18 @@ namespace ArgonFetch.Application.Queries
                 Author = listing.Uploader ?? listing.Channel,
                 CoverUrl = LargestThumbnail(listing),
                 MediaItems = entries
-                    // A flat listing still carries rows for entries that have been deleted or made
-                    // private, and those have no link to fetch anything by.
                     .Where(entry => !string.IsNullOrWhiteSpace(entry.Url) || !string.IsNullOrWhiteSpace(entry.WebpageUrl))
                     .Select(entry => new MediaInformationDto
                     {
                         RequestedUrl = entry.WebpageUrl ?? entry.Url,
                         Title = entry.Title ?? NameFromUrl(entry.WebpageUrl ?? entry.Url) ?? "Unknown",
                         Author = entry.Uploader ?? entry.Channel ?? listing.Uploader ?? string.Empty,
-                        // Falls back to the list's own picture, which is what a source that
-                        // reports no per-entry artwork leaves us with.
                         CoverUrl = LargestThumbnail(entry) ?? LargestThumbnail(listing),
                     })
                     .ToList()
             };
         }
 
-        /// <summary>
-        /// A readable name recovered from a link's last segment, for a listing that names nothing.
-        /// <para>
-        /// SoundCloud sets are listed as bare links - no title, no credit, no artwork - and every
-        /// row otherwise reads "Unknown", which is unusable for picking a track. The slug is a
-        /// close enough rendering of the name to choose by, and the real title arrives once the
-        /// entry is opened. Naming every row after its own link is worth more than being tidy
-        /// about the apostrophe that a slug has lost.
-        /// </para>
-        /// </summary>
         internal static string? NameFromUrl(string? url)
         {
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
@@ -468,9 +391,6 @@ namespace ArgonFetch.Application.Queries
             return string.IsNullOrWhiteSpace(name) ? null : name;
         }
 
-        /// <summary>
-        /// The biggest picture a result carries, or null when it carries none.
-        /// </summary>
         private static string? LargestThumbnail(VideoData data)
         {
             var largest = data.Thumbnails?
@@ -483,7 +403,6 @@ namespace ArgonFetch.Application.Queries
 
         private StreamingUrlDto ExtractCombinedFormatsAndCacheNewUrl(FormatData[] formatData)
         {
-            // Get formats that already have both video AND audio (no muxing needed!)
             var combinedFormats = formatData
                 .Where(f =>
                     !string.IsNullOrEmpty(f.VideoCodec) &&
@@ -532,9 +451,6 @@ namespace ArgonFetch.Application.Queries
                     !string.IsNullOrEmpty(urls.WorstQuality));
         }
 
-        /// <summary>
-        /// Formats that already carry both tracks, so they can be served untouched.
-        /// </summary>
         private static IEnumerable<RenditionSource> PreMuxedSources(FormatData[] formatData) =>
             formatData
                 .Where(f =>
@@ -545,7 +461,6 @@ namespace ArgonFetch.Application.Queries
                     !f.Protocol.Contains("m3u8"))
                 .Select(ToSource);
 
-        /// <summary>Video tracks without audio, which have to be muxed before use.</summary>
         private static IEnumerable<RenditionSource> VideoOnlySources(FormatData[] formatData) =>
             formatData
                 .Where(f =>
@@ -565,8 +480,6 @@ namespace ArgonFetch.Application.Queries
                     !f.Protocol.Contains("mhtml") &&
                     !f.Protocol.Contains("m3u8") &&
                     f.AudioBitrate is > 0)
-                // Weighted the same way the three fixed rungs are, so the top rendition and
-                // "best" do not disagree about which format wins.
                 .OrderByDescending(f => f.Bitrate * OpusQualityFactor(f.AudioCodec))
                 .Select(ToSource);
 
@@ -578,16 +491,8 @@ namespace ArgonFetch.Application.Queries
             format.Bitrate,
             (long?)(format.FileSize ?? format.ApproximateFileSize));
 
-        /// <summary>
-        /// The watch page for a song id, which is what yt-dlp is given to fetch.
-        /// </summary>
         private static string WatchUrl(string id) => $"https://music.youtube.com/watch?v={id}";
 
-        /// <summary>
-        /// Opus is worth roughly 20% more than AAC at the same bitrate, so it is weighted that
-        /// way rather than compared on the raw number. YouTube offers the two within a kbps of
-        /// each other, which would otherwise make the pick a coin toss.
-        /// </summary>
         private static double OpusQualityFactor(string? audioCodec) =>
             audioCodec?.StartsWith("opus", StringComparison.OrdinalIgnoreCase) == true ? 1.2 : 1.0;
 
@@ -595,8 +500,6 @@ namespace ArgonFetch.Application.Queries
         {
             options ??= new OptionSet { DumpSingleJson = true };
 
-            // Not only for Instagram: an age-gated YouTube video needs a session too, and a
-            // source that does not care simply ignores them.
             options.Cookies = _toolPaths.CookiesPath;
 
             if (!Uri.IsWellFormedUriString(query, UriKind.Absolute))
@@ -614,8 +517,6 @@ namespace ArgonFetch.Application.Queries
                 query = searchResult.Data.Entries.First().Url;
             }
 
-            // A failed fetch is retried through the next proxy, since the usual cause is the
-            // current one being blocked. Capped at 3 so a dead list still fails quickly.
             var attempts = Math.Min(Math.Max(_proxyPool.Count, 1), 3);
             RunResult<VideoData> result;
 
@@ -631,13 +532,9 @@ namespace ArgonFetch.Application.Queries
             {
                 var errors = string.Join(", ", result.ErrorOutput);
 
-                // Separated from a plain failure because the two mean different things to
-                // whoever pasted the link: DRM is a refusal, not a bad address.
                 if (YtDlpErrors.IsDrmProtected(result.ErrorOutput))
                     throw new NotSupportedException("This media is DRM protected and cannot be downloaded.");
 
-                // Told apart from a missing page for the same reason as DRM: the link is right
-                // and the fix is a cookies file, which the reader can actually act on.
                 if (YtDlpErrors.NeedsSignedInSession(result.ErrorOutput))
                     throw new NotSupportedException(
                         _toolPaths.CookiesPath is null

@@ -17,7 +17,6 @@ namespace ArgonFetch.Tests
 
             var renditions = builder.BuildRenditions([AudioSource(".webm")], CacheStub(), isAudio: true);
 
-            // Opus in WebM used to be advertised as ".mp3", which forced a needless re-encode.
             Assert.Equal(".webm", renditions[0].FileExtension);
             Assert.Equal("audio/webm", renditions[0].MimeType);
         }
@@ -29,7 +28,6 @@ namespace ArgonFetch.Tests
 
             var renditions = builder.BuildRenditions([AudioSource(".sph")], CacheStub(), isAudio: true);
 
-            // Unknown containers are still converted, so the converted format is what is promised.
             Assert.Equal(".mp3", renditions[0].FileExtension);
             Assert.Equal("audio/mpeg", renditions[0].MimeType);
         }
@@ -59,15 +57,12 @@ namespace ArgonFetch.Tests
             Assert.Equal(".mp3", converted.FileExtension);
             Assert.Equal("192 kbps", converted.Label);
 
-            // The conversion streams from the same cached source it is made from.
             Assert.Equal(renditions[0].Key, converted.Key);
         }
 
         [Fact]
         public void BuildRenditions_SkipsTheMp3Conversion_WhenTheSourceIsAlreadyMp3()
         {
-            // SoundCloud serves MP3 directly. Re-encoding it at a higher bitrate produces a
-            // bigger file that sounds worse, so there is nothing to offer.
             var renditions = new ProxyUrlBuilder().BuildRenditions(
                 [new RenditionSource("https://example.test/mp3", "128 kbps", ".mp3", null, 128, 2_200_000)],
                 CacheStub(),

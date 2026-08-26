@@ -5,10 +5,6 @@ namespace ArgonFetch.Application.Services
 {
     public interface IMediaHttpClients
     {
-        /// <summary>
-        /// Client for fetching a media URL. Pass the proxy the URL was extracted through, or
-        /// null to fetch directly.
-        /// </summary>
         HttpClient For(string? proxy);
     }
 
@@ -39,9 +35,6 @@ namespace ArgonFetch.Application.Services
             return _proxiedClients.GetOrAdd(proxy, CreateProxiedClient);
         }
 
-        /// <summary>
-        /// Proxy identity for logs, without the credentials the URL carries.
-        /// </summary>
         public static string Describe(string? proxy)
         {
             if (string.IsNullOrWhiteSpace(proxy))
@@ -66,10 +59,6 @@ namespace ArgonFetch.Application.Services
             return client;
         }
 
-        /// <summary>
-        /// Credentials in a proxy URL are not applied by WebProxy on their own, so they are
-        /// lifted out of the user info and attached explicitly.
-        /// </summary>
         private static WebProxy BuildWebProxy(string proxy)
         {
             var uri = new Uri(proxy);

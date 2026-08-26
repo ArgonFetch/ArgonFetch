@@ -9,20 +9,6 @@ using System.Runtime.InteropServices;
 
 namespace ArgonFetch.Infrastructure.Services
 {
-    /// <summary>
-    /// Owns the media tooling: fetches yt-dlp and FFmpeg when the app boots and keeps yt-dlp
-    /// current afterwards.
-    /// <para>
-    /// Baking them into the image pinned every deployment to whatever was current on build day,
-    /// and yt-dlp breaks whenever the sites it extracts from change. Fetching at boot means a
-    /// restart is enough to recover, and the image ships without media tooling at all - which is
-    /// also what lets it run on a minimal base with no package manager involved.
-    /// </para>
-    /// <para>
-    /// The app reports itself as under maintenance while this runs, so a fetch arriving before
-    /// the binaries exist is refused with a reason instead of failing on a missing file.
-    /// </para>
-    /// </summary>
     public class MediaToolsService : BackgroundService
     {
         private static readonly TimeSpan UpdateInterval = TimeSpan.FromHours(12);
@@ -57,9 +43,6 @@ namespace ArgonFetch.Infrastructure.Services
 
                 if (!File.Exists(_paths.FfmpegPath))
                 {
-                    // FFmpeg is fetched once and then left alone: it is a stable dependency,
-                    // unlike yt-dlp, and the archive is large enough that re-fetching it on a
-                    // timer would cost far more than it is worth.
                     using (_maintenance.Begin("Downloading FFmpeg"))
                     {
                         await TryDownloadFfmpegAsync(stoppingToken);
@@ -77,8 +60,6 @@ namespace ArgonFetch.Infrastructure.Services
 
                     await TryUpdateYtDlpAsync(stoppingToken);
 
-                    // Logged rather than served: which extractor build is running is useful
-                    // when debugging, and nothing a caller needs to be told.
                     await LogVersionsAsync(stoppingToken);
                 }
 
@@ -88,17 +69,11 @@ namespace ArgonFetch.Infrastructure.Services
                 }
                 catch (OperationCanceledException)
                 {
-                    // Shutting down.
                     return;
                 }
             }
         }
 
-        /// <summary>
-        /// Fetches the standalone yt-dlp build for the current platform. The generic "yt-dlp"
-        /// asset needs a Python interpreter beside it; the per-platform ones do not, which is
-        /// what keeps Python out of the image.
-        /// </summary>
         private async Task TryDownloadYtDlpAsync(CancellationToken cancellationToken)
         {
             var assetName = OperatingSystem.IsWindows()
@@ -129,16 +104,10 @@ namespace ArgonFetch.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                // Retried on the next cycle. Failing to start over it would take the whole app
-                // down for what is usually a transient network problem.
                 _logger.LogError(ex, "Could not download yt-dlp. Fetching will be retried later.");
             }
         }
 
-        /// <summary>
-        /// Fetches a static FFmpeg build and lifts the single binary out of the archive. The GPL
-        /// build is the one carrying libx264, which the conversion path needs.
-        /// </summary>
         private async Task TryDownloadFfmpegAsync(CancellationToken cancellationToken)
         {
             var isWindows = OperatingSystem.IsWindows();
@@ -155,9 +124,6 @@ namespace ArgonFetch.Infrastructure.Services
 
                 using var timeout = Bounded(cancellationToken);
 
-                // Both archive formats need to seek, which a response stream cannot do, so the
-                // download lands on disk first. A file rather than memory: the archive runs to
-                // tens of megabytes and a container is usually the tighter on RAM of the two.
                 var archivePath = Path.Combine(_paths.ToolsDirectory, assetName);
 
                 try
@@ -192,8 +158,6 @@ namespace ArgonFetch.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                // Conversion is the only thing that needs FFmpeg, and it is now the exception
-                // rather than the rule, so the app stays up and retries on the next cycle.
                 _logger.LogError(ex, "Could not download FFmpeg. Conversion will not work until it succeeds.");
             }
         }
@@ -226,10 +190,6 @@ namespace ArgonFetch.Infrastructure.Services
             await WriteExecutableAsync(_paths.FfmpegPath, content, cancellationToken);
         }
 
-        /// <summary>
-        /// Writes to a temporary name and moves it into place, so a download that dies halfway
-        /// cannot leave a truncated binary that looks installed.
-        /// </summary>
         private static async Task WriteExecutableAsync(string path, Stream content, CancellationToken cancellationToken)
         {
             var partialPath = path + ".partial";
@@ -276,7 +236,6 @@ namespace ArgonFetch.Infrastructure.Services
 
             try
             {
-                // Bound the attempt so a hung download can't keep the timer from firing again.
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(UpdateTimeout);
 
@@ -305,10 +264,6 @@ namespace ArgonFetch.Infrastructure.Services
             }
         }
 
-        /// <summary>
-        /// Records which tool builds are in use. Kept to the log rather than any endpoint:
-        /// naming exact versions to callers only helps someone matching them to known exploits.
-        /// </summary>
         private async Task LogVersionsAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation(
@@ -332,7 +287,6 @@ namespace ArgonFetch.Infrastructure.Services
                 if (exitCode != 0)
                     return null;
 
-                // ffmpeg answers with a whole banner; only its first line carries the version.
                 var firstLine = stdout.Split('\n').FirstOrDefault()?.Trim();
 
                 return string.IsNullOrWhiteSpace(firstLine) ? null : firstLine;

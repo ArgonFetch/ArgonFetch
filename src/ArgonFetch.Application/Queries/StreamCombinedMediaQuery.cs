@@ -40,13 +40,11 @@ namespace ArgonFetch.Application.Queries
         {
             try
             {
-                // Validate input
                 if (string.IsNullOrWhiteSpace(request.Key))
                 {
                     return StreamResult.BadRequest("Cache key is required");
                 }
 
-                // Get URLs from cache
                 var (actualVideoUrl, actualAudioUrl, proxy, tags) = _cacheService.GetCachedUrls(request.Key);
 
                 if (actualVideoUrl == null || actualAudioUrl == null)
@@ -54,12 +52,10 @@ namespace ArgonFetch.Application.Queries
                     return StreamResult.NotFound("Cache key expired or not found");
                 }
 
-                // Set response headers before starting stream
                 request.Response.ContentType = "video/mp4";
                 request.Response.Headers.ContentDisposition = MediaFileName.ContentDisposition(tags, ".mp4");
                 request.Response.Headers.Append("Cache-Control", "no-cache");
 
-                // Start streaming - once this starts, we cannot change headers
                 await _ffmpegStreamingService.StreamCombinedMediaAsync(
                     actualVideoUrl,
                     actualAudioUrl,
@@ -72,7 +68,6 @@ namespace ArgonFetch.Application.Queries
             }
             catch (OperationCanceledException)
             {
-                // Client disconnected, this is normal
                 _logger.LogInformation("Client disconnected during streaming");
                 return StreamResult.ClientDisconnected();
             }

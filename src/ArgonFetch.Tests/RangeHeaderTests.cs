@@ -12,9 +12,7 @@ namespace ArgonFetch.Tests
         [InlineData("bytes=-200", 800, 999)]
         [InlineData("bytes=0-", 0, 999)]
         [InlineData("bytes=999-999", 999, 999)]
-        // An end past the resource is clamped, which is what clients expect.
         [InlineData("bytes=900-5000", 900, 999)]
-        // A suffix longer than the resource is the whole resource.
         [InlineData("bytes=-5000", 0, 999)]
         [InlineData(" bytes=10-20 ", 10, 20)]
         [InlineData("BYTES=10-20", 10, 20)]
@@ -43,14 +41,12 @@ namespace ArgonFetch.Tests
         [InlineData("bytes=0-99,200-299")] // multipart, which this server does not serve
         public void Parse_IgnoresWhatItCannotHonour(string? header)
         {
-            // Ignored means the whole resource is served, which is always a valid answer.
             Assert.Equal(RangeRequest.None, RangeHeader.Parse(header, Total, out _));
         }
 
         [Fact]
         public void Parse_IgnoresRangesWhenTheLengthIsUnknown()
         {
-            // Without a length there is nothing to resolve "bytes=-200" or an open end against.
             Assert.Equal(RangeRequest.None, RangeHeader.Parse("bytes=0-99", 0, out _));
         }
     }

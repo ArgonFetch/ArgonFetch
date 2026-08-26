@@ -18,7 +18,6 @@ namespace ArgonFetch.Tests
 
             Assert.Equal(["2160p (4K)", "1080p", "720p"], picked.Select(p => RenditionPicker.Label(p, isAudio: false)));
 
-            // The better encode of the duplicated resolution is the one kept.
             Assert.Equal(4000, picked[1].Bitrate);
         }
 
@@ -30,8 +29,6 @@ namespace ArgonFetch.Tests
 
             Assert.Equal(4, picked.Count);
 
-            // Taking the top four would offer no small download at all, which is the choice
-            // someone on a slow connection is actually after.
             Assert.Equal("2160p (4K)", RenditionPicker.Label(picked[0], isAudio: false));
             Assert.Equal("144p", RenditionPicker.Label(picked[^1], isAudio: false));
         }
@@ -39,9 +36,6 @@ namespace ArgonFetch.Tests
         [Fact]
         public void PickAudio_CollapsesBitratesWithinOneContainer_ButKeepsBothContainers()
         {
-            // The order a caller hands in reflects Opus being worth more than AAC at the same
-            // bitrate, so the Opus entry leads - but the M4A is a different file type, and
-            // whether a player can read it is exactly the choice worth offering.
             var picked = RenditionPicker.PickAudio([Audio(128.9), Audio(129.5, ".m4a"), Audio(126, ".webm"), Audio(48)]);
 
             Assert.Equal([".webm", ".m4a", ".webm"], picked.Select(p => p.Extension));

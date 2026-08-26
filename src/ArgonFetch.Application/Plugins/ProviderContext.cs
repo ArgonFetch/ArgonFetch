@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 
 namespace ArgonFetch.Application.Plugins
 {
-    /// <summary>Makes a context for one plugin to work with.</summary>
     public interface IProviderContextFactory
     {
         IProviderContext For(string pluginId, Func<Uri, CancellationToken, Task<ProbeResult?>> probe);
@@ -74,17 +73,12 @@ namespace ArgonFetch.Application.Plugins
 
             public IReadOnlyDictionary<string, string?> Settings { get; }
 
-            // Whichever client the pool's next proxy needs, or the plain one. The same service
-            // the rest of the application fetches media through, so a plugin is subject to the
-            // same rotation rather than quietly going direct.
             public HttpClient CreateHttpClient(bool rotateProxy = true) =>
                 _httpClients.For(rotateProxy ? _proxyPool.Next() : null);
 
             public Task<ProbeResult?> ProbeAsync(Uri url, CancellationToken cancellationToken) =>
                 _probe(url, cancellationToken);
 
-            // Prefixed so two plugins caching "track:1" cannot overwrite one another - the cache
-            // is the application's, not any one plugin's.
             public string CacheKey(string key) => $"plugin:{_pluginId}:{key}";
         }
     }

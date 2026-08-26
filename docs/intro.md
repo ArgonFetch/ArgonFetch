@@ -6,6 +6,8 @@ Paste a URL, and ArgonFetch resolves it, lists every quality the source actually
 serves the one you pick back as an ordinary browser download. There is nothing to sign up for
 and nothing to configure - not even Spotify credentials.
 
+- **Plugins.** Sources yt-dlp cannot reach - Spotify, TikTok - are installed by name rather than
+  built in, and anyone can publish one.
 - **No API keys.** Spotify metadata is read from the public track page, so there is no developer
   app to register and no secret to rotate.
 - **Audio or video.** Renditions come straight from the source, with a size and bitrate on each

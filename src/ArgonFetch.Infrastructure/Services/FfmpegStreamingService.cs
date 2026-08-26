@@ -7,8 +7,6 @@ namespace ArgonFetch.Infrastructure.Services
 {
     public class FfmpegStreamingService : IFfmpegStreamingService
     {
-        // Shared with the media HttpClient so the User-Agent that avoids upstream 403s
-        // is defined in exactly one place.
         private const string UserAgent = MediaHttpClientDefaults.UserAgent;
 
         private readonly IHttpClientFactory _httpClientFactory;
@@ -35,9 +33,6 @@ namespace ArgonFetch.Infrastructure.Services
 
             var processStartInfo = CreateProcessStartInfo(ffmpegPath);
 
-            // Use HTTP input for better streaming support
-            // Add user-agent header to avoid 403 errors from YouTube
-            // Arguments are passed as separate tokens so a URL can never be parsed as an option.
             processStartInfo.ArgumentList.Add("-user_agent");
             processStartInfo.ArgumentList.Add(UserAgent);
             AddProxy(processStartInfo, proxy);
@@ -88,10 +83,8 @@ namespace ArgonFetch.Infrastructure.Services
                 process.Start();
                 process.BeginErrorReadLine();
 
-                // Stream the output to the client
                 await process.StandardOutput.BaseStream.CopyToAsync(outputStream, 81920, cancellationToken);
 
-                // Wait for process to complete
                 await process.WaitForExitAsync(cancellationToken);
 
                 if (process.ExitCode != 0)
@@ -103,7 +96,6 @@ namespace ArgonFetch.Infrastructure.Services
             }
             catch (OperationCanceledException)
             {
-                // Client disconnected, kill the process
                 if (!process.HasExited)
                 {
                     try
@@ -141,7 +133,6 @@ namespace ArgonFetch.Infrastructure.Services
 
             var processStartInfo = CreateProcessStartInfo(ffmpegPath);
 
-            // Arguments are passed as separate tokens so a URL can never be parsed as an option.
             processStartInfo.ArgumentList.Add("-user_agent");
             processStartInfo.ArgumentList.Add(UserAgent);
             AddProxy(processStartInfo, proxy);
@@ -150,7 +141,6 @@ namespace ArgonFetch.Infrastructure.Services
 
             if (isAudio)
             {
-                // Convert any audio format to MP3
                 processStartInfo.ArgumentList.Add("-vn");        // Disable video
                 // ID3v2.3 rather than the default 2.4: a fair number of players and Windows
                 // Explorer read tags only from the older revision.
@@ -159,7 +149,6 @@ namespace ArgonFetch.Infrastructure.Services
                 processStartInfo.ArgumentList.Add("-c:a");
                 processStartInfo.ArgumentList.Add("mp3");        // Convert audio to MP3
                 processStartInfo.ArgumentList.Add("-b:a");
-                // The rendition list advertises this same number, so it comes from one place.
                 processStartInfo.ArgumentList.Add($"{MediaFormats.Mp3BitrateKbps}k");
                 processStartInfo.ArgumentList.Add("-f");
                 processStartInfo.ArgumentList.Add("mp3");        // Force MP3 format
@@ -167,7 +156,6 @@ namespace ArgonFetch.Infrastructure.Services
             }
             else
             {
-                // Convert any video format to MP4 (with audio if present)
                 processStartInfo.ArgumentList.Add("-c:v");
                 processStartInfo.ArgumentList.Add("libx264");    // Use H.264 codec for video
                 processStartInfo.ArgumentList.Add("-preset");
@@ -209,10 +197,8 @@ namespace ArgonFetch.Infrastructure.Services
                 process.Start();
                 process.BeginErrorReadLine();
 
-                // Stream the output to the client
                 await process.StandardOutput.BaseStream.CopyToAsync(outputStream, 81920, cancellationToken);
 
-                // Wait for process to complete
                 await process.WaitForExitAsync(cancellationToken);
 
                 if (process.ExitCode != 0)
@@ -224,7 +210,6 @@ namespace ArgonFetch.Infrastructure.Services
             }
             catch (OperationCanceledException)
             {
-                // Client disconnected, kill the process
                 if (!process.HasExited)
                 {
                     try
@@ -263,10 +248,6 @@ namespace ArgonFetch.Infrastructure.Services
             };
         }
 
-        /// <summary>
-        /// FFmpeg treats a leading dash as an option and can read local paths as input,
-        /// so only absolute http(s) URLs are accepted as media sources.
-        /// </summary>
         private static void ValidateMediaUrl(string url, string parameterName)
         {
             if (string.IsNullOrWhiteSpace(url))
@@ -281,18 +262,6 @@ namespace ArgonFetch.Infrastructure.Services
             }
         }
 
-        /// <summary>
-        /// Renders the argument list for logging only - it is never handed to the process.
-        /// </summary>
-        /// <summary>
-        /// Writes what the media is into the file itself.
-        /// <para>
-        /// Text only, no cover art. Embedding a picture needs a seekable output, and this writes
-        /// to a pipe: given both, FFmpeg silently drops the picture and every tag with it, exit
-        /// code zero and nothing on stderr. Artwork would mean converting to a file first and
-        /// sending it afterwards, which costs the whole conversion before the first byte moves.
-        /// </para>
-        /// </summary>
         private static void AddTags(ProcessStartInfo processStartInfo, MediaTags? tags)
         {
             if (tags is null || !tags.HasAny)
@@ -308,7 +277,6 @@ namespace ArgonFetch.Infrastructure.Services
             {
                 processStartInfo.ArgumentList.Add("-metadata");
                 processStartInfo.ArgumentList.Add($"artist={tags.Artist}");
-                // Written to both: players disagree on which one names the performer.
                 processStartInfo.ArgumentList.Add("-metadata");
                 processStartInfo.ArgumentList.Add($"album_artist={tags.Artist}");
             }
@@ -334,14 +302,11 @@ namespace ArgonFetch.Infrastructure.Services
 
         private string? GetFfmpegPath()
         {
-            // The fetched binary wins: in a container it is the only one, and on a developer
-            // machine it is the same build the deployment runs rather than whatever is installed.
             if (File.Exists(_toolPaths.FfmpegPath))
             {
                 return _toolPaths.FfmpegPath;
             }
 
-            // Try to find ffmpeg in PATH
             var paths = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? Array.Empty<string>();
 
             foreach (var path in paths)
@@ -353,7 +318,6 @@ namespace ArgonFetch.Infrastructure.Services
                 }
             }
 
-            // Check common installation locations
             var commonPaths = new[]
             {
                 "/usr/bin/ffmpeg",

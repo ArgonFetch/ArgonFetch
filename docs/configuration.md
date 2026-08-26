@@ -11,13 +11,55 @@ Everything is set through environment variables, normally in the `.env` file nex
 | `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables the Swagger UI |
 | `TOOLS_PATH` | no | Where `yt-dlp` and `FFmpeg` are downloaded to. `/tools` in the image, which is the path the compose file mounts a volume on. Must be writable by the runtime user |
 | `PROXY_LIST_PATH` | no | File with one proxy per line, rotated across `yt-dlp` fetches so they do not all leave from the same IP. See [below](#proxy-rotation) |
+| `COOKIES_PATH` | no | Netscape-format cookies file exported from a signed-in browser, for sources that serve nothing to strangers. See [Platforms](/platforms#sites-that-need-an-account) |
+| `Plugins__*` | for Spotify and TikTok | Which plugins to install and where from. See [below](#plugins) |
 
 A complete `.env` for a public deployment:
 
 ```ini
 ASPNETCORE_ENVIRONMENT=Production
 CORS_ALLOWED_ORIGINS=https://argonfetch.example.com
+
+Plugins__Repositories__0=https://raw.githubusercontent.com/ArgonFetch/ArgonFetchPlugins/repo/index.json
+Plugins__Install__0=spotify
+Plugins__Install__1=tiktok
 ```
+
+## Plugins
+
+`yt-dlp` fetches most links on its own. A few sources need something else first - Spotify
+serves no audio anyone can download, TikTok watermarks what it serves - and those are
+**plugins**, installed by name rather than built in.
+
+```ini
+Plugins__Repositories__0=https://raw.githubusercontent.com/ArgonFetch/ArgonFetchPlugins/repo/index.json
+Plugins__Install__0=spotify
+Plugins__Install__1=tiktok
+```
+
+Or, if you configure with a file rather than the environment:
+
+```jsonc
+"Plugins": {
+  "Repositories": [ "https://raw.githubusercontent.com/ArgonFetch/ArgonFetchPlugins/repo/index.json" ],
+  "Install": [ "spotify", "tiktok" ]
+}
+```
+
+The list is read as **desired state**: what you name is installed, what you leave out is
+removed. Pin a version with `spotify@1.0.0`, or name the plugin alone for the newest build
+that fits this release.
+
+The order is also precedence - if two plugins claim the same link, the one listed first
+wins, and the other is mentioned in the log so you can see it happened.
+
+Plugins are downloaded once at startup and checked against the hash the repository
+published, never during a request. A repository that cannot be reached leaves whatever is
+already installed alone rather than stopping the app from starting.
+
+Anyone can serve a repository: it is a JSON index and some zip files on a URL. To write a
+plugin, start from
+[ArgonFetchPluginTemplate](https://github.com/ArgonFetch/ArgonFetchPluginTemplate).
 
 ## CORS
 

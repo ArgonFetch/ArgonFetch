@@ -22,10 +22,6 @@ public class ApplicationInfoService : IApplicationInfoService
 
     private static string LoadVersion()
     {
-        // The version is stamped into the assembly at build time from
-        // application.properties (see ReadVersionFromProperties in ArgonFetch.API.csproj),
-        // so the assembly is the reliable source at runtime - the properties file itself
-        // is not part of the published output.
         return LoadVersionFromAssembly() ?? LoadVersionFromPropertiesFile() ?? UnknownVersion;
     }
 
@@ -37,8 +33,6 @@ public class ApplicationInfoService : IApplicationInfoService
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
             .InformationalVersion;
 
-        // AssemblyInformationalVersion carries the source revision as "0.1.1+<commit sha>"
-        // when SourceLink is active; only the version part is wanted here.
         if (!string.IsNullOrWhiteSpace(informationalVersion))
         {
             var version = informationalVersion.Split('+', 2)[0];
@@ -50,8 +44,6 @@ public class ApplicationInfoService : IApplicationInfoService
 
         var assemblyVersion = assembly.GetName().Version;
 
-        // AssemblyVersion is always four-part; application.properties uses three,
-        // so drop a trailing zero revision to keep the two in sync.
         return assemblyVersion is null
             ? null
             : assemblyVersion.Revision == 0
@@ -63,14 +55,11 @@ public class ApplicationInfoService : IApplicationInfoService
     {
         try
         {
-            // Development fallback: application.properties lives at the repository root.
             var currentDirectory = Directory.GetCurrentDirectory();
             var propertiesPath = Path.Combine(currentDirectory, "application.properties");
 
-            // Check if running from src/ArgonFetch.API directory
             if (!File.Exists(propertiesPath))
             {
-                // Try going up directories to find the root
                 var parentPath = Path.Combine(currentDirectory, "..", "..", "application.properties");
                 if (File.Exists(parentPath))
                 {

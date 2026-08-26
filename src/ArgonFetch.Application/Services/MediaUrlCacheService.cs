@@ -27,10 +27,8 @@ namespace ArgonFetch.Application.Services
 
         public string CacheMediaUrls(string videoUrl, string audioUrl, string? proxy = null, MediaTags? tags = null, TimeSpan? expiration = null)
         {
-            // Generate a unique cache key
             var cacheKey = GenerateCacheKey(videoUrl, audioUrl);
 
-            // Store URLs in cache with expiration (default 1 hour)
             var cacheOptions = new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromHours(1)
@@ -62,10 +60,8 @@ namespace ArgonFetch.Application.Services
 
         public string CacheSingleUrl(string url, TimeSpan? expiration = null)
         {
-            // Generate a unique cache key for single URL
             var cacheKey = GenerateSingleUrlCacheKey(url);
 
-            // Store URL in cache with expiration (default 1 hour)
             var cacheOptions = new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromHours(1)
@@ -78,10 +74,8 @@ namespace ArgonFetch.Application.Services
 
         public string CacheSingleUrl(string url, bool isAudio, string? mimeType = null, string? proxy = null, MediaTags? tags = null, TimeSpan? expiration = null)
         {
-            // Generate a unique cache key for single URL
             var cacheKey = GenerateSingleUrlCacheKey(url);
 
-            // Store URL with format info in cache with expiration (default 1 hour)
             var cacheOptions = new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromHours(1)
@@ -91,14 +85,10 @@ namespace ArgonFetch.Application.Services
             {
                 Url = url,
                 IsAudio = isAudio,
-                // Carried so the stream endpoint serves exactly the format the fetch response
-                // advertised, instead of re-deriving it from a URL that has no extension.
                 MimeType = mimeType,
                 // Media URLs are signed for the IP that requested them, so the download has to
                 // leave through the same proxy the extraction did or the source answers 403.
                 Proxy = proxy,
-                // Kept with the url because by streaming time only a cache key is left, and a
-                // file with no title is what the download otherwise lands as.
                 Tags = tags ?? MediaTags.None,
                 CachedAt = DateTime.UtcNow
             };
@@ -110,7 +100,6 @@ namespace ArgonFetch.Application.Services
 
         public string? GetCachedSingleUrl(string cacheKey)
         {
-            // Try to get as new format first
             if (_cache.TryGetValue(CACHE_PREFIX + cacheKey, out object? cachedData))
             {
                 if (cachedData is CachedSingleUrl singleUrl)
@@ -119,7 +108,6 @@ namespace ArgonFetch.Application.Services
                 }
                 else if (cachedData is string url)
                 {
-                    // Legacy format - just URL string
                     return url;
                 }
             }
@@ -137,7 +125,6 @@ namespace ArgonFetch.Application.Services
                 }
                 else if (cachedData is string url)
                 {
-                    // Legacy format - assume video (since we don't know)
                     return (url, false, null, null, MediaTags.None);
                 }
             }
@@ -152,12 +139,10 @@ namespace ArgonFetch.Application.Services
 
         private string GenerateCacheKey(string videoUrl, string audioUrl)
         {
-            // Create a unique key based on URLs
             var combined = $"{videoUrl}|{audioUrl}";
             using var sha256 = SHA256.Create();
             var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(combined));
 
-            // Convert to URL-safe base64
             var base64 = Convert.ToBase64String(hashBytes)
                 .Replace('+', '-')
                 .Replace('/', '_')
@@ -169,11 +154,9 @@ namespace ArgonFetch.Application.Services
 
         private string GenerateSingleUrlCacheKey(string url)
         {
-            // Create a unique key based on single URL
             using var sha256 = SHA256.Create();
             var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(url));
 
-            // Convert to URL-safe base64
             var base64 = Convert.ToBase64String(hashBytes)
                 .Replace('+', '-')
                 .Replace('/', '_')

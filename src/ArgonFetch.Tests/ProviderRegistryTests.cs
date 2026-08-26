@@ -27,8 +27,6 @@ namespace ArgonFetch.Tests
         [Fact]
         public void For_SettlesAClashByTheOrderTheOperatorInstalledThem()
         {
-            // Two plugins wanting the same link is a decision for whoever chose them, not for
-            // whichever one happened to load first.
             var registry = Registry(
                 Plugin("spotify-fork", new StubProvider("spotify-fork", @"^https?://([\w-]+\.)*spotify\.com/")),
                 Plugin("spotify", new StubProvider("spotify", @"^https?://([\w-]+\.)*spotify\.com/")));
@@ -39,8 +37,6 @@ namespace ArgonFetch.Tests
         [Fact]
         public void For_TreatsAProviderThatThrowsAsNotInterested()
         {
-            // CanHandle is asked of every plugin on every request, including for sources it has
-            // nothing to do with, so one that throws must not break an unrelated download.
             var registry = Registry(
                 Plugin("broken", new ThrowingProvider()),
                 Plugin("spotify", new StubProvider("spotify", @"^https?://([\w-]+\.)*spotify\.com/")));
@@ -51,8 +47,6 @@ namespace ArgonFetch.Tests
         [Fact]
         public void For_IgnoresAPatternThatDoesNotCompile()
         {
-            // A typo in one pattern costs that pattern. Taking the plugin out entirely over it
-            // would help nobody, and the working patterns beside it are still worth having.
             var registry = Registry(Plugin("broken-pattern", new BadPatternProvider(
                 "broken-pattern", "([unclosed", @"^https?://([\w-]+\.)*spotify\.com/")));
 
@@ -62,8 +56,6 @@ namespace ArgonFetch.Tests
         [Fact]
         public void For_AsksTheProviderOnlyAfterAPatternMatched()
         {
-            // The throwing provider claims every link, so if it were consulted for this one the
-            // exception would be swallowed and it would be the winner that never ran.
             var registry = Registry(
                 Plugin("spotify", new StubProvider("spotify", @"^https?://([\w-]+\.)*spotify\.com/")));
 
@@ -130,8 +122,6 @@ namespace ArgonFetch.Tests
         [InlineData("spotify", "spotify", null)]
         [InlineData("spotify@1.2.0", "spotify", "1.2.0")]
         [InlineData("  spotify @ 1.2.0  ", "spotify", "1.2.0")]
-        // A trailing separator with nothing after it asks for the newest, rather than for a
-        // version named the empty string.
         [InlineData("spotify@", "spotify", null)]
         public void Parse_ReadsAnIdAndAnOptionalPinnedVersion(string request, string id, string? version)
         {

@@ -4,18 +4,12 @@ using Microsoft.Extensions.Logging;
 
 namespace ArgonFetch.Application.Plugins
 {
-    /// <summary>
-    /// Decides which provider, if any, wants a link.
-    /// </summary>
     public interface IProviderRegistry
     {
-        /// <summary>The provider that handles this link, or null to fetch it the ordinary way.</summary>
         ISourceProvider? For(Uri url);
 
-        /// <summary>Every hook, to be applied in turn before a fetch.</summary>
         IReadOnlyList<IFetchOptionsHook> Hooks { get; }
 
-        /// <summary>What is loaded, for the application information endpoint.</summary>
         IReadOnlyList<LoadedPlugin> Plugins { get; }
     }
 
@@ -55,9 +49,6 @@ namespace ArgonFetch.Application.Plugins
 
         public IReadOnlyList<LoadedPlugin> Plugins { get; }
 
-        /// <summary>
-        /// Compiles a provider's declared patterns once, here, rather than on every request.
-        /// </summary>
         private static IReadOnlyList<Regex> Compile(string pluginId, ISourceProvider provider, ILogger logger)
         {
             var compiled = new List<Regex>();
@@ -85,8 +76,6 @@ namespace ArgonFetch.Application.Plugins
                 }
                 catch (ArgumentException ex)
                 {
-                    // One unusable pattern costs that pattern. The plugin may well have others,
-                    // and taking it out entirely over a typo helps nobody.
                     logger.LogWarning(ex, "The {Id} plugin declared a pattern that does not compile: {Pattern}", pluginId, pattern);
                 }
             }
@@ -99,9 +88,6 @@ namespace ArgonFetch.Application.Plugins
 
         public ISourceProvider? For(Uri url)
         {
-            // Every provider is asked, rather than stopping at the first that says yes. A second
-            // claim on the same link is worth knowing about: left unsaid, the losing plugin
-            // simply never runs and nobody can see why.
             var address = url.ToString();
             var claimed = _providers.Where(entry => Claims(entry, url, address)).ToList();
 
@@ -123,8 +109,6 @@ namespace ArgonFetch.Application.Plugins
         {
             try
             {
-                // The declared patterns first, then the provider's own say - which almost every
-                // provider leaves at the default, because the patterns were the whole answer.
                 return entry.Patterns.Any(pattern => pattern.IsMatch(address)) && entry.Provider.CanHandle(url);
             }
             catch (RegexMatchTimeoutException)
@@ -134,9 +118,6 @@ namespace ArgonFetch.Application.Plugins
             }
             catch (Exception ex)
             {
-                // A provider that throws while deciding has answered no. It is asked on every
-                // request, including ones for sources it has nothing to do with, so a fault
-                // here must not be able to break an unrelated download.
                 _logger.LogWarning(ex, "The {Id} plugin threw while deciding about {Url}", entry.PluginId, url);
                 return false;
             }

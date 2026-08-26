@@ -24,8 +24,6 @@ namespace ArgonFetch.Application.Plugins
         private static readonly string[] Shared =
         [
             "ArgonFetch.Abstractions",
-            // The two the contract itself exposes. A plugin handed an ILogger from its own copy
-            // of the abstractions could not be given the host's logger.
             "Microsoft.Extensions.Logging.Abstractions",
             "Microsoft.Extensions.Caching.Abstractions",
             "Microsoft.Extensions.Primitives",
