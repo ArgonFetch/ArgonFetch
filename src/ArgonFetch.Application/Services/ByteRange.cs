@@ -15,14 +15,7 @@ namespace ArgonFetch.Application.Services
         Unsatisfiable
     }
 
-    /// <summary>
-    /// Reads the Range request header.
-    /// <para>
-    /// Only single ranges are honoured. Multipart responses exist in the specification and
-    /// almost nothing asks for them - players and download managers ask for one window at a
-    /// time - so a multi-range request is served whole rather than half-answered.
-    /// </para>
-    /// </summary>
+    // Single ranges only; a multi-range request is served whole rather than half-answered.
     public static class RangeHeader
     {
         public static RangeRequest Parse(string? header, long totalLength, out ByteRange range)

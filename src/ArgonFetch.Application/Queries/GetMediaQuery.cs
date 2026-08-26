@@ -38,8 +38,7 @@ namespace ArgonFetch.Application.Queries
         private readonly IProviderContextFactory _providerContexts;
         private readonly ILogger<GetMediaQueryHandler> _logger;
 
-        // The proxy the last extraction went through. Media URLs are signed for the IP that
-        // requested them, so it has to travel with them to the stream endpoint.
+        // Media URLs are signed for the IP that asked, so the proxy travels with them.
         private string? _fetchProxy;
 
         private MediaTags? _overrideTags;

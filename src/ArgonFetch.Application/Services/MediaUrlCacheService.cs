@@ -86,8 +86,7 @@ namespace ArgonFetch.Application.Services
                 Url = url,
                 IsAudio = isAudio,
                 MimeType = mimeType,
-                // Media URLs are signed for the IP that requested them, so the download has to
-                // leave through the same proxy the extraction did or the source answers 403.
+                // Signed for the requesting IP, so the download must leave through the same proxy.
                 Proxy = proxy,
                 Tags = tags ?? MediaTags.None,
                 CachedAt = DateTime.UtcNow

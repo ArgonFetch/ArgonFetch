@@ -12,8 +12,7 @@ namespace ArgonFetch.Application.Services
 
     public static class MediaFileName
     {
-        // Characters Windows refuses outright, plus the separators that would turn a name into a
-        // path. Trimmed rather than replaced with a marker: nobody wants "AC_DC" for "AC/DC".
+        // Trimmed rather than substituted: nobody wants "AC_DC" for "AC/DC".
         private static readonly char[] Invalid = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
         private const int MaxStemLength = 120;
@@ -70,7 +69,7 @@ namespace ArgonFetch.Application.Services
             if (trimmed.Length > MaxStemLength)
                 trimmed = trimmed[..MaxStemLength].TrimEnd();
 
-            // A trailing dot or space is legal in the header and unusable as a Windows filename.
+            // Legal in the header, unusable as a Windows filename.
             return trimmed.TrimEnd('.', ' ');
         }
 

@@ -142,8 +142,7 @@ namespace ArgonFetch.Infrastructure.Services
             if (isAudio)
             {
                 processStartInfo.ArgumentList.Add("-vn");        // Disable video
-                // ID3v2.3 rather than the default 2.4: a fair number of players and Windows
-                // Explorer read tags only from the older revision.
+                // 2.3, not the default 2.4: many players and Explorer only read the older revision.
                 processStartInfo.ArgumentList.Add("-id3v2_version");
                 processStartInfo.ArgumentList.Add("3");
                 processStartInfo.ArgumentList.Add("-c:a");
@@ -282,10 +281,7 @@ namespace ArgonFetch.Infrastructure.Services
             }
         }
 
-        /// <summary>
-        /// Routes the input that follows through the proxy the URL was extracted with. Media
-        /// URLs are signed for the requesting IP, so fetching one from anywhere else is a 403.
-        /// </summary>
+        // Media URLs are signed for the requesting IP, so this must match the extraction.
         private static void AddProxy(ProcessStartInfo processStartInfo, string? proxy)
         {
             if (string.IsNullOrWhiteSpace(proxy))

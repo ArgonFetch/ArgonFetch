@@ -52,10 +52,6 @@ builder.Services.AddEndpointsApiExplorer();
 #endregion
 
 #region External Services Configuration
-// Register YoutubeDL
-// Search and metadata only. Its streaming endpoints need a PoToken and answer 403 to IPs
-// that look like VPNs, which is exactly what a rotated proxy looks like; yt-dlp fetches the
-// media instead, as it always has.
 builder.Services.AddScoped(sp =>
 {
     var toolPaths = sp.GetRequiredService<ArgonFetch.Application.Services.IToolPaths>();
@@ -84,7 +80,7 @@ builder.Services.AddSingleton<ArgonFetch.Application.Services.IMediaHttpClients,
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IMaintenanceState, ArgonFetch.Application.Services.MaintenanceState>();
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IArchiveProgressTracker, ArgonFetch.Application.Services.ArchiveProgressTracker>();
 
-// Optional proxy list (one proxy per line) rotated across yt-dlp fetches; no file means direct fetches.
+// One proxy per line, rotated across fetches. No file means direct.
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IProxyPool>(sp =>
     new ArgonFetch.Application.Services.ProxyPool(
         ArgonFetch.Application.Services.ProxyPool.ReadList(builder.Configuration["PROXY_LIST_PATH"])));
@@ -93,7 +89,6 @@ builder.Services.AddSingleton<ArgonFetch.Application.Services.IProxyPool>(sp =>
 #region Validation
 builder.Services.AddFluentValidationAutoValidation();
 #region Plugins
-// Read as desired state: what the configuration lists is installed, what it does not is removed.
 var pluginOptions = builder.Configuration
     .GetSection(ArgonFetch.Application.Plugins.PluginOptions.SectionName)
     .Get<ArgonFetch.Application.Plugins.PluginOptions>() ?? new ArgonFetch.Application.Plugins.PluginOptions();

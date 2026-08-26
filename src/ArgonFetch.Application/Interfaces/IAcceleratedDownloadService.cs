@@ -4,10 +4,7 @@ namespace ArgonFetch.Application.Interfaces
 {
     public interface IAcceleratedDownloadService
     {
-        /// <param name="range">
-        /// Window of the resource to write, or null for all of it. Set when a client is
-        /// seeking or resuming, in which case only these bytes may reach the output.
-        /// </param>
+        /// <param name="range">Window to write, or null for all of it.</param>
         Task StreamWithAccelerationAsync(
             string url,
             Stream outputStream,

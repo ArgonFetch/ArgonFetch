@@ -104,9 +104,7 @@ namespace ArgonFetch.Application.Queries
 
             try
             {
-                // Async throughout: the central directory is written on dispose, and Kestrel
-                // refuses a synchronous write to a response body.
-                // leaveOpen: Kestrel owns that body and closes it itself.
+                // leaveOpen: Kestrel owns the response body.
                 await using var archive = await ZipArchive.CreateAsync(
                     request.Response.Body, ZipArchiveMode.Create, leaveOpen: true, entryNameEncoding: null);
 
