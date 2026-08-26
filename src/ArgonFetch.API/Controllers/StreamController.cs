@@ -1,7 +1,7 @@
 ﻿using ArgonFetch.Application.Queries;
 using ArgonFetch.Application.Services;
 using System.Text.Json;
-using MediatR;
+using Mediator;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
