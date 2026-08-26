@@ -17,6 +17,13 @@ ENV TOOLS_PATH=/tools
 RUN mkdir -p /tools && chown -R $APP_UID:0 /tools && chmod 0775 /tools
 VOLUME /tools
 
+# Plugins are downloaded on boot for the same reason, into a directory the runtime user can
+# write to. /app is owned by root, so the default relative path could not be created and the
+# container crash-looped before serving anything.
+ENV Plugins__Path=/plugins
+RUN mkdir -p /plugins && chown -R $APP_UID:0 /plugins && chmod 0775 /plugins
+VOLUME /plugins
+
 # The fetched FFmpeg is built against OpenSSL's own default paths, which are Debian's and do
 # not exist here, so every HTTPS input failed certificate verification. Pointing it at this
 # image's bundle fixes that; the CA data itself is already in the base image.

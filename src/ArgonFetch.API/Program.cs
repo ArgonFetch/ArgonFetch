@@ -153,14 +153,22 @@ var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
         ? pluginOptions.Path
         : Path.Combine(app.Environment.ContentRootPath, pluginOptions.Path);
 
-    await app.Services.GetRequiredService<ArgonFetch.Application.Plugins.PluginInstaller>()
-        .InstallAsync(pluginOptions, pluginRoot);
+    try
+    {
+        await app.Services.GetRequiredService<ArgonFetch.Application.Plugins.PluginInstaller>()
+            .InstallAsync(pluginOptions, pluginRoot);
 
-    var registry = app.Services.GetRequiredService<ArgonFetch.Application.Plugins.IProviderRegistry>();
+        var registry = app.Services.GetRequiredService<ArgonFetch.Application.Plugins.IProviderRegistry>();
 
-    startupLogger.LogInformation("Plugins: {Count} loaded{Names}",
-        registry.Plugins.Count,
-        registry.Plugins.Count == 0 ? string.Empty : " - " + string.Join(", ", registry.Plugins.Select(p => $"{p.Id} {p.Version}")));
+        startupLogger.LogInformation("Plugins: {Count} loaded{Names}",
+            registry.Plugins.Count,
+            registry.Plugins.Count == 0 ? string.Empty : " - " + string.Join(", ", registry.Plugins.Select(p => $"{p.Id} {p.Version}")));
+    }
+    catch (Exception ex)
+    {
+        // Sources a plugin would have added stop working; everything yt-dlp handles still does.
+        startupLogger.LogError(ex, "Plugins could not be prepared; continuing without them");
+    }
 }
 
 if (app.Environment.IsProduction() && corsUsesDevelopmentDefault)
