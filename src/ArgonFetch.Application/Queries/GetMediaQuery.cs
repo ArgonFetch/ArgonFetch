@@ -1,9 +1,11 @@
 ﻿using ArgonFetch.Application.Dtos;
 using ArgonFetch.Application.Enums;
 using ArgonFetch.Application.Services;
+// Both namespaces name one: the contract has its own so a plugin need not reference the
+// application, and the application keeps the one its cache and file naming already speak.
+using MediaTags = ArgonFetch.Application.Services.MediaTags;
 using ArgonFetch.Abstractions;
 using ArgonFetch.Application.Plugins;
-using ArgonFetch.Application.Services.DDLFetcherServices;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
@@ -11,9 +13,6 @@ using Microsoft.Extensions.Logging;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Metadata;
 using YoutubeDLSharp.Options;
-using YouTubeMusicAPI.Client;
-using YouTubeMusicAPI.Models.Search;
-using MediaTags = ArgonFetch.Application.Services.MediaTags;
 
 namespace ArgonFetch.Application.Queries
 {
@@ -30,9 +29,6 @@ namespace ArgonFetch.Application.Queries
     public class GetMediaQueryHandler : IRequestHandler<GetMediaQuery, ResourceInformationDto>
     {
         private readonly YoutubeDL _youtubeDL;
-        private readonly ISpotifyMetadataService _spotifyMetadataService;
-        private readonly YouTubeMusicClient _ytmClient;
-        private readonly TikTokDllFetcherService _tikTokDllFetcherService;
         private readonly IMemoryCache _memoryCache;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ICombinedStreamUrlBuilder _combinedUrlBuilder;
@@ -43,19 +39,6 @@ namespace ArgonFetch.Application.Queries
         private readonly IProviderRegistry _providers;
         private readonly IProviderContextFactory _providerContexts;
         private readonly ILogger<GetMediaQueryHandler> _logger;
-
-        // Enough to hold the album version when search leads with a radio edit and a remaster,
-        // and few enough that a mistyped query does not drag twenty rows through matching.
-        private const int SearchResultsToConsider = 20;
-
-        // Wrong-recording candidates come in runs - a radio edit, a remaster and a twelve-inch
-        // mix all sit above the album version - so checking a couple past the leader is worth a
-        // fetch each. Beyond that the search itself was wrong.
-        private const int MaxVerificationAttempts = 3;
-
-        // A release and its Spotify entry differ by a second or two of trailing silence. A radio
-        // edit differs by a minute, which is what this has to catch.
-        private const double VerificationToleranceSec = 12.0;
 
         // The proxy the last extraction went through. Media URLs are signed for the IP that
         // requested them, so it has to travel with them to the stream endpoint.
@@ -69,10 +52,7 @@ namespace ArgonFetch.Application.Queries
         private string? _originalUrl;
 
         public GetMediaQueryHandler(
-            ISpotifyMetadataService spotifyMetadataService,
-            YouTubeMusicClient ytmClient,
             YoutubeDL youtubeDL,
-            TikTokDllFetcherService tikTokDllFetcherService,
             IMemoryCache memoryCache,
             IHttpContextAccessor httpContextAccessor,
             ICombinedStreamUrlBuilder combinedUrlBuilder,
@@ -85,10 +65,7 @@ namespace ArgonFetch.Application.Queries
             ILogger<GetMediaQueryHandler> logger
             )
         {
-            _spotifyMetadataService = spotifyMetadataService;
-            _ytmClient = ytmClient;
             _youtubeDL = youtubeDL;
-            _tikTokDllFetcherService = tikTokDllFetcherService;
             _memoryCache = memoryCache;
             _httpContextAccessor = httpContextAccessor;
             _combinedUrlBuilder = combinedUrlBuilder;
@@ -124,18 +101,6 @@ namespace ArgonFetch.Application.Queries
             }
 
             var platform = PlatformIdentifierService.IdentifyPlatform(request.Query);
-
-            if (platform == Platform.Spotify)
-            {
-                var contentType = await MediaContentIdentifierService.IdentifyContent(request.Query, platform);
-
-                return contentType is ContentType.Playlist or ContentType.SpotifyAlbum
-                    ? await HandleSpotifyCollection(request.Query, cancellationToken)
-                    : await HandleSpotify(request.Query, cancellationToken);
-            }
-
-            else if (platform == Platform.TikTok)
-                return await HandleTikTok(request.Query, cancellationToken);
 
             // Asked before fetching rather than after: a playlist read the ordinary way extracts
             // every entry in full, which is seconds apiece and minutes for a list of any size.
@@ -567,7 +532,6 @@ namespace ArgonFetch.Application.Queries
                     !string.IsNullOrEmpty(urls.WorstQuality));
         }
 
-
         /// <summary>
         /// Formats that already carry both tracks, so they can be served untouched.
         /// </summary>
@@ -620,79 +584,12 @@ namespace ArgonFetch.Application.Queries
         private static string WatchUrl(string id) => $"https://music.youtube.com/watch?v={id}";
 
         /// <summary>
-        /// Fetches candidates in order until one turns out to be the requested recording.
-        /// </summary>
-        /// <param name="requireDuration">
-        /// Whether a candidate whose length cannot be confirmed may be accepted. It may on the
-        /// normal path, where the title and credit already matched; it may not when the title
-        /// was disregarded, because then the duration is the only thing identifying the track.
-        /// </param>
-        private async Task<VideoData?> FetchVerifiedAgainstSpotify(
-            IReadOnlyList<MatchCandidate> ranked,
-            List<MatchCandidate> candidates,
-            List<SongSearchResult> results,
-            SpotifyTrackMetadata track,
-            CancellationToken cancellationToken,
-            bool requireDuration = false)
-        {
-            VideoData? firstFetched = null;
-
-            // Two beyond the leader. Each attempt is a yt-dlp call, and a search whose first
-            // three results are all the wrong recording is not one more fetch away from success.
-            foreach (var candidate in ranked.Take(MaxVerificationAttempts))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // Reference equality, not IndexOf: MatchCandidate is a record, so two results with
-                // the same title, artist and length would compare equal and resolve to the wrong URL.
-                var url = WatchUrl(results[candidates.FindIndex(c => ReferenceEquals(c, candidate))].Id);
-
-                VideoData fetched;
-
-                try
-                {
-                    fetched = await YT_DLP_Fetch(url);
-                }
-                catch (ArgumentException)
-                {
-                    // A candidate that cannot be fetched is no worse than one that does not fit.
-                    continue;
-                }
-
-                firstFetched ??= fetched;
-
-                if (DurationFits(fetched, track.DurationMs))
-                    return fetched;
-            }
-
-            // Nothing was confirmed. On the normal path the leader had already matched on title
-            // and credit, so it is still the best answer available; on the credit-only path there
-            // is nothing left to identify it by, and a wrong recording is worse than none.
-            return requireDuration ? null : firstFetched;
-        }
-
-        /// <summary>
-        /// Whether a fetched result runs to the length the request asked for. Unknown lengths on
-        /// either side are not evidence against a candidate.
-        /// </summary>
-        private static bool DurationFits(VideoData fetched, long wantedMs)
-        {
-            if (wantedMs <= 0 || fetched.Duration is not > 0)
-                return false;
-
-            return Math.Abs(fetched.Duration.Value - wantedMs / 1000.0) <= VerificationToleranceSec;
-        }
-
-        /// <summary>
         /// Opus is worth roughly 20% more than AAC at the same bitrate, so it is weighted that
         /// way rather than compared on the raw number. YouTube offers the two within a kbps of
         /// each other, which would otherwise make the pick a coin toss.
         /// </summary>
         private static double OpusQualityFactor(string? audioCodec) =>
             audioCodec?.StartsWith("opus", StringComparison.OrdinalIgnoreCase) == true ? 1.2 : 1.0;
-
-
-
 
         private async Task<VideoData> YT_DLP_Fetch(string query, OptionSet? options = null)
         {
@@ -753,149 +650,5 @@ namespace ArgonFetch.Application.Queries
             return result.Data;
         }
 
-        /// <summary>
-        /// An album or playlist, listed rather than resolved.
-        /// <para>
-        /// Each entry needs its own YouTube Music match and its own extraction, which is seconds
-        /// of work apiece; doing that for a hundred of them before showing anything would take
-        /// minutes and throw most of it away, since nobody downloads a whole playlist by
-        /// accident. The listing carries what Spotify knows, and picking an entry fetches that
-        /// one track through the path a single link already takes.
-        /// </para>
-        /// </summary>
-        private async Task<ResourceInformationDto> HandleSpotifyCollection(string query, CancellationToken cancellationToken)
-        {
-            var collection = await _spotifyMetadataService.GetCollectionAsync(query, cancellationToken);
-
-            if (collection.MayBeTruncated)
-            {
-                _logger.LogInformation(
-                    "Spotify returned the maximum of {Count} entries for {Url}; there may be more it did not send.",
-                    collection.Items.Count, query);
-            }
-
-            return new ResourceInformationDto
-            {
-                Type = MediaType.PlayList,
-                Title = collection.Title,
-                Author = collection.Author,
-                CoverUrl = collection.CoverUrl,
-                MediaItems = collection.Items
-                    .Select(item => new MediaInformationDto
-                    {
-                        RequestedUrl = item.TrackUrl,
-                        Title = item.Title,
-                        Author = item.Artist,
-                        // The listing has no per-track picture, so entries show the release's.
-                        CoverUrl = collection.CoverUrl,
-                        // Unresolved on purpose: see above.
-                        Audio = null,
-                        Video = null
-                    })
-                    .ToList()
-            };
-        }
-
-        private async Task<ResourceInformationDto> HandleSpotify(string query, CancellationToken cancellationToken)
-        {
-            var track = await _spotifyMetadataService.GetTrackAsync(query, cancellationToken);
-
-            // Spotify only supplies the metadata; the audio comes from the matching
-            // YouTube Music result.
-            var searchQuery = YouTubeMusicMatcher.SearchQuery(track.Artist, track.Title);
-
-            var results = (await _ytmClient
-                    .SearchAsync(searchQuery, SearchCategory.Songs)
-                    .FetchItemsAsync(0, SearchResultsToConsider, cancellationToken))
-                .OfType<SongSearchResult>()
-                .ToList();
-
-            // Taking the first hit matches covers, karaoke versions and instrumentals as readily as
-            // the real recording, so score the candidates instead.
-            var candidates = results
-                .Select(r => new MatchCandidate(
-                    r.Name,
-                    string.Join(", ", r.Artists.Select(artist => artist.Name)),
-                    (long)r.Duration.TotalSeconds,
-                    // The release, which is where an instrumental or a solo cut declares itself.
-                    // The previous client offered no album at all, so this carried the artist
-                    // again and the check that reads it never had anything to find.
-                    r.Album?.Name ?? string.Empty))
-                .ToList();
-
-            var ranked = YouTubeMusicMatcher.RankMatches(
-                candidates,
-                track.Title,
-                track.Artist,
-                track.DurationMs,
-                officialShelf: true);
-
-            // A safety net rather than the mechanism: search reports durations now, so ranking
-            // usually settles which recording this is and the first candidate is the answer.
-            // Fetching still confirms it, because a length search got wrong would otherwise be
-            // discovered by whoever opened the file.
-            var result = await FetchVerifiedAgainstSpotify(ranked, candidates, results, track, cancellationToken);
-
-            if (result is null)
-            {
-                // Titles are often translated - Spotify says "REVENGE OF B" where YouTube Music
-                // says the Japanese original - and then no candidate shares a single word with
-                // what was asked for. The credit still matches, and the duration decides, so
-                // this pass drops the title requirement and leans on the check instead.
-                var byCredit = YouTubeMusicMatcher.RankByCreditOnly(candidates, track.Artist, track.DurationMs);
-
-                result = await FetchVerifiedAgainstSpotify(byCredit, candidates, results, track, cancellationToken, requireDuration: true);
-            }
-
-            if (result is null)
-                throw new ArgumentException($"No YouTube Music match found for '{searchQuery}'");
-
-            // Spotify's own metadata, not YouTube's: knowing the release better than YouTube
-            // does is the reason the track was matched rather than simply searched for.
-            var spotifyTags = new MediaTags(track.Title, track.Artist);
-
-            // The audio comes from YouTube Music, so it has the same renditions any other
-            // YouTube track does.
-            var audioReferences = new StreamReferenceDto
-            {
-                UrlType = UrlType.Media,
-                Renditions = _proxyUrlBuilder.BuildRenditions(
-                    RenditionPicker.PickAudio(AudioSources(result.Formats)),
-                    _cacheService,
-                    isAudio: true,
-                    proxy: _fetchProxy,
-                    tags: spotifyTags)
-            };
-
-            // Spotify typically only has audio, so combined URLs would be null
-
-            return new ResourceInformationDto
-            {
-                Type = MediaType.Media,
-                MediaItems =
-                [
-                    new MediaInformationDto
-                    {
-                        RequestedUrl = query,
-                        Video = null,  // Spotify has no video
-                        Audio = audioReferences,  // Audio-only
-                        CoverUrl = track.CoverUrl,
-                        Title = track.Title,
-                        Author = track.Artist,
-                    }
-                ]
-            };
-        }
-
-        private async Task<ResourceInformationDto> HandleTikTok(string query, CancellationToken cancellationToken)
-        {
-            var mediaInformation = await _tikTokDllFetcherService.FetchLinkAsync(query, cancellationToken: cancellationToken);
-
-            return new ResourceInformationDto
-            {
-                Type = MediaType.Media,
-                MediaItems = [mediaInformation]
-            };
-        }
     }
 }

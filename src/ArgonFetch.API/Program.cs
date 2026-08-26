@@ -1,6 +1,5 @@
 ﻿using ArgonFetch.Application.Behaviors;
 using ArgonFetch.Application.Queries;
-using ArgonFetch.Application.Services.DDLFetcherServices;
 using ArgonFetch.Application.Validators;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -39,12 +38,6 @@ builder.Services.AddSpaStaticFiles(spaStaticFilesOptions => { spaStaticFilesOpti
 // Add MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetMediaQuery).Assembly));
 
-// Add HttpClient for TikTokDllFetcherService
-builder.Services.AddHttpClient<TikTokDllFetcherService>();
-
-// Register the IDllFetcher implementations
-builder.Services.AddScoped<TikTokDllFetcherService>();
-
 // Register In memory caching
 builder.Services.AddMemoryCache();
 
@@ -69,21 +62,10 @@ builder.Services.AddEndpointsApiExplorer();
 #endregion
 
 #region External Services Configuration
-// Spotify track details are read from the public track page, so no credentials
-// and no API client are needed.
-builder.Services.AddScoped<ArgonFetch.Application.Services.ISpotifyMetadataService,
-                           ArgonFetch.Application.Services.SpotifyMetadataService>();
-
-// Reads long playlists through the web player's own API. Singleton so the anonymous session
-// it mints is held across requests rather than re-minted for each one.
-builder.Services.AddSingleton<ArgonFetch.Application.Services.ISpotifyWebPlayerClient,
-                              ArgonFetch.Application.Services.SpotifyWebPlayerClient>();
-
-// Register YoutubeMusicAPI and YoutubeDL
+// Register YoutubeDL
 // Search and metadata only. Its streaming endpoints need a PoToken and answer 403 to IPs
 // that look like VPNs, which is exactly what a rotated proxy looks like; yt-dlp fetches the
 // media instead, as it always has.
-builder.Services.AddSingleton<YouTubeMusicAPI.Client.YouTubeMusicClient>();
 builder.Services.AddScoped(sp =>
 {
     var toolPaths = sp.GetRequiredService<ArgonFetch.Application.Services.IToolPaths>();

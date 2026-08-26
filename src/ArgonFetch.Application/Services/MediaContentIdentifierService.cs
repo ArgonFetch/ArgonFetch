@@ -26,23 +26,9 @@ namespace ArgonFetch.Application.Services
 
                     return ContentType.Media;
 
-                case Platform.Spotify:
-                    var spotifyPathSegments = new Uri(query).AbsolutePath.Trim('/').Split('/');
-                    if (spotifyPathSegments.Contains("playlist"))
-                        return ContentType.Playlist;
-                    else if (spotifyPathSegments.Contains("album"))
-                        return ContentType.SpotifyAlbum;
-                    else if (spotifyPathSegments.Contains("track"))
-                        return ContentType.Media;
-                    else
-                        throw new UnknownContentTypeException();
-
                 case Platform.SoundCloud:
                     var soundCloudPathSegments = new Uri(query).AbsolutePath.Trim('/').Split('/');
                     return soundCloudPathSegments.Contains("sets") ? ContentType.Playlist : ContentType.Media;
-
-                case Platform.TikTok:
-                    return ContentType.Media;
 
                 case Platform.Unknown:
                     return ContentType.Unknown;
