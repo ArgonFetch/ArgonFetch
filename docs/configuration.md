@@ -8,7 +8,7 @@ Everything is set through environment variables, normally in the `.env` file nex
 | Variable | Required | Description |
 |---|---|---|
 | `CORS_ALLOWED_ORIGINS` | in production | Comma-separated origins allowed to call the API. Defaults to `http://localhost:4200`, and the app warns at startup if that default is still in use in production |
-| `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables the Swagger UI |
+| `ASPNETCORE_ENVIRONMENT` | no | Already `Production` when unset - set it only to run as `Development`, which enables the Swagger UI |
 | `TOOLS_PATH` | no | Where `yt-dlp` and `FFmpeg` are downloaded to. `/tools` in the image, which is the path the compose file mounts a volume on. Must be writable by the runtime user |
 | `PROXY_LIST_PATH` | no | File with one proxy per line, rotated across `yt-dlp` fetches so they do not all leave from the same IP. See [below](#proxy-rotation) |
 | `COOKIES_PATH` | no | Netscape-format cookies file exported from a signed-in browser, for sources that serve nothing to strangers. See [Platforms](/platforms#sites-that-need-an-account) |
@@ -17,7 +17,6 @@ Everything is set through environment variables, normally in the `.env` file nex
 A complete `.env` for a public deployment:
 
 ```ini
-ASPNETCORE_ENVIRONMENT=Production
 CORS_ALLOWED_ORIGINS=https://argonfetch.example.com
 
 Plugins__Repositories__0=https://raw.githubusercontent.com/ArgonFetch/ArgonFetchPlugins/repo/index.json

@@ -23,10 +23,13 @@ services:
       # yt-dlp and FFmpeg are fetched on boot instead of being baked into the image.
       # Keeping them here means a restart reuses them rather than downloading again.
       - tools:/tools
+      # Same for plugins.
+      - plugins:/plugins
     restart: unless-stopped
 
 volumes:
   tools:
+  plugins:
 ```
 
 ## 2. Create `.env` next to it
@@ -34,6 +37,12 @@ volumes:
 ```ini
 # Origins allowed to call the API. Set this to your own host in production.
 CORS_ALLOWED_ORIGINS=http://localhost:8080
+
+# Spotify and TikTok are plugins rather than built in. Leave these out and their links
+# will not resolve; everything yt-dlp handles works either way.
+Plugins__Repositories__0=https://raw.githubusercontent.com/ArgonFetch/ArgonFetchPlugins/repo/index.json
+Plugins__Install__0=spotify
+Plugins__Install__1=tiktok
 ```
 
 ## 3. Start it
@@ -66,11 +75,14 @@ ArgonFetch images are published to two registries - pick whichever suits your se
 | GitHub Container Registry | `ghcr.io/argonfetch/argonfetch:latest` |
 | Docker Hub | `docker.io/pianonic/argonfetch:latest` |
 
-## Mount `/tools`
+## Mount `/tools` and `/plugins`
 
-The compose file above mounts one volume, and it is not a database. `/tools` holds `yt-dlp`
-and `FFmpeg`. Keep it - without one, roughly 100MB is downloaded again every time the
-container starts.
+Neither volume is a database. `/tools` holds `yt-dlp` and `FFmpeg`; without it, roughly 100MB is
+downloaded again every time the container starts. `/plugins` holds whatever you named under
+`Plugins__Install__*`, for the same reason.
+
+Both are created inside the image and writable by the runtime user, so the paths need no
+configuration - only the volumes, if you would rather not re-download on every start.
 
 Nothing else is written anywhere. ArgonFetch keeps no record of what it has been asked to
 fetch, and no count of how often.

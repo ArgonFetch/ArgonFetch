@@ -21,7 +21,17 @@ namespace ArgonFetch.Application.Plugins
 
         public async Task InstallAsync(PluginOptions options, string root, CancellationToken cancellationToken = default)
         {
-            Directory.CreateDirectory(root);
+            try
+            {
+                Directory.CreateDirectory(root);
+            }
+            catch (Exception ex)
+            {
+                // Nothing below can work, but a downloader that will not start is worse than one
+                // without plugins - and this threw before any of the guards further down.
+                _logger.LogError(ex, "Cannot use {Root} for plugins, so none will be installed", root);
+                return;
+            }
 
             var wanted = options.Install
                 .Select(Parse)
