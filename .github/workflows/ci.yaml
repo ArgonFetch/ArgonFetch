@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push supersedes the run already going for that branch.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ArgonFetch.slnx
+
+      # Warnings are errors for nullable (Directory.Build.props), so this is not only a
+      # compile check.
+      - name: Build
+        run: dotnet build ArgonFetch.slnx --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test ArgonFetch.slnx --no-build --configuration Release --verbosity normal
+
+  image:
+    name: Build image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Built and thrown away. The point is that it builds at all: the Dockerfile keeps its own
+      # list of projects to copy and installs the frontend with --frozen-lockfile, so a deleted
+      # project or a lockfile behind package.json breaks the image while every local check still
+      # passes. Both reached a published release that way (#219, #214).
+      #
+      # One architecture, because neither failure was architecture-specific and the release
+      # publish is where multi-arch belongs.
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./src/ArgonFetch.API/Dockerfile
+          platforms: linux/amd64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
