@@ -8,14 +8,9 @@
  * Do not edit the class manually.
  */
 import { MediaRenditionDto } from './mediaRenditionDto';
-import { UrlType } from './urlType';
 
 
 export interface StreamReferenceDto { 
-    urlType?: UrlType;
     renditions?: Array<MediaRenditionDto> | null;
 }
-export namespace StreamReferenceDto {
-}
-
 

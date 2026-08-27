@@ -574,9 +574,6 @@
       "StreamReferenceDto": {
         "type": "object",
         "properties": {
-          "urlType": {
-            "$ref": "#/components/schemas/UrlType"
-          },
           "renditions": {
             "type": "array",
             "items": {
