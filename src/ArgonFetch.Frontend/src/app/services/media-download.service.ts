@@ -22,8 +22,14 @@ export class MediaDownloadService {
   readonly downloadedMB = signal('');
   readonly hasKnownTotal = signal(false);
 
+  // Whether the total came from the rendition rather than the response. A muxed stream sends no
+  // length, but the server did predict one from the two tracks it is about to combine, so the
+  // bar can be honest about roughly how far along it is instead of saying nothing at all.
+  readonly isEstimatedTotal = signal(false);
+
   private lastTime = 0;
   private lastBytes = 0;
+  private expectedBytes: number | null = null;
 
   constructor() {
     // A transfer lives in this page, so leaving takes it with you - reload included, which is
@@ -45,12 +51,17 @@ export class MediaDownloadService {
     return this.isDownloading();
   }
 
-  download(url: string, fileName: string): Promise<void> {
+  /**
+   * @param expectedBytes Size the server predicted for this rendition, used only when the
+   * response declares no length of its own. A prediction, so the bar it drives is one too.
+   */
+  download(url: string, fileName: string, expectedBytes?: number | null): Promise<void> {
     return new Promise<void>(resolve => {
       this.reset();
       this.isDownloading.set(true);
       this.fileName.set(fileName);
       this.downloadedMB.set('0');
+      this.expectedBytes = expectedBytes && expectedBytes > 0 ? expectedBytes : null;
       this.lastTime = Date.now();
 
       // Errors arrive on the error callback rather than as a thrown exception; subscribe()
@@ -78,14 +89,22 @@ export class MediaDownloadService {
   }
 
   private report(loaded: number, total?: number) {
-    // A percentage is only reported when the real transfer size is known. The combined endpoint
-    // muxes on the fly and genuinely cannot send a length; there the bar runs indeterminate and
-    // the byte counter carries the information.
-    this.hasKnownTotal.set(!!total);
+    // The combined endpoint muxes on the fly and cannot declare a length, so fall back to the
+    // size the server predicted for the rendition. Only when neither exists does the bar go
+    // indeterminate and leave the byte counter to carry the information.
+    const estimated = !total && this.expectedBytes !== null;
+    const denominator = total ?? this.expectedBytes;
 
-    if (total) {
-      this.progress.set(Math.min(100, Math.max(0, Math.round((loaded / total) * 100))));
-      this.totalMB.set((total / 1024 / 1024).toFixed(1));
+    this.hasKnownTotal.set(!!denominator);
+    this.isEstimatedTotal.set(estimated);
+
+    if (denominator) {
+      const percent = Math.round((loaded / denominator) * 100);
+
+      // An estimate stops one short rather than sitting at 100% while bytes still arrive: a
+      // mux weighs a little more than the two tracks going into it, so it will overshoot.
+      this.progress.set(Math.max(0, Math.min(estimated ? 99 : 100, percent)));
+      this.totalMB.set((denominator / 1024 / 1024).toFixed(1));
     } else {
       this.progress.set(0);
       this.totalMB.set('');
@@ -124,6 +143,8 @@ export class MediaDownloadService {
     this.totalMB.set('');
     this.downloadedMB.set('');
     this.hasKnownTotal.set(false);
+    this.isEstimatedTotal.set(false);
+    this.expectedBytes = null;
     this.lastBytes = 0;
   }
 

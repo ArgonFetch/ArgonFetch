@@ -80,7 +80,7 @@ export class SingleSongContainerComponent {
     const title = this.resourceInformation.mediaItems?.[0]?.title || 'download';
     const extension = rendition.fileExtension || '';
 
-    await this.downloads.download(url, `${title}${extension}`);
+    await this.downloads.download(url, `${title}${extension}`, rendition.fileSizeBytes);
   }
 
   hasCombinedUrls(): boolean {

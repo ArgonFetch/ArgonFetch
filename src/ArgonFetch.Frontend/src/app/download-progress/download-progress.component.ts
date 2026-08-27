@@ -28,4 +28,5 @@ export class DownloadProgressComponent {
   readonly totalMB = this.downloads.totalMB;
   readonly downloadedMB = this.downloads.downloadedMB;
   readonly hasKnownTotal = this.downloads.hasKnownTotal;
+  readonly isEstimatedTotal = this.downloads.isEstimatedTotal;
 }
