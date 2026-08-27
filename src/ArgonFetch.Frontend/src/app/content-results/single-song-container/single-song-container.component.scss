@@ -208,6 +208,15 @@
   border-top: 1px solid var(--border);
 }
 
+/* Fast and muxed steps interleave by resolution, so the warning rides on the row it belongs
+   to rather than trying to divide the menu into two halves that do not exist. */
+.menu-item-note {
+  margin-left: 0.4rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  opacity: 0.65;
+}
+
 /* Not a button: there is nothing to press when a source offers no renditions, and a menu
    item that looks pressable but does nothing is worse than one that plainly cannot be. */
 .menu-item--empty {

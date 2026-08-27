@@ -6,7 +6,7 @@ import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { MediaRenditionDto, ResourceInformationDto } from '../../api';
 import { HttpClientModule } from '@angular/common/http';
 import { MediaDownloadService } from '../../services/media-download.service';
-import { ResourceUrlService } from '../../services/resource-url.service';
+import { ResourceUrlService, UrlType } from '../../services/resource-url.service';
 import { DownloadProgressComponent } from '../../download-progress/download-progress.component';
 
 @Component({
@@ -49,6 +49,15 @@ export class SingleSongContainerComponent {
    */
   typeOf(rendition: MediaRenditionDto): string {
     return (rendition.fileExtension || '').replace('.', '').toUpperCase();
+  }
+
+  /**
+   * Whether a rendition has to be muxed on the way out. Those are the higher resolutions a
+   * source only offers as separate video and audio: worth having, but slower to arrive and
+   * with no size to show beforehand, so the menu says as much before someone picks one.
+   */
+  isMuxed(rendition: MediaRenditionDto): boolean {
+    return rendition.urlType === UrlType.Combined;
   }
 
   /** Size label for a rendition, e.g. "3.3 MB". Empty when the source does not report one. */

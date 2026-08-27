@@ -131,36 +131,41 @@ namespace ArgonFetch.Application.Queries
                     proxy: _fetchProxy,
                     tags: tags);
 
-                List<MediaRenditionDto> videoRenditions;
-                UrlType videoUrlType;
+                // Sent untouched: fast, declares a length, supports ranges. Sources stop
+                // offering these well below their best resolution.
+                var passThrough = _proxyUrlBuilder.BuildRenditions(
+                    RenditionPicker.PickVideo(PreMuxedSources(resultData.Formats), perContainer: true),
+                    _cacheService,
+                    isAudio: false,
+                    proxy: _fetchProxy,
+                    tags: tags);
 
-                if (HasValidUrls(combinedFormats))
-                {
-                    videoUrlType = UrlType.Media;
-                    videoRenditions = _proxyUrlBuilder.BuildRenditions(
-                        RenditionPicker.PickVideo(PreMuxedSources(resultData.Formats), perContainer: true),
-                        _cacheService,
-                        isAudio: false,
-                        proxy: _fetchProxy,
-                        tags: tags);
-                }
-                else
-                {
-                    videoUrlType = UrlType.Combined;
-                    videoRenditions = _combinedUrlBuilder.BuildCombinedRenditions(
-                        RenditionPicker.PickVideo(VideoOnlySources(resultData.Formats)),
-                        RenditionPicker.PickAudio(AudioSources(resultData.Formats), count: 1).FirstOrDefault(),
-                        _cacheService,
-                        _fetchProxy,
-                        tags);
-                }
+                // The higher steps exist only as separate tracks, muxed on the way out: slower,
+                // and no length to declare. Both are offered so the choice is the caller's.
+                var muxed = _combinedUrlBuilder.BuildCombinedRenditions(
+                    RenditionPicker.PickVideo(VideoOnlySources(resultData.Formats)),
+                    RenditionPicker.PickAudio(AudioSources(resultData.Formats), count: 1).FirstOrDefault(),
+                    _cacheService,
+                    _fetchProxy,
+                    tags);
+
+                // A resolution already available untouched would be the same picture, slower.
+                var untouchedHeights = passThrough
+                    .Select(rendition => rendition.Height)
+                    .Where(height => height is not null)
+                    .ToHashSet();
+
+                var videoRenditions = passThrough
+                    .Concat(muxed.Where(rendition => !untouchedHeights.Contains(rendition.Height)))
+                    .OrderByDescending(rendition => rendition.Height ?? 0)
+                    .ToList();
 
                 combinedReferences = videoRenditions.Count > 0
-                    ? new StreamReferenceDto { UrlType = videoUrlType, Renditions = videoRenditions }
+                    ? new StreamReferenceDto { Renditions = videoRenditions }
                     : null;
 
                 audioReferences = audioRenditions.Count > 0
-                    ? new StreamReferenceDto { UrlType = UrlType.Media, Renditions = audioRenditions }
+                    ? new StreamReferenceDto { Renditions = audioRenditions }
                     : null;
 
                 return new ResourceInformationDto
@@ -308,7 +313,7 @@ namespace ArgonFetch.Application.Queries
 
             return renditions.Count == 0
                 ? null
-                : new StreamReferenceDto { UrlType = UrlType.Media, Renditions = renditions };
+                : new StreamReferenceDto { Renditions = renditions };
         }
 
         private async Task<ProbeResult?> ProbeAsync(Uri url, CancellationToken cancellationToken)
