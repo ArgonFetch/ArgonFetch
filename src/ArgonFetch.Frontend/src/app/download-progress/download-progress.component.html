@@ -8,11 +8,11 @@
         }
         @if (downloadedMB()) {
           <span class="download-size">
-            {{ downloadedMB() }}@if (hasKnownTotal()) { / {{ totalMB() }}} MB
+            {{ downloadedMB() }}@if (hasKnownTotal()) { / @if (isEstimatedTotal()) {~}{{ totalMB() }}} MB
           </span>
         }
         @if (hasKnownTotal()) {
-          <span class="download-percentage">{{ progress() }}%</span>
+          <span class="download-percentage">@if (isEstimatedTotal()) {~}{{ progress() }}%</span>
         }
       </div>
     </div>
@@ -20,8 +20,8 @@
       @if (hasKnownTotal()) {
         <div class="progress-bar" [style.width.%]="progress()" [style.max-width]="'100%'"></div>
       } @else {
-        <!-- The server cannot declare a length for muxed streams, so show motion
-             rather than a number that would be invented. -->
+        <!-- Neither the response nor the rendition offered a size, so show motion rather
+             than a number that would be invented. -->
         <div class="progress-bar progress-bar--indeterminate"></div>
       }
     </div>

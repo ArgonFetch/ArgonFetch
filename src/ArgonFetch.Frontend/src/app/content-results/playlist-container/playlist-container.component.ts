@@ -122,7 +122,10 @@ export class PlaylistContainerComponent {
 
       const extension = audio?.renditions?.[0]?.fileExtension || '';
 
-      await this.downloads.download(url, `${media?.title || song.title}${extension}`);
+      await this.downloads.download(
+        url,
+        `${media?.title || song.title}${extension}`,
+        audio?.renditions?.[0]?.fileSizeBytes);
     } catch (error: any) {
       // A Spotify track is played from somewhere else, and the odd remix or regional
       // release has no counterpart to find. That is a different thing from the source
