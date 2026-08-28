@@ -52,12 +52,15 @@ export class SingleSongContainerComponent {
   }
 
   /**
-   * Whether a rendition has to be muxed on the way out. Those are the higher resolutions a
-   * source only offers as separate video and audio: worth having, but slower to arrive and
-   * with no size to show beforehand, so the menu says as much before someone picks one.
+   * Whether the server can send this untouched or has to build it first.
+   * <p>
+   * Shown on every rendition rather than only the slow ones: "slower" on its own invites the
+   * question "slower than what", and the answer is only useful next to the alternative.
    */
-  isMuxed(rendition: MediaRenditionDto): boolean {
-    return rendition.urlType === UrlType.Combined;
+  speedOf(rendition: MediaRenditionDto): 'fast' | 'slow' {
+    // Muxed video and converted audio both go through FFmpeg on the way out, which is the
+    // whole of the difference: no declared length, no ranges, and a wait before the first byte.
+    return rendition.urlType === UrlType.Combined || rendition.convertTo ? 'slow' : 'fast';
   }
 
   /** Size label for a rendition, e.g. "3.3 MB". Empty when the source does not report one. */
