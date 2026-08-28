@@ -11,22 +11,6 @@ using YoutubeDLSharp;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (File.Exists(".env"))
-{
-    foreach (var line in File.ReadAllLines(".env"))
-    {
-        var trimmedLine = line.Trim();
-        if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#"))
-            continue;
-
-        var parts = trimmedLine.Split('=', 2);
-        if (parts.Length == 2)
-        {
-            Environment.SetEnvironmentVariable(parts[0], parts[1]);
-        }
-    }
-}
-
 #region Configure Services
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
@@ -140,8 +124,10 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 #region CORS Configuration
 const string defaultCorsOrigin = "http://localhost:4200";
 
-var allowedOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-    ?? new[] { defaultCorsOrigin }; // Default for development
+// Read like every other setting. Reaching for the environment directly meant this alone
+// answered to a .env file while TOOLS_PATH, COOKIES_PATH and the rest did not.
+var allowedOrigins = builder.Configuration["CORS_ALLOWED_ORIGINS"]?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? new[] { defaultCorsOrigin };
 
 var corsUsesDevelopmentDefault = allowedOrigins.Length == 1 && allowedOrigins[0] == defaultCorsOrigin;
 
