@@ -48,17 +48,12 @@
     <ng-template #videoMenu>
       <div class="dropdown-menu" cdkMenu animate.enter="menu-enter" animate.leave="menu-leave">
         @for (rendition of videoRenditions(); track rendition.key + (rendition.convertTo ?? '')) {
-          <!-- A muxed rendition is quality the source only offers as separate video and audio.
-               Its size is a prediction rather than a length the server can declare, and it
-               arrives slower, so it is marked whether or not a size came with it. -->
           <button type="button" class="menu-item" cdkMenuItem
             (cdkMenuItemTriggered)="onDownloadRendition(rendition)">
             <span class="menu-item-label">
               {{ rendition.label }}
               <span class="menu-item-type">{{ typeOf(rendition) }}</span>
-              @if (isMuxed(rendition)) {
-                <span class="menu-item-note">slower</span>
-              }
+              <span class="menu-item-note" [class.menu-item-note--slow]="speedOf(rendition) === 'slow'">{{ speedOf(rendition) }}</span>
             </span>
             @if (sizeOf(rendition)) {
               <span class="menu-item-size">{{ sizeOf(rendition) }}</span>
@@ -73,14 +68,13 @@
     <ng-template #audioMenu>
       <div class="dropdown-menu" cdkMenu animate.enter="menu-enter" animate.leave="menu-leave">
         @for (rendition of audioRenditions(); track rendition.key + (rendition.convertTo ?? '')) {
-          <!-- Converted options come from the server in the same list, marked as such, so
-               they need no case of their own here. -->
           <button type="button" class="menu-item" cdkMenuItem
             [class.menu-item--converted]="!!rendition.convertTo"
             (cdkMenuItemTriggered)="onDownloadRendition(rendition)">
             <span class="menu-item-label">
               {{ rendition.label }}
               <span class="menu-item-type">{{ typeOf(rendition) }}</span>
+              <span class="menu-item-note" [class.menu-item-note--slow]="speedOf(rendition) === 'slow'">{{ speedOf(rendition) }}</span>
             </span>
             @if (rendition.convertTo) {
               <span class="menu-item-size">converted</span>

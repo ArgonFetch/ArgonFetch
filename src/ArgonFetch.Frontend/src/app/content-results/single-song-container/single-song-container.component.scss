@@ -214,7 +214,13 @@
   margin-left: 0.4rem;
   font-size: 0.7rem;
   letter-spacing: 0.02em;
-  opacity: 0.65;
+  opacity: 0.5;
+}
+
+/* The one worth noticing: it is the row that makes you wait. */
+.menu-item-note--slow {
+  color: var(--warning);
+  opacity: 0.9;
 }
 
 /* Not a button: there is nothing to press when a source offers no renditions, and a menu
