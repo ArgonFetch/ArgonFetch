@@ -1,5 +1,5 @@
 /**
- * ArgonFetch.API
+ * ArgonFetch API
  *
  * 
  *
@@ -10,12 +10,9 @@
 
 
 export interface ProblemDetails { 
-  [key: string]: any | any;
-
-
     type?: string | null;
     title?: string | null;
-    status?: number | null;
+    status?: any | null;
     detail?: string | null;
     instance?: string | null;
 }

@@ -1,8 +1,9 @@
 {
   "openapi": "3.0.4",
   "info": {
-    "title": "ArgonFetch.API",
-    "version": "1.0"
+    "title": "ArgonFetch API",
+    "description": "Resolve a link to its downloadable media, and stream it.",
+    "version": "1.0.0"
   },
   "paths": {
     "/api/App": {
@@ -389,107 +390,108 @@
     "schemas": {
       "AppInfoDto": {
         "required": [
-          "environment",
+          "version",
           "isHealthy",
-          "version"
+          "environment"
         ],
         "type": "object",
         "properties": {
           "version": {
-            "type": "string",
-            "nullable": true
+            "type": "string"
           },
           "isHealthy": {
             "type": "boolean"
           },
           "environment": {
-            "type": "string",
-            "nullable": true
+            "type": "string"
           },
           "maintenance": {
             "type": "string",
             "nullable": true
           }
-        },
-        "additionalProperties": false
+        }
       },
       "MediaInformationDto": {
         "required": [
-          "author",
           "requestedUrl",
-          "title"
+          "title",
+          "author"
         ],
         "type": "object",
         "properties": {
           "requestedUrl": {
-            "type": "string",
-            "nullable": true
+            "type": "string"
           },
           "video": {
-            "$ref": "#/components/schemas/StreamReferenceDto"
+            "type": "object",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/StreamReferenceDto"
+              }
+            ],
+            "nullable": true
           },
           "audio": {
-            "$ref": "#/components/schemas/StreamReferenceDto"
+            "type": "object",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/StreamReferenceDto"
+              }
+            ],
+            "nullable": true
           },
           "coverUrl": {
             "type": "string",
             "nullable": true
           },
           "title": {
-            "type": "string",
-            "nullable": true
+            "type": "string"
           },
           "author": {
-            "type": "string",
-            "nullable": true
+            "type": "string"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "MediaRenditionDto": {
         "required": [
-          "fileExtension",
           "key",
           "label",
+          "fileExtension",
           "mimeType"
         ],
         "type": "object",
         "properties": {
           "key": {
-            "type": "string",
-            "nullable": true
+            "type": "string"
           },
           "label": {
-            "type": "string",
-            "nullable": true
+            "type": "string"
           },
           "description": {
             "type": "string",
             "nullable": true
           },
           "fileExtension": {
-            "type": "string",
-            "nullable": true
+            "type": "string"
           },
           "mimeType": {
-            "type": "string",
-            "nullable": true
+            "type": "string"
           },
           "urlType": {
             "$ref": "#/components/schemas/UrlType"
           },
           "fileSizeBytes": {
-            "type": "integer",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "format": "int64",
             "nullable": true
           },
           "height": {
-            "type": "integer",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "format": "int32",
             "nullable": true
           },
           "bitrate": {
-            "type": "number",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
             "format": "double",
             "nullable": true
           },
@@ -497,16 +499,14 @@
             "type": "string",
             "nullable": true
           }
-        },
-        "additionalProperties": false
+        }
       },
       "MediaType": {
         "enum": [
           "Media",
           "PlayList",
           "Unknown"
-        ],
-        "type": "string"
+        ]
       },
       "ProblemDetails": {
         "type": "object",
@@ -520,7 +520,7 @@
             "nullable": true
           },
           "status": {
-            "type": "integer",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "format": "int32",
             "nullable": true
           },
@@ -532,13 +532,12 @@
             "type": "string",
             "nullable": true
           }
-        },
-        "additionalProperties": { }
+        }
       },
       "ResourceInformationDto": {
         "required": [
-          "mediaItems",
-          "type"
+          "type",
+          "mediaItems"
         ],
         "type": "object",
         "properties": {
@@ -565,11 +564,9 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MediaInformationDto"
-            },
-            "nullable": true
+            }
           }
-        },
-        "additionalProperties": false
+        }
       },
       "StreamReferenceDto": {
         "type": "object",
@@ -578,19 +575,27 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MediaRenditionDto"
-            },
-            "nullable": true
+            }
           }
-        },
-        "additionalProperties": false
+        }
       },
       "UrlType": {
         "enum": [
           "Combined",
           "Media"
-        ],
-        "type": "string"
+        ]
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "App"
+    },
+    {
+      "name": "Fetch"
+    },
+    {
+      "name": "Stream"
+    }
+  ]
 }

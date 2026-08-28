@@ -1,5 +1,5 @@
 /**
- * ArgonFetch.API
+ * ArgonFetch API
  *
  * 
  *
@@ -7,15 +7,15 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
-import { StreamReferenceDto } from './streamReferenceDto';
+import { MediaInformationDtoVideo } from './mediaInformationDtoVideo';
 
 
 export interface MediaInformationDto { 
-    requestedUrl: string | null;
-    video?: StreamReferenceDto;
-    audio?: StreamReferenceDto;
+    requestedUrl: string;
+    video?: MediaInformationDtoVideo | null;
+    audio?: MediaInformationDtoVideo | null;
     coverUrl?: string | null;
-    title: string | null;
-    author: string | null;
+    title: string;
+    author: string;
 }
 

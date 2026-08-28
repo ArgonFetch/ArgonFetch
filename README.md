@@ -100,7 +100,7 @@ Everything is set through environment variables in `.env`.
 | Variable | Required | Description |
 |---|---|---|
 | `CORS_ALLOWED_ORIGINS` | in production | Comma-separated origins allowed to call the API. Defaults to `http://localhost:4200`, and the app warns at startup if that default is still in use in production |
-| `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables Swagger UI |
+| `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables Scalar |
 | `PROXY_LIST_PATH` | no | File with one proxy per line, rotated across yt-dlp fetches so they do not all leave from the same IP. See below |
 | `COOKIES_PATH` | no | Netscape-format cookies file, for sources that serve media only to a signed-in session. See below |
 
@@ -176,7 +176,7 @@ clients elsewhere without running the app. Refresh it from a running instance af
 any endpoint or DTO:
 
 ```bash
-curl -s http://localhost:5114/swagger/v1/swagger.json -o docs/public/openapi.json
+dotnet build src/ArgonFetch.API
 ```
 
 ## Development

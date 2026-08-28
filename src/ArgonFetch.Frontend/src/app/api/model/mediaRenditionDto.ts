@@ -1,5 +1,5 @@
 /**
- * ArgonFetch.API
+ * ArgonFetch API
  *
  * 
  *
@@ -11,15 +11,15 @@ import { UrlType } from './urlType';
 
 
 export interface MediaRenditionDto { 
-    key: string | null;
-    label: string | null;
+    key: string;
+    label: string;
     description?: string | null;
-    fileExtension: string | null;
-    mimeType: string | null;
+    fileExtension: string;
+    mimeType: string;
     urlType?: UrlType;
-    fileSizeBytes?: number | null;
-    height?: number | null;
-    bitrate?: number | null;
+    fileSizeBytes?: any | null;
+    height?: any | null;
+    bitrate?: any | null;
     convertTo?: string | null;
 }
 export namespace MediaRenditionDto {

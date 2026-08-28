@@ -1,5 +1,5 @@
 /**
- * ArgonFetch.API
+ * ArgonFetch API
  *
  * 
  *
@@ -10,9 +10,9 @@
 
 
 export interface AppInfoDto { 
-    version: string | null;
+    version: string;
     isHealthy: boolean;
-    environment: string | null;
+    environment: string;
     maintenance?: string | null;
 }
 

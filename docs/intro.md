@@ -13,7 +13,7 @@ and nothing to configure - not even Spotify credentials.
 - **Audio or video.** Renditions come straight from the source, with a size and bitrate on each
   so you can see what you are choosing.
 - **Web interface and REST API.** The UI is one input box; the API is a handful of `GET`
-  endpoints, documented at `/swagger` and checked in as [`openapi.json`](/openapi.json).
+  endpoints, documented at `/scalar` and checked in as [`openapi.json`](/openapi.json).
 - **One container, no database.** Resolved media is cached in memory. Everything else
   runs in the app container.
 

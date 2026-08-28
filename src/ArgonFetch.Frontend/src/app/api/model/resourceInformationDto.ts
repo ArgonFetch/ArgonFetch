@@ -1,5 +1,5 @@
 /**
- * ArgonFetch.API
+ * ArgonFetch API
  *
  * 
  *
@@ -17,7 +17,7 @@ export interface ResourceInformationDto {
     title?: string | null;
     author?: string | null;
     coverUrl?: string | null;
-    mediaItems: Array<MediaInformationDto> | null;
+    mediaItems: Array<MediaInformationDto>;
 }
 export namespace ResourceInformationDto {
 }
