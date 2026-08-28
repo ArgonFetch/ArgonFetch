@@ -1,5 +1,5 @@
 /**
- * ArgonFetch.API
+ * ArgonFetch API
  *
  * 
  *

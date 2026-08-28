@@ -82,7 +82,7 @@ bun run apigen
 And the checked-in schema, after changing an endpoint or a DTO:
 
 ```bash
-curl -s http://localhost:5114/swagger/v1/swagger.json -o docs/public/openapi.json
+dotnet build src/ArgonFetch.API
 ```
 
 ## Building this documentation site

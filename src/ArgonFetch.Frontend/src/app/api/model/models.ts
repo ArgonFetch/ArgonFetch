@@ -1,5 +1,6 @@
 export * from './appInfoDto';
 export * from './mediaInformationDto';
+export * from './mediaInformationDtoVideo';
 export * from './mediaRenditionDto';
 export * from './mediaType';
 export * from './problemDetails';

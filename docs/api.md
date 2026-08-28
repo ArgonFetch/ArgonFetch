@@ -97,12 +97,12 @@ seconds of a start.
 ## The schema
 
 These pages are generated from [`openapi.json`](/openapi.json), which is checked in at
-`docs/public/openapi.json` so clients can be generated without running the app. Swagger UI is also
+`docs/public/openapi.json` so clients can be generated without running the app. The reference UI is also
 served at `/swagger` when `ASPNETCORE_ENVIRONMENT=Development`.
 
 Refresh the schema from a running instance after changing any endpoint or DTO - the pages here
 follow automatically:
 
 ```bash
-curl -s http://localhost:5114/swagger/v1/swagger.json -o docs/public/openapi.json
+dotnet build src/ArgonFetch.API
 ```

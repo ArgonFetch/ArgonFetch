@@ -176,8 +176,8 @@ namespace ArgonFetch.Application.Queries
                             new MediaInformationDto
                             {
                                 RequestedUrl = _originalUrl ?? request.Query,
-                                Video = combinedReferences,  // Either pre-muxed or FFmpeg-combined
-                                Audio = audioReferences,      // Audio-only option
+                                Video = combinedReferences,
+                                Audio = audioReferences,
                                 CoverUrl = _overrideCover ?? thumbnailUrl,
                                 Title = tags.Title ?? string.Empty,
                                 Author = tags.Artist ?? string.Empty

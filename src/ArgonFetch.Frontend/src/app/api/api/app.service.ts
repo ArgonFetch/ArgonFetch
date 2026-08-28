@@ -1,5 +1,5 @@
 /**
- * ArgonFetch.API
+ * ArgonFetch API
  *
  * 
  *
@@ -30,7 +30,7 @@ import { Configuration }                                     from '../configurat
 })
 export class AppService {
 
-    protected basePath = 'http://localhost';
+    protected basePath = 'http://localhost:5114';
     public defaultHeaders = new HttpHeaders();
     public configuration = new Configuration();
     public encoder: HttpParameterCodec;

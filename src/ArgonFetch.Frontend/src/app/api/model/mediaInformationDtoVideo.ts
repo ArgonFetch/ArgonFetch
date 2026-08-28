@@ -7,10 +7,13 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { StreamReferenceDto } from './streamReferenceDto';
 import { MediaRenditionDto } from './mediaRenditionDto';
 
 
-export interface StreamReferenceDto { 
-    renditions?: Array<MediaRenditionDto>;
-}
+/**
+ * @type MediaInformationDtoVideo
+ * @export
+ */
+export type MediaInformationDtoVideo = StreamReferenceDto;
 

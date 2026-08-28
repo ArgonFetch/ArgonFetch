@@ -94,7 +94,7 @@ responses are pipes.
 ## Trying the API without curl
 
 Every endpoint has a page under [API](/api) with a playground that sends the request for you,
-against the hosted instance or your own. Swagger UI is also served at `/swagger`, though only when
+against the hosted instance or your own. The reference UI is also served at `/swagger`, though only when
 the instance runs with `ASPNETCORE_ENVIRONMENT=Development` - so on a local build, not on
 app.argonfetch.dev. The schema is checked in at [`openapi.json`](/openapi.json) either way, for
 generating clients without running anything.
