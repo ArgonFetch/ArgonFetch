@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ArgonFetch.Abstractions\ArgonFetch.Abstractions.csproj" />
     <ProjectReference Include="..\ArgonFetch.Application\ArgonFetch.Application.csproj" />
+    <ProjectReference Include="..\ArgonFetch.Infrastructure\ArgonFetch.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

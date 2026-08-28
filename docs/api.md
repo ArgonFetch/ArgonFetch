@@ -98,7 +98,7 @@ seconds of a start.
 
 These pages are generated from [`openapi.json`](/openapi.json), which is checked in at
 `docs/public/openapi.json` so clients can be generated without running the app. The reference UI is also
-served at `/swagger` when `ASPNETCORE_ENVIRONMENT=Development`.
+served at `/scalar` when `ASPNETCORE_ENVIRONMENT=Development`.
 
 Refresh the schema from a running instance after changing any endpoint or DTO - the pages here
 follow automatically:

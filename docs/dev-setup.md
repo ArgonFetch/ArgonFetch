@@ -23,7 +23,7 @@ cd ArgonFetch
 ## 2. Run both halves
 
 ```bash
-# API - http://localhost:5114, Swagger at /swagger
+# API - http://localhost:5114, API reference at /scalar
 cd src/ArgonFetch.API
 dotnet run
 ```

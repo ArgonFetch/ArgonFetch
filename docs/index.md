@@ -28,7 +28,7 @@ features:
   - title: Audio or video, your quality
     details: Every rendition the source offers is listed. Audio passes through in its original container; MP3 on request.
   - title: Web UI and REST API
-    details: One interface for people, one JSON API for scripts, with a Swagger page and a checked-in OpenAPI schema.
+    details: One interface for people, one JSON API for scripts, with an API reference and a checked-in OpenAPI schema.
   - title: One container plus a database
     details: yt-dlp and FFmpeg are fetched at boot and update themselves, so extractor fixes land without rebuilding anything.
 ---
