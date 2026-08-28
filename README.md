@@ -26,7 +26,7 @@ streams and serves them back as a normal file download.
 - **No API keys.** Nothing to register, no credentials to configure — including Spotify.
 - **Plugins.** Sources yt-dlp cannot reach are installed by name rather than built in, and anyone can publish one.
 - **Audio or video**, at a quality you choose.
-- **Web interface and REST API**, with Swagger docs.
+- **Web interface and REST API**, with a browsable API reference.
 - **One container, no database.** Runs anywhere Docker does.
 
 ## Screenshots
@@ -169,7 +169,7 @@ migrating — ArgonFetch keeps no persistent state at all.
 2. Paste a media URL and press Enter
 3. Pick a quality, then download
 
-API docs are at `http://localhost:8080/swagger` when running in `Development`.
+API docs are at `http://localhost:8080/scalar` when running in `Development`.
 
 The schema is also checked in at [`docs/public/openapi.json`](docs/public/openapi.json) for generating
 clients elsewhere without running the app. Refresh it from a running instance after changing
