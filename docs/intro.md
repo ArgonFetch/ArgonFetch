@@ -14,6 +14,8 @@ and nothing to configure - not even Spotify credentials.
   so you can see what you are choosing.
 - **Web interface and REST API.** The UI is one input box; the API is a handful of `GET`
   endpoints, documented at `/scalar` and checked in as [`openapi.json`](/openapi.json).
+- **Usable by an AI assistant.** ArgonFetch speaks [MCP](/mcp) at `/mcp`, so an assistant resolves
+  a link and gets a URL it can fetch - no glue code, no API keys.
 - **One container, no database.** Resolved media is cached in memory. Everything else
   runs in the app container.
 

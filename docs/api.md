@@ -26,6 +26,9 @@ point it at your own instance instead - and make sure that instance lists `docs.
 `Fetch` and `Stream` are the pair you want: resolve a URL, then stream the `key` you picked out of
 the response. [Usage](/usage#from-the-command-line) walks through both with `curl`.
 
+An AI assistant should use [MCP](/mcp) at `POST /mcp` instead. It is the same resolution, with the
+key already turned into a URL that can be fetched as it stands.
+
 ## Filenames
 
 Both stream endpoints send a `Content-Disposition` built from the media, so a client that respects
