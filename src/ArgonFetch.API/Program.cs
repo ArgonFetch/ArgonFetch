@@ -5,6 +5,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Mediator;
 using Microsoft.OpenApi;
+using ModelContextProtocol.AspNetCore;
 using Scalar.AspNetCore;
 using System.Text.Json.Serialization;
 using YoutubeDLSharp;
@@ -36,6 +37,46 @@ builder.Services.AddHostedService(
     sp => sp.GetRequiredService<ArgonFetch.Infrastructure.Services.MediaToolsService>());
 
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IApplicationInfoService, ArgonFetch.Infrastructure.Services.ApplicationInfoService>();
+#endregion
+
+#region MCP
+// The same GetMediaQuery the REST controller sends, exposed as a tool so an assistant can use
+// ArgonFetch without being taught how a rendition key becomes a download URL. Stateless: nothing
+// here calls back to the client, so no session has to be pinned to one replica.
+builder.Services.AddMcpServer(options => options.ServerInstructions = """
+        ArgonFetch turns a media link into a downloadable file. It handles YouTube, TikTok,
+        Spotify, SoundCloud, Instagram and everything else yt-dlp reaches, including playlists.
+
+        Call `fetch_media` with the page URL the user gave you. It answers with the title, author
+        and a list of renditions - `video` and `audio` - each carrying a `downloadUrl`.
+
+        A playlist answers with `type: "PlayList"` and one entry per track, and those entries carry
+        titles but no renditions - resolving two hundred tracks up front would take minutes. Call
+        `fetch_media` again with a track's `sourceUrl` to get its download URLs, and do that only
+        for the tracks the user actually wants.
+
+        A `downloadUrl` is a plain GET and needs nothing added to it. Fetch it directly, or hand it
+        to the user. Do not ask ArgonFetch for the bytes: it streams files that run to hundreds of
+        megabytes, so the URL is the deliverable, not the content.
+
+        Picking a rendition, when the user did not say:
+
+        - audio only, or a song -> the highest `label` bitrate under `audio`
+        - video -> the highest `label` resolution under `video` whose `fileSizeBytes` is sane for
+          what the user is doing; 1080p is a good default, 2160p is often over 200 MB
+        - the `.mp3` rendition is transcoded on the fly and is the only audio option that carries
+          title and artist tags inside the file - prefer it when the user is building a library,
+          and prefer the source container otherwise, because it is faster and lossless
+
+        A `downloadUrl` stops working one hour after the call that produced it. Call `fetch_media`
+        again rather than reusing a URL from earlier in the conversation.
+
+        Errors say what went wrong and are worth relaying: DRM-protected media cannot be
+        downloaded no matter how the request is phrased, and a message about updating means the
+        instance is briefly busy and the same call will work shortly.
+        """)
+    .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
+    .WithTools<ArgonFetch.API.Mcp.ArgonFetchTools>();
 #endregion
 
 #region API Documentation
@@ -204,6 +245,9 @@ app.UseRouting();
 app.UseAuthorization();
 app.UseCors();
 app.MapControllers();
+
+// Outside /api, so neither the fallback below nor the SPA competes for it.
+app.MapMcp("/mcp");
 
 app.MapFallback("/api/{**path}", (HttpContext context) => Results.Problem(
     title: "Not Found",
