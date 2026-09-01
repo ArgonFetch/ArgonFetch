@@ -27,6 +27,7 @@ streams and serves them back as a normal file download.
 - **Plugins.** Sources yt-dlp cannot reach are installed by name rather than built in, and anyone can publish one.
 - **Audio or video**, at a quality you choose.
 - **Web interface and REST API**, with a browsable API reference.
+- **MCP endpoint** at `/mcp`, so an AI assistant can resolve a link and download it directly.
 - **One container, no database.** Runs anywhere Docker does.
 
 ## Screenshots
@@ -170,6 +171,14 @@ migrating — ArgonFetch keeps no persistent state at all.
 3. Pick a quality, then download
 
 API docs are at `http://localhost:8080/scalar` when running in `Development`.
+
+To use ArgonFetch from an AI assistant, point an MCP client at `http://localhost:8080/mcp`:
+
+```bash
+claude mcp add --transport http argonfetch http://localhost:8080/mcp
+```
+
+See the [MCP guide](https://docs.argonfetch.dev/mcp) (source: [`docs/mcp.md`](docs/mcp.md)).
 
 The schema is also checked in at [`docs/public/openapi.json`](docs/public/openapi.json) for generating
 clients elsewhere without running the app. Refresh it from a running instance after changing

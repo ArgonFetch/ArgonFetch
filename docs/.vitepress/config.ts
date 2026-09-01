@@ -43,6 +43,7 @@ export default defineConfig({
       { text: 'Setup', link: '/self-host' },
       { text: 'Usage', link: '/usage' },
       { text: 'API', link: '/api' },
+      { text: 'MCP', link: '/mcp' },
       { text: 'Development', link: '/dev-setup' },
       { text: 'Live app', link: 'https://app.argonfetch.dev' },
     ],
@@ -62,6 +63,7 @@ export default defineConfig({
         items: [
           { text: 'Usage', link: '/usage' },
           { text: 'Supported platforms', link: '/platforms' },
+          { text: 'MCP for AI assistants', link: '/mcp' },
         ],
       },
       {
