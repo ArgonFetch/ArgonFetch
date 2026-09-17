@@ -20,6 +20,7 @@ point it at your own instance instead - and make sure that instance lists `docs.
 |---|---|
 | [`GET /api/App`](/operations/GetAppInfo) | Version and health, including why the instance is in maintenance |
 | [`GET /api/Fetch/GetResource`](/operations/GetResource) | Resolves a media URL into metadata and available renditions |
+| [`GET /api/Fetch/GetPlayback`](/operations/GetPlayback) | Resolves the same URL into separate, seekable tracks for a player |
 | [`GET /api/Stream/Media/{key}`](/operations/Media) | Streams one rendition; `?format=mp3` re-encodes audio |
 | [`GET /api/Stream/Combined/{key}`](/operations/Combined) | Muxes separate video and audio into MP4 |
 
@@ -28,6 +29,57 @@ the response. [Usage](/usage#from-the-command-line) walks through both with `cur
 
 An AI assistant should use [MCP](/mcp) at `POST /mcp` instead. It is the same resolution, with the
 key already turned into a URL that can be fetched as it stands.
+
+## Playing instead of downloading
+
+`GetResource` answers the question a downloader asks: which whole files can I save? Its video
+renditions therefore carry sound, which for most sources means FFmpeg muxing a video-only and an
+audio-only stream together as the response is written. That is the right answer for a download and
+the wrong one for a player - a muxed response has no length and ignores `Range`, so a timeline
+built on it can only reach as far as what has already arrived.
+
+[`GET /api/Fetch/GetPlayback`](/operations/GetPlayback) answers the other question. The same link
+comes back as tracks rather than files:
+
+```json
+{
+  "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)",
+  "author": "Rick Astley",
+  "durationSeconds": 213,
+  "video": [
+    {
+      "key": "xSHwNTL2VipXJe",
+      "path": "/api/Stream/Media/xSHwNTL2VipXJe",
+      "label": "1080p",
+      "contentType": "video/mp4; codecs=\"avc1.640028\"",
+      "height": 1080,
+      "fps": 25,
+      "fileSizeBytes": 80911999
+    }
+  ],
+  "audio": [ "..." ],
+  "muxed": [ "..." ]
+}
+```
+
+What it gives you that `GetResource` does not:
+
+- **Video and audio apart.** A client pairs them itself - two media elements kept in sync, or one
+  `MediaSource`. Nothing is re-encoded, so a resolve is fast and a track starts immediately.
+- **Every step of the ladder**, not the four spread across it that a download menu wants.
+- **`contentType` with codecs**, so `canPlayType` and `MediaSource.isTypeSupported` can answer
+  properly. A bare `video/webm` makes a browser accept a file it cannot decode.
+- **`path` rather than a URL**, because the caller knows which origin it reached and an absolute
+  URL built from the request hands an HTTPS page an HTTP link when there is a proxy in front.
+
+Every track is served by `/api/Stream/Media/{key}`, which declares a length and answers ranges, so
+seeking works. `muxed` holds the streams that already carry both, for a client that would rather
+not pair anything; sources are dropping these, so the list is often empty or just 360p.
+
+Keys expire an hour after the call that produced them, the same as everywhere else.
+
+[Argon Play](https://github.com/ArgonFetch/ArgonPlay), the browser extension, is the first caller:
+it replaces YouTube's player with one fed from this endpoint.
 
 ## Filenames
 
@@ -63,7 +115,8 @@ curl -r 0-1048575 "https://app.argonfetch.dev/api/Stream/Media/<key>" -o part.we
 ```
 
 `GET /api/Stream/Combined/{key}` does not: it muxes video and audio as it sends them, so there is
-no known length to seek within. It answers `200` and streams from the start.
+no known length to seek within. It answers `200` and streams from the start. A player wants the
+first endpoint, which is what [`GetPlayback`](#playing-instead-of-downloading) hands out.
 
 ## Errors
 
@@ -78,7 +131,7 @@ Failures come back as [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807) 
 }
 ```
 
-What `GetResource` answers, and what each one means:
+What `GetResource` and `GetPlayback` answer, and what each one means:
 
 | Status | Title | Means |
 |---|---|---|

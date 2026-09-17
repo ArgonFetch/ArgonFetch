@@ -3,19 +3,24 @@ using ArgonFetch.Application.Services;
 using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace ArgonFetch.Application.Queries
 {
     public class StreamCombinedMediaQuery : IRequest<StreamResult>
     {
-        public StreamCombinedMediaQuery(string key, HttpResponse response, CancellationToken cancellationToken)
+        public StreamCombinedMediaQuery(string key, HttpResponse response, CancellationToken cancellationToken, double startSeconds = 0)
         {
             Key = key;
             Response = response;
             CancellationToken = cancellationToken;
+            StartSeconds = startSeconds;
         }
 
         public string Key { get; }
+
+        /// <summary>Where the mux should begin, so a player can seek a stream that has no length.</summary>
+        public double StartSeconds { get; }
         public HttpResponse Response { get; }
         public CancellationToken CancellationToken { get; }
     }
@@ -56,12 +61,18 @@ namespace ArgonFetch.Application.Queries
                 request.Response.Headers.ContentDisposition = MediaFileName.ContentDisposition(tags, ".mp4");
                 request.Response.Headers.Append("Cache-Control", "no-cache");
 
+                // Said out loud so a client can tell a seek took effect, and so a proxy does not
+                // treat two different offsets as the same response.
+                if (request.StartSeconds > 0)
+                    request.Response.Headers.Append("X-Argon-Start", request.StartSeconds.ToString("0.###", CultureInfo.InvariantCulture));
+
                 await _ffmpegStreamingService.StreamCombinedMediaAsync(
                     actualVideoUrl,
                     actualAudioUrl,
                     request.Response.Body,
                     proxy,
                     tags,
+                    request.StartSeconds,
                     request.CancellationToken);
 
                 return StreamResult.Success();

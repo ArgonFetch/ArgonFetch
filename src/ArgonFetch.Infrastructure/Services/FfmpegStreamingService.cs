@@ -2,6 +2,7 @@
 using ArgonFetch.Application.Services;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace ArgonFetch.Infrastructure.Services
 {
@@ -20,7 +21,7 @@ namespace ArgonFetch.Infrastructure.Services
             _toolPaths = toolPaths;
         }
 
-        public async Task StreamCombinedMediaAsync(string videoUrl, string audioUrl, Stream outputStream, string? proxy = null, MediaTags? tags = null, CancellationToken cancellationToken = default)
+        public async Task StreamCombinedMediaAsync(string videoUrl, string audioUrl, Stream outputStream, string? proxy = null, MediaTags? tags = null, double startSeconds = 0, CancellationToken cancellationToken = default)
         {
             var ffmpegPath = GetFfmpegPath();
             if (string.IsNullOrEmpty(ffmpegPath))
@@ -36,11 +37,13 @@ namespace ArgonFetch.Infrastructure.Services
             processStartInfo.ArgumentList.Add("-user_agent");
             processStartInfo.ArgumentList.Add(UserAgent);
             AddProxy(processStartInfo, proxy);
+            AddStart(processStartInfo, startSeconds);
             processStartInfo.ArgumentList.Add("-i");
             processStartInfo.ArgumentList.Add(videoUrl);
             processStartInfo.ArgumentList.Add("-user_agent");
             processStartInfo.ArgumentList.Add(UserAgent);
             AddProxy(processStartInfo, proxy);
+            AddStart(processStartInfo, startSeconds);
             processStartInfo.ArgumentList.Add("-i");
             processStartInfo.ArgumentList.Add(audioUrl);
             processStartInfo.ArgumentList.Add("-map");
@@ -282,6 +285,20 @@ namespace ArgonFetch.Infrastructure.Services
         }
 
         // Media URLs are signed for the requesting IP, so this must match the extraction.
+        /// <summary>
+        /// Starts the mux partway in. Placed before -i so FFmpeg seeks the source rather than
+        /// decoding everything up to that point, which is what makes a muxed stream seekable at
+        /// all: the client asks for a new stream that begins where it wants to be.
+        /// </summary>
+        private static void AddStart(ProcessStartInfo processStartInfo, double startSeconds)
+        {
+            if (startSeconds <= 0)
+                return;
+
+            processStartInfo.ArgumentList.Add("-ss");
+            processStartInfo.ArgumentList.Add(startSeconds.ToString("0.###", CultureInfo.InvariantCulture));
+        }
+
         private static void AddProxy(ProcessStartInfo processStartInfo, string? proxy)
         {
             if (string.IsNullOrWhiteSpace(proxy))
