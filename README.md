@@ -107,6 +107,7 @@ Everything is set through environment variables in `.env`.
 | `ASPNETCORE_ENVIRONMENT` | no | `Production` by default. `Development` also enables Scalar |
 | `PROXY_LIST_PATH` | no | File with one proxy per line, rotated across yt-dlp fetches so they do not all leave from the same IP. See below |
 | `COOKIES_PATH` | no | Netscape-format cookies file, for sources that serve media only to a signed-in session. See below |
+| `YOUTUBE_PLAYER_CLIENTS` | no | Clients to retry as when YouTube tells the server to sign in. Defaults to `android_vr,tv,ios`. See below |
 
 ### Media tooling
 
