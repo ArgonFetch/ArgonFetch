@@ -33,9 +33,12 @@ namespace ArgonFetch.API.Controllers
         [HttpGet("Combined/{key}", Name = "Combined")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> StreamCombinedMedia([FromRoute] string key, CancellationToken cancellationToken)
+        public async Task<IActionResult> StreamCombinedMedia(
+            [FromRoute] string key,
+            CancellationToken cancellationToken,
+            [FromQuery] double start = 0)
         {
-            var query = new StreamCombinedMediaQuery(key, Response, cancellationToken);
+            var query = new StreamCombinedMediaQuery(key, Response, cancellationToken, start);
             var result = await _mediator.Send(query, cancellationToken);
 
             if (!Response.HasStarted && !result.IsSuccess && result.StatusCode.HasValue)

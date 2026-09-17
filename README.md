@@ -27,6 +27,9 @@ streams and serves them back as a normal file download.
 - **Plugins.** Sources yt-dlp cannot reach are installed by name rather than built in, and anyone can publish one.
 - **Audio or video**, at a quality you choose.
 - **Web interface and REST API**, with a browsable API reference.
+- **A playback endpoint.** `GetPlayback` hands a player the video and audio tracks apart, each one
+  seekable, which is what [Argon Play](https://github.com/ArgonFetch/ArgonPlay) watches YouTube
+  through.
 - **MCP endpoint** at `/mcp`, so an AI assistant can resolve a link and download it directly.
 - **One container, no database.** Runs anywhere Docker does.
 

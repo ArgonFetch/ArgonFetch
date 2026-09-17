@@ -8,7 +8,6 @@ using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using YoutubeDLSharp;
 using YoutubeDLSharp.Metadata;
 using YoutubeDLSharp.Options;
 
@@ -26,14 +25,12 @@ namespace ArgonFetch.Application.Queries
 
     public class GetMediaQueryHandler : IRequestHandler<GetMediaQuery, ResourceInformationDto>
     {
-        private readonly YoutubeDL _youtubeDL;
+        private readonly IMediaMetadataFetcher _metadataFetcher;
         private readonly IMemoryCache _memoryCache;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ICombinedStreamUrlBuilder _combinedUrlBuilder;
         private readonly IMediaUrlCacheService _cacheService;
         private readonly IProxyUrlBuilder _proxyUrlBuilder;
-        private readonly IProxyPool _proxyPool;
-        private readonly IToolPaths _toolPaths;
         private readonly IProviderRegistry _providers;
         private readonly IProviderContextFactory _providerContexts;
         private readonly ILogger<GetMediaQueryHandler> _logger;
@@ -46,27 +43,23 @@ namespace ArgonFetch.Application.Queries
         private string? _originalUrl;
 
         public GetMediaQueryHandler(
-            YoutubeDL youtubeDL,
+            IMediaMetadataFetcher metadataFetcher,
             IMemoryCache memoryCache,
             IHttpContextAccessor httpContextAccessor,
             ICombinedStreamUrlBuilder combinedUrlBuilder,
             IMediaUrlCacheService cacheService,
             IProxyUrlBuilder proxyUrlBuilder,
-            IProxyPool proxyPool,
-            IToolPaths toolPaths,
             IProviderRegistry providers,
             IProviderContextFactory providerContexts,
             ILogger<GetMediaQueryHandler> logger
             )
         {
-            _youtubeDL = youtubeDL;
+            _metadataFetcher = metadataFetcher;
             _memoryCache = memoryCache;
             _httpContextAccessor = httpContextAccessor;
             _combinedUrlBuilder = combinedUrlBuilder;
             _cacheService = cacheService;
             _proxyUrlBuilder = proxyUrlBuilder;
-            _proxyPool = proxyPool;
-            _toolPaths = toolPaths;
             _providers = providers;
             _providerContexts = providerContexts;
             _logger = logger;
@@ -502,53 +495,11 @@ namespace ArgonFetch.Application.Queries
 
         private async Task<VideoData> YT_DLP_Fetch(string query, OptionSet? options = null)
         {
-            options ??= new OptionSet { DumpSingleJson = true };
+            var fetched = await _metadataFetcher.FetchAsync(query, options);
 
-            options.Cookies = _toolPaths.CookiesPath;
+            _fetchProxy = fetched.Proxy;
 
-            if (!Uri.IsWellFormedUriString(query, UriKind.Absolute))
-            {
-                _fetchProxy = _proxyPool.Next();
-
-                var searchOptions = new OptionSet
-                {
-                    NoPlaylist = true,
-                    Proxy = _fetchProxy,
-                    Cookies = _toolPaths.CookiesPath,
-                };
-
-                var searchResult = await _youtubeDL.RunVideoDataFetch($"ytsearch:{query}", overrideOptions: searchOptions);
-                query = searchResult.Data.Entries.First().Url;
-            }
-
-            var attempts = Math.Min(Math.Max(_proxyPool.Count, 1), 3);
-            RunResult<VideoData> result;
-
-            do
-            {
-                _fetchProxy = _proxyPool.Next();
-                options.Proxy = _fetchProxy;
-                result = await _youtubeDL.RunVideoDataFetch(query, overrideOptions: options);
-            }
-            while (!result.Success && --attempts > 0);
-
-            if (!result.Success)
-            {
-                var errors = string.Join(", ", result.ErrorOutput);
-
-                if (YtDlpErrors.IsDrmProtected(result.ErrorOutput))
-                    throw new NotSupportedException("This media is DRM protected and cannot be downloaded.");
-
-                if (YtDlpErrors.NeedsSignedInSession(result.ErrorOutput))
-                    throw new NotSupportedException(
-                        _toolPaths.CookiesPath is null
-                            ? "This source serves media only to a signed-in session. Set COOKIES_PATH to a Netscape-format cookies file exported from a logged-in browser."
-                            : "This source rejected the configured session. The cookies file may have expired.");
-
-                throw new ArgumentException($"Failed to fetch data: {errors}");
-            }
-
-            return result.Data;
+            return fetched.Data;
         }
 
     }
