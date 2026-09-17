@@ -1,4 +1,4 @@
-namespace ArgonFetch.Application.Dtos
+﻿namespace ArgonFetch.Application.Dtos
 {
     /// <summary>
     /// What a player needs, which is not what a downloader needs: every track here is a single
@@ -31,5 +31,8 @@ namespace ArgonFetch.Application.Dtos
         /// Sources are dropping these, so the list is often empty.
         /// </summary>
         public List<PlaybackTrackDto> Muxed { get; set; } = [];
+
+        /// <summary>Subtitle tracks, each served as WebVTT by this instance.</summary>
+        public List<PlaybackSubtitleDto> Subtitles { get; set; } = [];
     }
 }
