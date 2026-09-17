@@ -1,4 +1,4 @@
-# <p align="center">ArgonFetch</p>
+﻿# <p align="center">ArgonFetch</p>
 <p align="center">
   <img src="assets/logo-simple.svg" width="200" alt="ArgonFetch Logo">
 </p>
@@ -140,6 +140,27 @@ link is wrong. A path pointing at a file that is not there is ignored, so a mist
 setting does not break every other fetch.
 
 Treat the file as a credential: anyone holding it is signed in as you.
+
+### When YouTube asks a server to sign in
+
+YouTube demands a proof-of-origin token from its web clients whenever the request comes from an
+address it does not recognise, which is every server, and answers "sign in to confirm you're not
+a bot" when it does not get one. It does this whether or not *you* are signed in: the extraction
+happens from the instance's address, and a browser session never leaves the browser.
+
+Its other clients are not asked for that token. So before giving up, ArgonFetch asks again as one
+of them, which costs one more call and often succeeds where there is no cookies file to offer:
+
+```env
+YOUTUBE_PLAYER_CLIENTS=android_vr,tv,ios
+```
+
+That is the default, and it is configuration rather than a constant because which clients work is
+YouTube's to decide and it changes. Naming a web client here (`web`, `mweb`, `web_safari`) is
+pointless - those are the ones being challenged in the first place.
+
+A cookies file is still the surer answer, and the two work together: the retry only runs when the
+ordinary request was refused.
 
 ### Proxy rotation
 

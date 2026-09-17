@@ -117,7 +117,17 @@ builder.Services.AddHttpClient(
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ArgonFetch.Application.Interfaces.IFfmpegStreamingService, ArgonFetch.Infrastructure.Services.FfmpegStreamingService>();
 builder.Services.AddScoped<ArgonFetch.Application.Interfaces.IAcceleratedDownloadService, ArgonFetch.Infrastructure.Services.AcceleratedDownloadService>();
-builder.Services.AddScoped<ArgonFetch.Application.Services.IMediaMetadataFetcher, ArgonFetch.Application.Services.MediaMetadataFetcher>();
+// Clients to fall back to when YouTube asks an unrecognised address to sign in. Configurable
+// because which ones work is YouTube's to decide and it changes.
+var playerClients = ArgonFetch.Application.Services.MediaMetadataFetcher.ReadPlayerClients(
+    builder.Configuration["YOUTUBE_PLAYER_CLIENTS"]);
+
+builder.Services.AddScoped<ArgonFetch.Application.Services.IMediaMetadataFetcher>(sp =>
+    new ArgonFetch.Application.Services.MediaMetadataFetcher(
+        sp.GetRequiredService<YoutubeDL>(),
+        sp.GetRequiredService<ArgonFetch.Application.Services.IProxyPool>(),
+        sp.GetRequiredService<ArgonFetch.Application.Services.IToolPaths>(),
+        playerClients));
 builder.Services.AddScoped<ArgonFetch.Application.Services.ICombinedStreamUrlBuilder, ArgonFetch.Application.Services.CombinedStreamUrlBuilder>();
 builder.Services.AddScoped<ArgonFetch.Application.Services.IProxyUrlBuilder, ArgonFetch.Application.Services.ProxyUrlBuilder>();
 builder.Services.AddSingleton<ArgonFetch.Application.Services.IMediaUrlCacheService, ArgonFetch.Application.Services.MediaUrlCacheService>();

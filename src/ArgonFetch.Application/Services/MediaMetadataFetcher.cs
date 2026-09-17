@@ -1,4 +1,4 @@
-using YoutubeDLSharp;
+﻿using YoutubeDLSharp;
 using YoutubeDLSharp.Metadata;
 using YoutubeDLSharp.Options;
 
@@ -20,16 +20,45 @@ namespace ArgonFetch.Application.Services
     {
         private const int MaxAttempts = 3;
 
+        /// <summary>
+        /// Clients to ask as when YouTube refuses the ordinary one.
+        /// </summary>
+        /// <remarks>
+        /// YouTube demands a proof-of-origin token from its web clients when the request comes
+        /// from an address it does not trust - which is every server - and answers "sign in to
+        /// confirm you're not a bot" when it does not get one. Its other clients are not asked
+        /// for that token, so asking as one of them gets an answer where the default cannot.
+        ///
+        /// Which clients work is YouTube's to decide and it changes, so this is configuration
+        /// rather than a constant: an instance can be pointed at a working one without waiting
+        /// for a release.
+        /// </remarks>
+        public static readonly string[] DefaultPlayerClients = ["android_vr", "tv", "ios"];
+
         private readonly YoutubeDL _youtubeDL;
         private readonly IProxyPool _proxyPool;
         private readonly IToolPaths _toolPaths;
+        private readonly string[] _playerClients;
 
-        public MediaMetadataFetcher(YoutubeDL youtubeDL, IProxyPool proxyPool, IToolPaths toolPaths)
+        public MediaMetadataFetcher(
+            YoutubeDL youtubeDL,
+            IProxyPool proxyPool,
+            IToolPaths toolPaths,
+            string[]? playerClients = null)
         {
             _youtubeDL = youtubeDL;
             _proxyPool = proxyPool;
             _toolPaths = toolPaths;
+            _playerClients = playerClients ?? DefaultPlayerClients;
         }
+
+        /// <summary>Reads the configured list, falling back to the built-in one.</summary>
+        public static string[] ReadPlayerClients(string? configured) =>
+            string.IsNullOrWhiteSpace(configured)
+                ? DefaultPlayerClients
+                : configured
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToArray();
 
         public async Task<MediaMetadata> FetchAsync(string query, OptionSet? options = null)
         {
@@ -64,6 +93,25 @@ namespace ArgonFetch.Application.Services
                 result = await _youtubeDL.RunVideoDataFetch(query, overrideOptions: options);
             }
             while (!result.Success && --attempts > 0);
+
+            // The ordinary request was refused for wanting a session. Before giving up, ask as a
+            // client YouTube does not demand a token from: one more call, and it often succeeds
+            // where there is no cookies file to offer.
+            if (!result.Success && YtDlpErrors.NeedsSignedInSession(result.ErrorOutput))
+            {
+                foreach (var client in _playerClients)
+                {
+                    options.ExtractorArgs = $"youtube:player_client={client}";
+                    options.Proxy = proxy;
+
+                    result = await _youtubeDL.RunVideoDataFetch(query, overrideOptions: options);
+
+                    if (result.Success)
+                        return new MediaMetadata(result.Data, proxy);
+                }
+
+                options.ExtractorArgs = null;
+            }
 
             if (!result.Success)
             {
