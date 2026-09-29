@@ -122,7 +122,10 @@ namespace ArgonFetch.Application.Queries
                 StreamReferenceDto? combinedReferences = null;
                 StreamReferenceDto? audioReferences = null;
 
-                var tags = _overrideTags ?? new MediaTags(resultData.Title, resultData.Uploader);
+                var tags = (_overrideTags ?? new MediaTags(resultData.Title, resultData.Uploader)) with
+                {
+                    CoverUrl = _overrideCover ?? thumbnailUrl
+                };
 
                 var audioRenditions = _proxyUrlBuilder.BuildRenditions(
                     RenditionPicker.PickAudio(AudioSources(resultData.Formats)),
@@ -267,7 +270,7 @@ namespace ArgonFetch.Application.Queries
 
         private ResourceInformationDto MapMedia(MediaResult media, string requestedUrl)
         {
-            var tags = new MediaTags(media.Title, media.Author);
+            var tags = new MediaTags(media.Title, media.Author, media.CoverUrl);
 
             var audio = BuildReference(media.Streams.Where(stream => stream.IsAudio), isAudio: true, tags);
             var video = BuildReference(media.Streams.Where(stream => !stream.IsAudio), isAudio: false, tags);

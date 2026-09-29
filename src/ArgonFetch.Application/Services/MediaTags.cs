@@ -3,7 +3,7 @@ using System.Text;
 
 namespace ArgonFetch.Application.Services
 {
-    public record MediaTags(string? Title, string? Artist)
+    public record MediaTags(string? Title, string? Artist, string? CoverUrl = null)
     {
         public static readonly MediaTags None = new(null, null);
 

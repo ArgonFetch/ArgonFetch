@@ -139,19 +139,23 @@ namespace ArgonFetch.Infrastructure.Services
             processStartInfo.ArgumentList.Add("-i");
             processStartInfo.ArgumentList.Add(sourceUrl);
 
+            byte[]? id3Tag = null;
+
             if (isAudio)
             {
+                // FFmpeg seeks back to fill in the tag's size once the cover is written, which a
+                // pipe cannot do, so the tag is written here instead and FFmpeg writes none.
+                id3Tag = Id3Tag.Build(tags, await DownloadCoverAsync(tags?.CoverUrl, cancellationToken));
+
                 processStartInfo.ArgumentList.Add("-vn");        // Disable video
-                // 2.3, not the default 2.4: many players and Explorer only read the older revision.
-                processStartInfo.ArgumentList.Add("-id3v2_version");
-                processStartInfo.ArgumentList.Add("3");
+                processStartInfo.ArgumentList.Add("-write_id3v2");
+                processStartInfo.ArgumentList.Add("0");
                 processStartInfo.ArgumentList.Add("-c:a");
                 processStartInfo.ArgumentList.Add("mp3");        // Convert audio to MP3
                 processStartInfo.ArgumentList.Add("-b:a");
                 processStartInfo.ArgumentList.Add($"{MediaFormats.Mp3BitrateKbps}k");
                 processStartInfo.ArgumentList.Add("-f");
                 processStartInfo.ArgumentList.Add("mp3");        // Force MP3 format
-                AddTags(processStartInfo, tags);
             }
             else
             {
@@ -196,6 +200,9 @@ namespace ArgonFetch.Infrastructure.Services
                 process.Start();
                 process.BeginErrorReadLine();
 
+                if (id3Tag is not null)
+                    await outputStream.WriteAsync(id3Tag, cancellationToken);
+
                 await process.StandardOutput.BaseStream.CopyToAsync(outputStream, 81920, cancellationToken);
 
                 await process.WaitForExitAsync(cancellationToken);
@@ -231,6 +238,30 @@ namespace ArgonFetch.Infrastructure.Services
                     catch { }
                 }
                 throw;
+            }
+        }
+
+        // Fetched here rather than handed to FFmpeg as a URL: a cover that will not load
+        // should cost the artwork, not the whole download.
+        private async Task<byte[]?> DownloadCoverAsync(string? coverUrl, CancellationToken cancellationToken)
+        {
+            if (!Uri.TryCreate(coverUrl, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                return null;
+
+            try
+            {
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeout.CancelAfter(TimeSpan.FromSeconds(10));
+
+                return await _httpClientFactory
+                    .CreateClient(MediaHttpClientDefaults.ClientName)
+                    .GetByteArrayAsync(uri, timeout.Token);
+            }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Could not fetch the cover {Url}; the MP3 goes out without one", coverUrl);
+                return null;
             }
         }
 
