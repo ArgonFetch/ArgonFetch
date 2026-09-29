@@ -110,6 +110,25 @@ namespace ArgonFetch.API.Controllers
             }
         }
 
+        [HttpGet("Subtitle/{key}", Name = "Subtitle")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status502BadGateway)]
+        public async Task<IActionResult> StreamSubtitle([FromRoute] string key, CancellationToken cancellationToken)
+        {
+            var query = new StreamSubtitleQuery(key, Response, cancellationToken);
+            var result = await _mediator.Send(query, cancellationToken);
+
+            if (!Response.HasStarted && !result.IsSuccess && result.StatusCode.HasValue)
+            {
+                Response.StatusCode = result.StatusCode.Value;
+                await Response.WriteAsync(result.ErrorMessage ?? "An error occurred");
+                return new EmptyResult();
+            }
+
+            return new EmptyResult();
+        }
+
         [HttpGet("Media/{key}", Name = "Media")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status206PartialContent)]

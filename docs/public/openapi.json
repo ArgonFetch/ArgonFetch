@@ -461,6 +461,52 @@
         }
       }
     },
+    "/api/Stream/Subtitle/{key}": {
+      "get": {
+        "tags": [
+          "Stream"
+        ],
+        "operationId": "Subtitle",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway"
+          }
+        }
+      }
+    },
     "/api/Stream/Media/{key}": {
       "get": {
         "tags": [
@@ -700,6 +746,38 @@
             "items": {
               "$ref": "#/components/schemas/PlaybackTrackDto"
             }
+          },
+          "subtitles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlaybackSubtitleDto"
+            }
+          }
+        }
+      },
+      "PlaybackSubtitleDto": {
+        "required": [
+          "key",
+          "path",
+          "language",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "automatic": {
+            "type": "boolean"
           }
         }
       },
