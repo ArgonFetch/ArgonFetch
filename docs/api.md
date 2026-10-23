@@ -23,6 +23,7 @@ point it at your own instance instead - and make sure that instance lists `docs.
 | [`GET /api/Fetch/GetPlayback`](/operations/GetPlayback) | Resolves the same URL into separate, seekable tracks for a player |
 | [`GET /api/Stream/Media/{key}`](/operations/Media) | Streams one rendition; `?format=mp3` re-encodes audio |
 | [`GET /api/Stream/Combined/{key}`](/operations/Combined) | Muxes separate video and audio into MP4 |
+| [`GET /api/Stream/Subtitle/{key}`](/operations/Subtitle) | Serves one subtitle track as WebVTT |
 
 `Fetch` and `Stream` are the pair you want: resolve a URL, then stream the `key` you picked out of
 the response. [Usage](/usage#from-the-command-line) walks through both with `curl`.
@@ -58,7 +59,16 @@ comes back as tracks rather than files:
     }
   ],
   "audio": [ "..." ],
-  "muxed": [ "..." ]
+  "muxed": [ "..." ],
+  "subtitles": [
+    {
+      "key": "wZIMEPTy4BKAY6WK",
+      "path": "/api/Stream/Subtitle/wZIMEPTy4BKAY6WK",
+      "language": "en",
+      "name": "English",
+      "automatic": false
+    }
+  ]
 }
 ```
 
@@ -75,6 +85,15 @@ What it gives you that `GetResource` does not:
 Every track is served by `/api/Stream/Media/{key}`, which declares a length and answers ranges, so
 seeking works. `muxed` holds the streams that already carry both, for a client that would rather
 not pair anything; sources are dropping these, so the list is often empty or just 360p.
+
+`subtitles` is served the same way, by
+[`GET /api/Stream/Subtitle/{key}`](/operations/Subtitle), and always as WebVTT - whatever the
+source sent is converted on the way out, so a track drops straight into a `<track>` element. The
+instance fetches these rather than linking to them because the source signs its caption URLs for
+the player that asked and answers anyone else with `200` and an empty body, which makes a track
+with no cues and reports no error at all. `automatic` marks speech recognition rather than a
+person; the machine translations of it that sources also list - upwards of a hundred and fifty
+per video - are left out.
 
 Keys expire an hour after the call that produced them, the same as everywhere else.
 

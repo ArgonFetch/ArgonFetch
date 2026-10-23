@@ -59,6 +59,8 @@ namespace ArgonFetch.Application.Queries
                 .Select(source => Track(source, isAudio: false, tags, fetched.Proxy))
                 .ToList();
 
+            var subtitles = Subtitles(data, tags, fetched.Proxy);
+
             _logger.LogInformation(
                 "Playback for {Url}: {Video} video, {Audio} audio, {Muxed} muxed tracks",
                 request.Query, video.Count, audio.Count, muxed.Count);
@@ -72,7 +74,8 @@ namespace ArgonFetch.Application.Queries
                 DurationSeconds = data.Duration,
                 Video = video,
                 Audio = audio,
-                Muxed = muxed
+                Muxed = muxed,
+                Subtitles = subtitles
             };
         }
 
@@ -99,6 +102,66 @@ namespace ArgonFetch.Application.Queries
                 FileSizeBytes = source.FileSizeBytes
             };
         }
+
+        /// <summary>
+        /// The subtitle tracks, written by people first and by the source's speech recognition
+        /// after, one per language. They are proxied rather than linked: the source signs those
+        /// URLs for its own player and answers anyone else with an empty body.
+        /// </summary>
+        private List<PlaybackSubtitleDto> Subtitles(VideoData data, MediaTags tags, string? proxy)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var tracks = new List<PlaybackSubtitleDto>();
+
+            void Collect(Dictionary<string, SubtitleData[]>? source, bool automatic)
+            {
+                foreach (var (language, variants) in source ?? [])
+                {
+                    if (string.IsNullOrWhiteSpace(language) || !seen.Add(language))
+                        continue;
+
+                    // Whatever the source offers, taken as the format a browser can read without
+                    // help; the stream endpoint converts anything else on the way out.
+                    var chosen = variants?.FirstOrDefault(v => Matches(v.Ext, "vtt"))
+                        ?? variants?.FirstOrDefault(v => Matches(v.Ext, "srv3") || Matches(v.Ext, "ttml"))
+                        ?? variants?.FirstOrDefault();
+
+                    if (chosen?.Url is null)
+                        continue;
+
+                    // YouTube lists its speech recognition once per language it will machine
+                    // translate that recognition into - upwards of a hundred and fifty entries,
+                    // all of them the same track put through a translator. Only the one it was
+                    // actually recognised in is worth offering, and that is the one asking for
+                    // no translation.
+                    if (automatic && Translated(chosen.Url))
+                        continue;
+
+                    var key = _cacheService.CacheSingleUrl(chosen.Url, isAudio: false, "text/vtt", proxy, tags);
+
+                    tracks.Add(new PlaybackSubtitleDto
+                    {
+                        Key = key,
+                        Path = $"/api/Stream/Subtitle/{key}",
+                        Language = language,
+                        Name = string.IsNullOrWhiteSpace(chosen.Name) ? language : chosen.Name,
+                        Automatic = automatic
+                    });
+                }
+            }
+
+            Collect(data.Subtitles, automatic: false);
+            Collect(data.AutomaticCaptions, automatic: true);
+
+            return tracks;
+        }
+
+        private static bool Matches(string? extension, string wanted) =>
+            extension?.Trim('.').Equals(wanted, StringComparison.OrdinalIgnoreCase) == true;
+
+        /// <summary>A caption URL that asks the source to translate on the way out.</summary>
+        private static bool Translated(string url) =>
+            url.Contains("tlang=", StringComparison.OrdinalIgnoreCase);
 
         private static IEnumerable<PlaybackSource> Sources(FormatData[] formats, Func<FormatData, bool> keep) =>
             formats.Where(format => Playable(format) && keep(format)).Select(ToSource);
