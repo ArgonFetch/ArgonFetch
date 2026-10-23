@@ -76,12 +76,16 @@ namespace ArgonFetch.Application.Queries
 
         private async Task<ResourceInformationDto> Resolve(GetMediaQuery request, CancellationToken cancellationToken)
         {
+            string? declinedBy = null;
+
             if (Uri.TryCreate(request.Query, UriKind.Absolute, out var link))
             {
-                var handled = await AskProvidersAsync(link, request, cancellationToken);
+                var (handled, declined) = await AskProvidersAsync(link, request, cancellationToken);
 
                 if (handled is not null)
                     return handled;
+
+                declinedBy = declined;
             }
 
             var platform = PlatformIdentifierService.IdentifyPlatform(request.Query);
@@ -89,7 +93,17 @@ namespace ArgonFetch.Application.Queries
             if (await IsCollection(request.Query, platform))
                 return await HandleCollection(request.Query);
 
-            var resultData = await YT_DLP_Fetch(request.Query);
+            VideoData resultData;
+
+            try
+            {
+                resultData = await YT_DLP_Fetch(request.Query);
+            }
+            catch (Exception ex) when (declinedBy is not null && ex is not OperationCanceledException)
+            {
+                // yt-dlp refuses a Spotify link as DRM; what went wrong is that the plugin found nothing.
+                throw new ArgumentException($"The {declinedBy} plugin found nothing for this link, and yt-dlp could not fetch it either.", ex);
+            }
 
             if (resultData.ResultType == MetadataType.Video)
             {
@@ -185,7 +199,8 @@ namespace ArgonFetch.Application.Queries
                 throw new NotSupportedException("This isn't implemented yet");
         }
 
-        private async Task<ResourceInformationDto?> AskProvidersAsync(
+        // Declined names the plugin that claimed the link but could not do anything with it.
+        private async Task<(ResourceInformationDto? Handled, string? Declined)> AskProvidersAsync(
             Uri link,
             GetMediaQuery request,
             CancellationToken cancellationToken)
@@ -193,7 +208,7 @@ namespace ArgonFetch.Application.Queries
             var provider = _providers.For(link);
 
             if (provider is null)
-                return null;
+                return (null, null);
 
             ProviderOutcome outcome;
 
@@ -206,7 +221,7 @@ namespace ArgonFetch.Application.Queries
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogWarning(ex, "The {Id} plugin failed on {Url}; falling back", provider.Id, link);
-                return null;
+                return (null, provider.Id);
             }
 
             switch (outcome)
@@ -219,16 +234,19 @@ namespace ArgonFetch.Application.Queries
                     _originalUrl = request.Query;
                     request.Query = rewrite.Url.ToString();
 
-                    return null;
+                    return (null, null);
 
                 case ProviderOutcome.ListingOutcome listing:
-                    return MapCollection(listing.Collection, provider.Id);
+                    return (MapCollection(listing.Collection, provider.Id), null);
 
                 case ProviderOutcome.CompleteOutcome complete:
-                    return MapMedia(complete.Media, request.Query);
+                    return (MapMedia(complete.Media, request.Query), null);
+
+                case ProviderOutcome.DeclinedOutcome:
+                    return (null, provider.Id);
 
                 default:
-                    return null;
+                    return (null, null);
             }
         }
 
