@@ -1,15 +1,12 @@
 # Keeps yt-dlp imported between lookups: starting it costs more than most lookups take.
 # One JSON request per line on stdin; one "<id> ok|err <payload>" line per answer on stdout.
 import json
-import os
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
 library = sys.argv[1]
 sys.path.insert(0, library)
-# pip --target puts the bundled Deno here, where yt-dlp would not look for it.
-os.environ["PATH"] = os.path.join(library, "bin") + os.pathsep + os.environ.get("PATH", "")
 
 import yt_dlp  # noqa: E402
 
@@ -25,7 +22,9 @@ def reply(request_id, ok, payload):
 
 
 def lookup(request):
-    options = {"quiet": True, "no_warnings": True, "noprogress": True}
+    # No JS runtime: with one, YouTube is asked as its TV app too, and those URLs answer a
+    # server's address with 403. Without, yt-dlp keeps to the client the binary has always used.
+    options = {"quiet": True, "no_warnings": True, "noprogress": True, "js_runtimes": {}}
     if request.get("proxy"):
         options["proxy"] = request["proxy"]
     if request.get("cookies"):

@@ -39,7 +39,7 @@ namespace ArgonFetch.Infrastructure.Services
         }
 
         // yt-dlp as a Python library for the worker, one folder per version so a new one installs
-        // beside the one in use. Deno comes with it; YouTube's download challenge needs a JS runtime.
+        // beside the one in use.
         private async Task TryPrepareWorkerAsync(CancellationToken cancellationToken)
         {
             try
@@ -103,7 +103,7 @@ namespace ArgonFetch.Infrastructure.Services
 
             var (exitCode, _, stderr) = await RunAsync(python, timeout.Token,
                 "-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--quiet",
-                "--target", partial, "yt-dlp[default,deno]");
+                "--target", partial, "yt-dlp[default]");
 
             if (exitCode != 0)
             {
