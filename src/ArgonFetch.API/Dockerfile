@@ -30,8 +30,8 @@ VOLUME /plugins
 ENV SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
 ENV SSL_CERT_DIR=/etc/pki/tls/certs
 
-# Only the interpreter: yt-dlp itself, and the Deno it needs for YouTube, are pip-installed into
-# /tools on boot like the binaries above. Without Python, lookups fall back to the binary.
+# Only the interpreter: yt-dlp itself is pip-installed into /tools on boot like the binaries
+# above. Without Python, lookups fall back to the binary.
 RUN tdnf install -y python3 python3-pip && tdnf clean all
 
 USER $APP_UID
