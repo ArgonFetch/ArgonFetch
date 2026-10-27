@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Metadata;
 using YoutubeDLSharp.Options;
@@ -20,20 +21,46 @@ namespace ArgonFetch.Application.Services
     {
         private const int MaxAttempts = 3;
 
+        // Well inside the hours a signed media URL lives.
+        private static readonly TimeSpan Fresh = TimeSpan.FromMinutes(20);
+
         private readonly YoutubeDL _youtubeDL;
         private readonly IProxyPool _proxyPool;
         private readonly IToolPaths _toolPaths;
+        private readonly IMemoryCache _cache;
 
-        public MediaMetadataFetcher(YoutubeDL youtubeDL, IProxyPool proxyPool, IToolPaths toolPaths)
+        public MediaMetadataFetcher(YoutubeDL youtubeDL, IProxyPool proxyPool, IToolPaths toolPaths, IMemoryCache cache)
         {
             _youtubeDL = youtubeDL;
             _proxyPool = proxyPool;
             _toolPaths = toolPaths;
+            _cache = cache;
         }
 
-        public async Task<MediaMetadata> FetchAsync(string query, OptionSet? options = null)
+        public Task<MediaMetadata> FetchAsync(string query, OptionSet? options = null)
         {
-            options ??= new OptionSet { DumpSingleJson = true };
+            // Only the plain lookup is shared; a caller with options of its own wants its own run.
+            if (options is not null)
+                return RunAsync(query, options);
+
+            // A plugin probing a match and the fetch that follows ask for the same URL, seconds apart.
+            // ponytail: two first askers can race into two runs - wrap in Lazy if that shows up.
+            var key = $"yt-dlp:{query}";
+
+            if (_cache.TryGetValue(key, out Task<MediaMetadata>? pending) && pending is not null)
+                return pending;
+
+            var task = RunAsync(query, new OptionSet { DumpSingleJson = true });
+            _cache.Set(key, task, Fresh);
+
+            // A failure is not an answer worth keeping.
+            task.ContinueWith(_ => _cache.Remove(key), TaskContinuationOptions.NotOnRanToCompletion);
+
+            return task;
+        }
+
+        private async Task<MediaMetadata> RunAsync(string query, OptionSet options)
+        {
 
             options.Cookies = _toolPaths.CookiesPath;
 
