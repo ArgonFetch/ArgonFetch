@@ -1,5 +1,5 @@
 # Stage 1: Base runtime
-# Azure Linux rather than Debian: the image no longer installs anything, so all it has to
+# Azure Linux rather than Debian: the image installs nothing but Python, so all it has to
 # provide is glibc and CA certificates, and this base is smaller and carries fewer CVEs.
 # Alpine would not work - the static yt-dlp and FFmpeg builds fetched below are glibc.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-azurelinux3.0 AS base
@@ -29,6 +29,10 @@ VOLUME /plugins
 # image's bundle fixes that; the CA data itself is already in the base image.
 ENV SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
 ENV SSL_CERT_DIR=/etc/pki/tls/certs
+
+# Only the interpreter: yt-dlp itself, and the Deno it needs for YouTube, are pip-installed into
+# /tools on boot like the binaries above. Without Python, lookups fall back to the binary.
+RUN tdnf install -y python3 python3-pip && tdnf clean all
 
 USER $APP_UID
 EXPOSE 8080 8081

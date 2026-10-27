@@ -31,6 +31,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Run by YtDlpWorker from beside the app, so it has to land in the build and the publish. -->
+    <None Update="Services\ytdlp_worker.py" Link="ytdlp_worker.py" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ArgonFetch.Abstractions\ArgonFetch.Abstractions.csproj" />
   </ItemGroup>
 

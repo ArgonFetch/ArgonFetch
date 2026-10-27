@@ -32,6 +32,7 @@ builder.Services.AddSingleton<ArgonFetch.Application.Services.IToolPaths>(
     new ArgonFetch.Application.Services.ToolPaths(
         builder.Configuration["TOOLS_PATH"],
         builder.Configuration["COOKIES_PATH"]));
+builder.Services.AddSingleton<ArgonFetch.Application.Services.YtDlpWorker>();
 builder.Services.AddSingleton<ArgonFetch.Infrastructure.Services.MediaToolsService>();
 builder.Services.AddHostedService(
     sp => sp.GetRequiredService<ArgonFetch.Infrastructure.Services.MediaToolsService>());
