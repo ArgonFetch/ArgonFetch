@@ -22,17 +22,153 @@ namespace ArgonFetch.Infrastructure.Services
         private readonly IMaintenanceState _maintenance;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IToolPaths _paths;
+        private readonly YtDlpWorker _worker;
 
         public MediaToolsService(
             ILogger<MediaToolsService> logger,
             IMaintenanceState maintenance,
             IHttpClientFactory httpClientFactory,
-            IToolPaths paths)
+            IToolPaths paths,
+            YtDlpWorker worker)
         {
             _logger = logger;
             _maintenance = maintenance;
             _httpClientFactory = httpClientFactory;
             _paths = paths;
+            _worker = worker;
+        }
+
+        // yt-dlp as a Python library for the worker, one folder per version so a new one installs
+        // beside the one in use. Deno comes with it; YouTube's download challenge needs a JS runtime.
+        private async Task TryPrepareWorkerAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var python = await FindPythonAsync(cancellationToken);
+
+                if (python is null)
+                {
+                    _logger.LogInformation("No Python 3.10+ found, so every lookup starts yt-dlp afresh");
+                    return;
+                }
+
+                var root = Path.Combine(_paths.ToolsDirectory, "yt-dlp-python");
+                Directory.CreateDirectory(root);
+
+                var latest = await TryReadLatestYtDlpVersionAsync(cancellationToken);
+                var library = latest is null ? null : Path.Combine(root, latest);
+
+                if (library is not null && !Directory.Exists(library))
+                    library = await TryInstallLibraryAsync(python, root, latest!, cancellationToken);
+
+                // PyPI unreachable or the install failed: the newest one already here still works.
+                library ??= Directory.GetDirectories(root)
+                    .Where(directory => !directory.EndsWith(".partial", StringComparison.Ordinal))
+                    .OrderByDescending(directory => Version.TryParse(Path.GetFileName(directory), out var version) ? version : new Version())
+                    .FirstOrDefault();
+
+                if (library is null || library == _worker.Library)
+                    return;
+
+                _worker.Use(python, library);
+                _logger.LogInformation("Lookups go through the yt-dlp worker, using {Library}", library);
+
+                foreach (var old in Directory.GetDirectories(root).Where(directory => directory != library))
+                {
+                    try { Directory.Delete(old, recursive: true); }
+                    catch (Exception ex) { _logger.LogDebug(ex, "Could not remove {Directory}", old); }
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not prepare the yt-dlp worker; lookups run yt-dlp directly");
+            }
+        }
+
+        // Unpinned, so pip settles on the newest release this Python can run; the folder is named
+        // after whatever that turns out to be.
+        private async Task<string?> TryInstallLibraryAsync(string python, string root, string latest, CancellationToken cancellationToken)
+        {
+            var partial = Path.Combine(root, "next.partial");
+
+            if (Directory.Exists(partial))
+                Directory.Delete(partial, recursive: true);
+
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(UpdateTimeout);
+
+            var (exitCode, _, stderr) = await RunAsync(python, timeout.Token,
+                "-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--quiet",
+                "--target", partial, "yt-dlp[default,deno]");
+
+            if (exitCode != 0)
+            {
+                _logger.LogWarning("Could not install yt-dlp for the worker: {Error}", stderr);
+                return null;
+            }
+
+            var installed = Directory.GetDirectories(partial, "yt_dlp-*.dist-info")
+                .Select(Path.GetFileName)
+                .Select(name => name!["yt_dlp-".Length..^".dist-info".Length])
+                .FirstOrDefault() ?? latest;
+
+            if (installed != latest)
+            {
+                // ponytail: re-downloads every check while Python is too old - a newer image ends it.
+                _logger.LogWarning(
+                    "yt-dlp {Latest} needs a newer Python than {Python} offers; the worker stays on {Installed}",
+                    latest, python, installed);
+            }
+
+            var library = Path.Combine(root, installed);
+
+            if (Directory.Exists(library))
+                Directory.Delete(partial, recursive: true);
+            else
+                Directory.Move(partial, library);
+
+            return library;
+        }
+
+        private static async Task<string?> FindPythonAsync(CancellationToken cancellationToken)
+        {
+            foreach (var candidate in new[] { "python3", "python" })
+            {
+                try
+                {
+                    var (exitCode, stdout, _) = await RunAsync(candidate, cancellationToken,
+                        "-c", "import sys; print(sys.version_info >= (3, 10))");
+
+                    if (exitCode == 0 && stdout == "True")
+                        return candidate;
+                }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    // Not installed under this name.
+                }
+            }
+
+            return null;
+        }
+
+        private async Task<string?> TryReadLatestYtDlpVersionAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                await using var body = await OpenDownloadAsync("https://pypi.org/pypi/yt-dlp/json", cancellationToken);
+                using var document = await System.Text.Json.JsonDocument.ParseAsync(body, cancellationToken: cancellationToken);
+
+                return document.RootElement.GetProperty("info").GetProperty("version").GetString();
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogDebug(ex, "Could not ask PyPI for the latest yt-dlp");
+                return null;
+            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -61,6 +197,9 @@ namespace ArgonFetch.Infrastructure.Services
 
                     await LogVersionsAsync(stoppingToken);
                 }
+
+                // Outside maintenance: until the worker is ready, lookups run the binary above.
+                await TryPrepareWorkerAsync(stoppingToken);
 
                 try
                 {

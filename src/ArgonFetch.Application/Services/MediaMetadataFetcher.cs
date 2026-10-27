@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
+using Newtonsoft.Json;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Metadata;
 using YoutubeDLSharp.Options;
@@ -28,13 +29,33 @@ namespace ArgonFetch.Application.Services
         private readonly IProxyPool _proxyPool;
         private readonly IToolPaths _toolPaths;
         private readonly IMemoryCache _cache;
+        private readonly YtDlpWorker _worker;
 
-        public MediaMetadataFetcher(YoutubeDL youtubeDL, IProxyPool proxyPool, IToolPaths toolPaths, IMemoryCache cache)
+        public MediaMetadataFetcher(YoutubeDL youtubeDL, IProxyPool proxyPool, IToolPaths toolPaths, IMemoryCache cache, YtDlpWorker worker)
         {
             _youtubeDL = youtubeDL;
             _proxyPool = proxyPool;
             _toolPaths = toolPaths;
             _cache = cache;
+            _worker = worker;
+        }
+
+        // The worker understands only what this class sets: a proxy, cookies and a flat listing.
+        private async Task<RunResult<VideoData>> RunOnceAsync(string query, OptionSet options)
+        {
+            try
+            {
+                var json = await _worker.TryFetchJsonAsync(query, options.Proxy, options.Cookies, options.FlatPlaylist);
+
+                if (json is not null)
+                    return new RunResult<VideoData>(true, [], JsonConvert.DeserializeObject<VideoData>(json)!);
+            }
+            catch (YtDlpFailure failure)
+            {
+                return new RunResult<VideoData>(false, [failure.Message], null!);
+            }
+
+            return await _youtubeDL.RunVideoDataFetch(query, overrideOptions: options);
         }
 
         public Task<MediaMetadata> FetchAsync(string query, OptionSet? options = null)
@@ -88,7 +109,7 @@ namespace ArgonFetch.Application.Services
             {
                 proxy = _proxyPool.Next();
                 options.Proxy = proxy;
-                result = await _youtubeDL.RunVideoDataFetch(query, overrideOptions: options);
+                result = await RunOnceAsync(query, options);
             }
             while (!result.Success && --attempts > 0);
 
